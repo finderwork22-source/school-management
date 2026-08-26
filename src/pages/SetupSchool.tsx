@@ -1,222 +1,273 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { Building2, MapPin, Phone, Mail } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { Building2 } from "lucide-react";
 
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../context/AuthContext";
+import { useSchool } from "../context/SchoolContext";
 
 export default function SetupSchool() {
   const navigate = useNavigate();
+
   const { user } = useAuth();
+  const { refreshSchool } = useSchool();
 
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [city, setCity] = useState("Kigali");
-  const [country, setCountry] = useState("Rwanda");
+  const [schoolName, setSchoolName] =
+    useState("");
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [schoolType, setSchoolType] =
+    useState("School");
 
-  async function handleSubmit(event: FormEvent) {
+  const [phone, setPhone] =
+    useState("");
+
+  const [email, setEmail] =
+    useState("");
+
+  const [address, setAddress] =
+    useState("");
+
+  const [loading, setLoading] =
+    useState(false);
+
+  const [error, setError] =
+    useState("");
+
+  async function handleSubmit(
+    event: FormEvent<HTMLFormElement>,
+  ) {
     event.preventDefault();
 
     if (!user) {
-      setError("You must be signed in to create a school.");
+      setError(
+        "You must be logged in to create a school.",
+      );
+      return;
+    }
+
+    if (!schoolName.trim()) {
+      setError("School name is required.");
       return;
     }
 
     setLoading(true);
     setError("");
 
-    const slug =
-      name
-        .toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-|-$/g, "") +
-      "-" +
-      crypto.randomUUID().slice(0, 8);
-
-    const { data: school, error: schoolError } = await supabase.rpc(
-      "create_school",
-      {
-        school_name: name.trim(),
-        school_slug: slug,
-        school_email: email.trim() || null,
-        school_phone: phone.trim() || null,
-        school_city: city.trim() || null,
-        school_country: country.trim() || null,
-      },
-    );
+    const {
+      data: school,
+      error: schoolError,
+    } = await supabase
+      .from("schools")
+      .insert({
+        name: schoolName.trim(),
+        type: schoolType,
+        phone: phone.trim() || null,
+        email: email.trim() || null,
+        address: address.trim() || null,
+      })
+      .select()
+      .single();
 
     if (schoolError) {
-      setError(schoolError.message);
+      setError(
+        schoolError.message ||
+          "Failed to create school.",
+      );
+
       setLoading(false);
       return;
     }
 
     if (!school) {
-      setError("The school could not be created.");
+      setError(
+        "School was not created. Please try again.",
+      );
+
       setLoading(false);
       return;
     }
 
-    navigate("/");
+    await refreshSchool();
 
-    if (schoolError) {
-      setError(schoolError.message);
-      setLoading(false);
-      return;
-    }
-
-    if (!school) {
-    setError("The school could not be created.");
     setLoading(false);
-    return;
-  }
 
-    navigate("/");
+    navigate("/", {
+      replace: true,
+    });
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 p-6">
-      <div className="w-full max-w-xl">
-        <div className="mb-8 text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-600 text-white">
-            <Building2 size={22} />
-          </div>
-
-          <h1 className="mt-5 text-2xl font-semibold tracking-tight text-slate-900">
-            Set up your school
-          </h1>
-
-          <p className="mt-2 text-sm text-slate-500">
-            This information will be used to create your school workspace.
-          </p>
-        </div>
-
+    <div className="min-h-screen bg-slate-50 px-4 py-10">
+      <div className="mx-auto max-w-xl">
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <form onSubmit={handleSubmit}>
-            <div className="space-y-5 p-6 sm:p-8">
-              {error && (
-                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                  {error}
-                </div>
-              )}
+          {/* Header */}
+          <div className="border-b border-slate-200 px-6 py-6 sm:px-8">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+                <Building2 size={22} />
+              </div>
 
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-slate-700">
-                  School name
-                </label>
+                <h1 className="text-lg font-semibold text-slate-900">
+                  Set up your school
+                </h1>
 
-                <div className="relative">
-                  <Building2
-                    size={17}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                  />
-
-                  <input
-                    value={name}
-                    onChange={(event) => setName(event.target.value)}
-                    placeholder="High Gate International Academy"
-                    required
-                    className="h-11 w-full rounded-lg border border-slate-200 pl-10 pr-4 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-5 sm:grid-cols-2">
-                <Field
-                  label="School email"
-                  icon={Mail}
-                  type="email"
-                  value={email}
-                  onChange={setEmail}
-                  placeholder="info@school.com"
-                />
-
-                <Field
-                  label="Phone"
-                  icon={Phone}
-                  value={phone}
-                  onChange={setPhone}
-                  placeholder="+250..."
-                />
-
-                <Field
-                  label="City"
-                  icon={MapPin}
-                  value={city}
-                  onChange={setCity}
-                  placeholder="Kigali"
-                />
-
-                <Field
-                  label="Country"
-                  icon={MapPin}
-                  value={country}
-                  onChange={setCountry}
-                  placeholder="Rwanda"
-                />
+                <p className="mt-1 text-sm text-slate-500">
+                  Add your school information to get
+                  started.
+                </p>
               </div>
             </div>
+          </div>
 
-            <div className="border-t border-slate-200 p-6 sm:px-8">
-              <button
-                type="submit"
+          {/* Form */}
+          <form
+            onSubmit={handleSubmit}
+            className="space-y-5 px-6 py-6 sm:px-8"
+          >
+            {error && (
+              <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3">
+                <p className="text-sm text-red-600">
+                  {error}
+                </p>
+              </div>
+            )}
+
+            {/* School name */}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                School name
+              </label>
+
+              <input
+                type="text"
+                value={schoolName}
+                onChange={(event) =>
+                  setSchoolName(
+                    event.target.value,
+                  )
+                }
+                placeholder="e.g. High Gate International Academy"
+                className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                 disabled={loading}
-                className="flex h-11 w-full items-center justify-center rounded-lg bg-indigo-600 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-60"
-              >
-                {loading ? "Creating school..." : "Create school"}
-              </button>
+              />
             </div>
+
+            {/* School type */}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                School type
+              </label>
+
+              <select
+                value={schoolType}
+                onChange={(event) =>
+                  setSchoolType(
+                    event.target.value,
+                  )
+                }
+                className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                disabled={loading}
+              >
+                <option value="School">
+                  School
+                </option>
+
+                <option value="Primary School">
+                  Primary School
+                </option>
+
+                <option value="Secondary School">
+                  Secondary School
+                </option>
+
+                <option value="Primary & Secondary">
+                  Primary & Secondary
+                </option>
+
+                <option value="International School">
+                  International School
+                </option>
+
+                <option value="Other">
+                  Other
+                </option>
+              </select>
+            </div>
+
+            {/* Phone */}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                Phone number
+              </label>
+
+              <input
+                type="tel"
+                value={phone}
+                onChange={(event) =>
+                  setPhone(
+                    event.target.value,
+                  )
+                }
+                placeholder="+250 7XX XXX XXX"
+                className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                disabled={loading}
+              />
+            </div>
+
+            {/* Email */}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                School email
+              </label>
+
+              <input
+                type="email"
+                value={email}
+                onChange={(event) =>
+                  setEmail(
+                    event.target.value,
+                  )
+                }
+                placeholder="info@school.com"
+                className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                disabled={loading}
+              />
+            </div>
+
+            {/* Address */}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                Address
+              </label>
+
+              <textarea
+                value={address}
+                onChange={(event) =>
+                  setAddress(
+                    event.target.value,
+                  )
+                }
+                rows={3}
+                placeholder="School address"
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                disabled={loading}
+              />
+            </div>
+
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex h-11 w-full items-center justify-center rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {loading
+                ? "Creating school..."
+                : "Create school"}
+            </button>
           </form>
         </div>
-
-        <p className="mt-5 text-center text-xs text-slate-400">
-          You will become the owner of this school.
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function Field({
-  label,
-  icon: Icon,
-  type = "text",
-  value,
-  onChange,
-  placeholder,
-}: {
-  label: string;
-  icon: typeof Mail;
-  type?: string;
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-}) {
-  return (
-    <div>
-      <label className="mb-1.5 block text-sm font-medium text-slate-700">
-        {label}
-      </label>
-
-      <div className="relative">
-        <Icon
-          size={17}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-        />
-
-        <input
-          type={type}
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-          placeholder={placeholder}
-          className="h-11 w-full rounded-lg border border-slate-200 pl-10 pr-4 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-        />
       </div>
     </div>
   );
