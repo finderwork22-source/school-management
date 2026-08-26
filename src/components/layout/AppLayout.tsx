@@ -1,4 +1,7 @@
 import { Outlet, NavLink } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import { useSchool } from "../../context/SchoolContext";
+
 import {
   LayoutDashboard,
   GraduationCap,
@@ -12,6 +15,9 @@ import {
   Megaphone,
   Settings,
   ChevronDown,
+  Bell,
+  ShieldCheck,
+  History,
 } from "lucide-react";
 
 const navigation = [
@@ -32,6 +38,16 @@ const navigation = [
         label: "Admissions",
         icon: GraduationCap,
         path: "/admissions",
+      },
+      {
+        label: "Pickup Desk",
+        icon: ShieldCheck,
+        path: "/pickup-desk",
+      },
+      {
+        label: "Pickup History",
+        icon: History,
+        path: "/pickup-history",
       },
       {
         label: "Students",
@@ -100,15 +116,18 @@ const navigation = [
 function Sidebar() {
   return (
     <aside className="hidden w-64 shrink-0 border-r border-slate-200 bg-white lg:flex lg:flex-col">
+      {/* Logo */}
       <div className="flex h-20 items-center border-b border-slate-200 px-6">
         <div>
           <div className="text-lg font-bold tracking-tight text-slate-900">
             School<span className="text-indigo-600">OS</span>
           </div>
+
           <div className="text-xs text-slate-500">School Management</div>
         </div>
       </div>
 
+      {/* Navigation */}
       <div className="flex-1 overflow-y-auto px-3 py-5">
         {navigation.map((section) => (
           <div key={section.label} className="mb-6">
@@ -135,6 +154,7 @@ function Sidebar() {
                     }
                   >
                     <Icon size={18} strokeWidth={1.8} />
+
                     <span>{item.label}</span>
                   </NavLink>
                 );
@@ -144,6 +164,7 @@ function Sidebar() {
         ))}
       </div>
 
+      {/* Settings */}
       <div className="border-t border-slate-200 p-3">
         <NavLink
           to="/settings"
@@ -165,42 +186,61 @@ function Sidebar() {
 }
 
 function Header() {
+  const { school, membership } = useSchool();
+  const { user } = useAuth();
+
+  const firstName = user?.user_metadata?.first_name ?? "";
+
+  const lastName = user?.user_metadata?.last_name ?? "";
+
+  const fullName = `${firstName} ${lastName}`.trim() || "School Admin";
+
+  const initials =
+    `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase() || "SA";
+
   return (
     <header className="flex h-20 items-center justify-between border-b border-slate-200 bg-white px-5 sm:px-8">
+      {/* School */}
       <div>
         <div className="text-sm text-slate-500">School</div>
-        <button className="mt-0.5 flex items-center gap-1 text-sm font-semibold text-slate-900">
-          High Gate International Academy
+
+        <button
+          type="button"
+          className="mt-0.5 flex items-center gap-1 text-sm font-semibold text-slate-900"
+        >
+          {school?.name ?? "School"}
+
           <ChevronDown size={15} />
         </button>
       </div>
 
+      {/* Right side */}
       <div className="flex items-center gap-4">
-        <button className="relative flex h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100">
+        {/* Notifications */}
+        <button
+          type="button"
+          aria-label="Notifications"
+          className="relative flex h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100"
+        >
           <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-indigo-600" />
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.8"
-          >
-            <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
-            <path d="M13.7 21a2 2 0 0 1-3.4 0" />
-          </svg>
+
+          <Bell size={18} strokeWidth={1.8} />
         </button>
 
-        <button className="flex items-center gap-3">
+        {/* User */}
+        <button type="button" className="flex items-center gap-3">
           <div className="hidden text-right sm:block">
             <div className="text-sm font-semibold text-slate-900">
-              School Admin
+              {fullName}
             </div>
-            <div className="text-xs text-slate-500">Administrator</div>
+
+            <div className="text-xs capitalize text-slate-500">
+              {membership?.role ?? "Administrator"}
+            </div>
           </div>
 
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-700">
-            SA
+            {initials}
           </div>
         </button>
       </div>
