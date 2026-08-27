@@ -5,11 +5,36 @@ export interface Student {
   name: string;
   studentId: string;
   className: string;
+  academicYearId: string | null;
+  dateOfBirth: string | null;
+  age: number | null;
   gender: "Male" | "Female";
+  nationality: string;
+  photoUrl: string | null;
   parent: string;
   parentPhone: string;
   status: "Active" | "Inactive";
   enrolledDate: string;
+}
+
+function calculateAge(dateOfBirth: string | null) {
+  if (!dateOfBirth) return null;
+
+  const birthDate = new Date(dateOfBirth);
+  const today = new Date();
+
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDifference = today.getMonth() - birthDate.getMonth();
+
+  if (
+    monthDifference < 0 ||
+    (monthDifference === 0 &&
+      today.getDate() < birthDate.getDate())
+  ) {
+    age -= 1;
+  }
+
+  return age >= 0 ? age : null;
 }
 
 export async function getStudents(schoolId: string): Promise<{
@@ -24,12 +49,18 @@ export async function getStudents(schoolId: string): Promise<{
       first_name,
       middle_name,
       last_name,
+      date_of_birth,
       gender,
+      nationality,
+      photo_url,
       status,
       enrolled_date,
 
       enrollments (
+        academic_year_id,
         class_id,
+        enrolled_at,
+        status,
         classes (
           id,
           name
@@ -79,24 +110,23 @@ export async function getStudents(schoolId: string): Promise<{
 
     return {
       id: student.id,
-
       name: `${student.first_name} ${student.last_name}`,
-
       studentId: student.student_id,
-
       className: classData?.name ?? "Unassigned",
-
+      academicYearId: enrollment?.academic_year_id ?? null,
+      dateOfBirth: student.date_of_birth ?? null,
+      age: calculateAge(student.date_of_birth ?? null),
       gender: student.gender ?? "Male",
-
+      nationality: student.nationality ?? "",
+      photoUrl: student.photo_url ?? null,
       parent: parent
         ? `${parent.first_name} ${parent.last_name}`
         : "No parent assigned",
-
       parentPhone: parent?.phone ?? "—",
-
       status: student.status,
-
-      enrolledDate: student.enrolled_date,
+      enrolledDate:
+        enrollment?.enrolled_at ??
+        student.enrolled_date,
     };
   });
 

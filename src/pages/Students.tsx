@@ -8,12 +8,14 @@ import {
   ChevronLeft,
   ChevronRight,
   UserRound,
+  ImagePlus,
   X,
 } from "lucide-react";
 
 import { useSchool } from "../context/SchoolContext";
 import { getStudents } from "../lib/students";
 import { getClasses, type SchoolClass } from "../lib/classes";
+import { supabase } from "../lib/supabase";
 
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
@@ -23,12 +25,25 @@ import PageHeader from "../components/ui/PageHeader";
 
 type StudentStatus = "Active" | "Inactive";
 
+interface AcademicYear {
+  id: string;
+  name: string;
+  start_date: string | null;
+  end_date: string | null;
+  is_active: boolean;
+}
+
 interface Student {
   id: string;
   name: string;
   studentId: string;
   className: string;
+  academicYearId: string | null;
+  dateOfBirth: string | null;
+  age: number | null;
   gender: "Male" | "Female";
+  nationality: string;
+  photoUrl: string | null;
   parent: string;
   parentPhone: string;
   status: StudentStatus;
@@ -45,6 +60,9 @@ export default function Students() {
   const [schoolClasses, setSchoolClasses] = useState<SchoolClass[]>(
     [],
   );
+
+  const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
+  const [selectedAcademicYearId, setSelectedAcademicYearId] = useState("");
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -81,9 +99,18 @@ export default function Students() {
         data: classesData,
         error: classesError,
       },
+      {
+        data: academicYearsData,
+        error: academicYearsError,
+      },
     ] = await Promise.all([
       getStudents(school.id),
       getClasses(school.id),
+      supabase
+        .from("academic_years")
+        .select("id, name, start_date, end_date, is_active")
+        .eq("school_id", school.id)
+        .order("name", { ascending: false }),
     ]);
 
     if (studentsError) {
@@ -110,6 +137,39 @@ export default function Students() {
       setSchoolClasses(classesData);
     }
 
+    if (academicYearsError) {
+      console.error(
+        "Failed to load academic years:",
+        academicYearsError,
+      );
+
+      setError(academicYearsError.message);
+      setAcademicYears([]);
+    } else {
+      setAcademicYears(academicYearsData ?? []);
+
+      setSelectedAcademicYearId((current) => {
+        if (
+          current &&
+          (academicYearsData ?? []).some(
+            (year) => year.id === current,
+          )
+        ) {
+          return current;
+        }
+
+        const activeYear = (academicYearsData ?? []).find(
+          (year) => year.is_active,
+        );
+
+        return (
+          activeYear?.id ??
+          academicYearsData?.[0]?.id ??
+          ""
+        );
+      });
+    }
+
     setLoading(false);
   }
 
@@ -117,18 +177,33 @@ export default function Students() {
     loadData();
   }, [school]);
 
+  const classesForSelectedYear = useMemo(
+    () =>
+      schoolClasses.filter(
+        (item) =>
+          (!selectedAcademicYearId ||
+            item.academic_year_id === selectedAcademicYearId) &&
+          item.is_active,
+      ),
+    [schoolClasses, selectedAcademicYearId],
+  );
+
   const classes = useMemo(
     () => [
       "All classes",
-      ...schoolClasses.map((item) => item.name),
+      ...classesForSelectedYear.map((item) => item.name),
     ],
-    [schoolClasses],
+    [classesForSelectedYear],
   );
 
   const filteredStudents = useMemo(() => {
     const query = search.toLowerCase().trim();
 
     return students.filter((student) => {
+      const matchesAcademicYear =
+        !selectedAcademicYearId ||
+        student.academicYearId === selectedAcademicYearId;
+
       const matchesSearch =
         !query ||
         student.name.toLowerCase().includes(query) ||
@@ -148,6 +223,7 @@ export default function Students() {
         student.status === statusFilter;
 
       return (
+        matchesAcademicYear &&
         matchesSearch &&
         matchesClass &&
         matchesStatus
@@ -158,6 +234,7 @@ export default function Students() {
     search,
     classFilter,
     statusFilter,
+    selectedAcademicYearId,
   ]);
 
   const activeStudents = students.filter(
@@ -179,6 +256,66 @@ export default function Students() {
           </Button>
         }
       />
+
+      {academicYears.length > 0 && (
+        <Card className="mb-5">
+          <div className="p-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Current academic year
+                  </p>
+
+                  {academicYears.find(
+                    (year) => year.id === selectedAcademicYearId,
+                  )?.is_active && (
+                    <span className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700">
+                      Active
+                    </span>
+                  )}
+                </div>
+
+                <h2 className="mt-1 text-lg font-semibold text-slate-900">
+                  {academicYears.find(
+                    (year) => year.id === selectedAcademicYearId,
+                  )?.name ?? "No academic year selected"}
+                </h2>
+
+                <p className="mt-1 text-xs text-slate-500">
+                  Manage students enrolled during this academic year.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <select
+                  value={selectedAcademicYearId}
+                  onChange={(event) => {
+                    setSelectedAcademicYearId(event.target.value);
+                    setClassFilter("All classes");
+                  }}
+                  className="h-10 min-w-[220px] rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                >
+                  {academicYears.map((year) => (
+                    <option key={year.id} value={year.id}>
+                      {year.name}
+                      {year.is_active ? " • Active" : ""}
+                    </option>
+                  ))}
+                </select>
+
+                <button
+                  type="button"
+                  onClick={() => navigate("/academic-years")}
+                  className="h-10 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                >
+                  Manage academic years
+                </button>
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
 
       <Card className="overflow-hidden">
         {/* Toolbar */}
@@ -319,9 +456,15 @@ export default function Students() {
                             }
                             className="flex items-center gap-3 text-left"
                           >
-                            <Avatar
-                              name={student.name}
-                            />
+                            {student.photoUrl ? (
+                              <img
+                                src={student.photoUrl}
+                                alt={student.name}
+                                className="h-10 w-10 rounded-full object-cover"
+                              />
+                            ) : (
+                              <Avatar name={student.name} />
+                            )}
 
                             <div>
                               <div className="text-sm font-medium text-slate-900 group-hover:text-indigo-700">
@@ -444,7 +587,7 @@ export default function Students() {
 
       {showAddModal && (
         <AddStudentModal
-          classes={schoolClasses}
+          classes={classesForSelectedYear}
           schoolId={school?.id ?? ""}
           onClose={() =>
             setShowAddModal(false)
@@ -485,6 +628,18 @@ function AddStudentModal({
     useState("");
 
   const [lastName, setLastName] =
+    useState("");
+
+  const [dateOfBirth, setDateOfBirth] =
+    useState("");
+
+  const [nationality, setNationality] =
+    useState("Rwandan");
+
+  const [photoFile, setPhotoFile] =
+    useState<File | null>(null);
+
+  const [photoPreview, setPhotoPreview] =
     useState("");
 
   const [classId, setClassId] =
@@ -542,9 +697,43 @@ function AddStudentModal({
     setSaving(true);
     setError("");
 
-    const { supabase } = await import(
-      "../lib/supabase"
-    );
+    let uploadedPhotoUrl = "";
+
+    if (photoFile) {
+      const extension =
+        photoFile.name.split(".").pop()?.toLowerCase() || "jpg";
+
+      const filePath = `${schoolId}/${crypto.randomUUID()}.${extension}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("student-photos")
+        .upload(filePath, photoFile, {
+          cacheControl: "3600",
+          upsert: false,
+          contentType: photoFile.type,
+        });
+
+      if (uploadError) {
+        console.error(
+          "Failed to upload student photo:",
+          uploadError,
+        );
+
+        setError(
+          `Photo upload failed: ${uploadError.message}`,
+        );
+        setSaving(false);
+        return;
+      }
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage
+        .from("student-photos")
+        .getPublicUrl(filePath);
+
+      uploadedPhotoUrl = publicUrl;
+    }
 
     const { data, error: createError } =
       await supabase.rpc("create_student", {
@@ -553,6 +742,9 @@ function AddStudentModal({
         p_last_name: lastName.trim(),
         p_gender: gender,
         p_class_id: classId,
+        p_date_of_birth: dateOfBirth || null,
+        p_nationality: nationality.trim() || null,
+        p_photo_url: uploadedPhotoUrl || null,
         p_parent_name: parent.trim(),
         p_parent_phone:
           parentPhone.trim() || "",
@@ -638,6 +830,20 @@ function AddStudentModal({
                   required
                 />
 
+                <Field
+                  label="Date of birth"
+                  value={dateOfBirth}
+                  onChange={setDateOfBirth}
+                  type="date"
+                />
+
+                <Field
+                  label="Nationality"
+                  value={nationality}
+                  onChange={setNationality}
+                  placeholder="e.g. Rwandan"
+                />
+
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-slate-700">
                     Gender
@@ -693,6 +899,65 @@ function AddStudentModal({
                       </option>
                     ))}
                   </select>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="mb-1.5 block text-xs font-medium text-slate-700">
+                    Profile picture
+                  </label>
+
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full border border-dashed border-slate-300 bg-slate-50">
+                      {photoPreview ? (
+                        <img
+                          src={photoPreview}
+                          alt="Student preview"
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <UserRound
+                          size={28}
+                          className="text-slate-300"
+                        />
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                        <ImagePlus size={16} />
+                        {photoFile ? "Change photo" : "Upload photo"}
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          className="hidden"
+                          onChange={(event) => {
+                            const file =
+                              event.target.files?.[0] ?? null;
+
+                            if (!file) return;
+
+                            if (file.size > 5 * 1024 * 1024) {
+                              setError(
+                                "Photo must be 5 MB or smaller.",
+                              );
+                              return;
+                            }
+
+                            setError("");
+                            setPhotoFile(file);
+
+                            const previewUrl =
+                              URL.createObjectURL(file);
+                            setPhotoPreview(previewUrl);
+                          }}
+                        />
+                      </label>
+
+                      <p className="mt-1.5 text-[11px] text-slate-400">
+                        JPG, PNG or WebP • Maximum 5 MB
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -753,6 +1018,7 @@ interface FieldProps {
   onChange: (value: string) => void;
   placeholder?: string;
   required?: boolean;
+  type?: string;
 }
 
 function Field({
@@ -761,6 +1027,7 @@ function Field({
   onChange,
   placeholder,
   required,
+  type = "text",
 }: FieldProps) {
   return (
     <div>
@@ -769,6 +1036,7 @@ function Field({
       </label>
 
       <input
+        type={type}
         value={value}
         onChange={(event) =>
           onChange(event.target.value)
@@ -795,10 +1063,18 @@ function StudentDetails({
       <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl">
         <div className="flex items-start justify-between border-b border-slate-200 p-6">
           <div className="flex items-center gap-3">
-            <Avatar
-              name={student.name}
-              size="lg"
-            />
+            {student.photoUrl ? (
+              <img
+                src={student.photoUrl}
+                alt={student.name}
+                className="h-12 w-12 rounded-full object-cover"
+              />
+            ) : (
+              <Avatar
+                name={student.name}
+                size="lg"
+              />
+            )}
 
             <div>
               <h2 className="font-semibold text-slate-900">
@@ -829,6 +1105,29 @@ function StudentDetails({
           <InfoItem
             label="Gender"
             value={student.gender}
+          />
+
+          <InfoItem
+            label="Date of birth"
+            value={
+              student.dateOfBirth
+                ? formatDate(student.dateOfBirth)
+                : "—"
+            }
+          />
+
+          <InfoItem
+            label="Age"
+            value={
+              student.age === null
+                ? "—"
+                : `${student.age} ${student.age === 1 ? "year" : "years"}`
+            }
+          />
+
+          <InfoItem
+            label="Nationality"
+            value={student.nationality || "—"}
           />
 
           <InfoItem
@@ -863,6 +1162,14 @@ function StudentDetails({
       </div>
     </div>
   );
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(value));
 }
 
 function InfoItem({

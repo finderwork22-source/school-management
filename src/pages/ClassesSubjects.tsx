@@ -1,8 +1,5 @@
-import {
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
 import {
   BookOpen,
   Check,
@@ -24,8 +21,16 @@ interface SchoolClass {
   id: string;
   name: string;
   section: string | null;
-  academic_year: string | null;
+  academic_year_id: string | null;
   capacity: number | null;
+  is_active: boolean;
+}
+
+interface AcademicYear {
+  id: string;
+  name: string;
+  start_date: string | null;
+  end_date: string | null;
   is_active: boolean;
 }
 
@@ -47,51 +52,51 @@ type Tab = "classes" | "subjects";
 
 export default function ClassesSubjects() {
   const { school } = useSchool();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const academicYearFromUrl = searchParams.get("academicYear");
 
-  const [activeTab, setActiveTab] =
-    useState<Tab>("classes");
+  const [activeTab, setActiveTab] = useState<Tab>("classes");
 
-  const [classes, setClasses] =
-    useState<SchoolClass[]>([]);
+  const [classes, setClasses] = useState<SchoolClass[]>([]);
 
-  const [subjects, setSubjects] =
-    useState<Subject[]>([]);
+  const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
 
-  const [classSubjects, setClassSubjects] =
-    useState<ClassSubject[]>([]);
+  const [selectedAcademicYearId, setSelectedAcademicYearId] = useState("");
 
-  const [loading, setLoading] =
-    useState(true);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
 
-  const [error, setError] =
-    useState("");
+  const [classSubjects, setClassSubjects] = useState<ClassSubject[]>([]);
 
-  const [search, setSearch] =
-    useState("");
+  const [loading, setLoading] = useState(true);
 
-  const [showClassModal, setShowClassModal] =
-    useState(false);
+  const [, setError] = useState("");
 
-  const [showSubjectModal, setShowSubjectModal] =
-    useState(false);
+  const [search, setSearch] = useState("");
 
-  const [editingClass, setEditingClass] =
-    useState<SchoolClass | null>(null);
+  const [showClassModal, setShowClassModal] = useState(false);
 
-  const [editingSubject, setEditingSubject] =
-    useState<Subject | null>(null);
+  const [showSubjectModal, setShowSubjectModal] = useState(false);
 
-  const [selectedClass, setSelectedClass] =
-    useState<SchoolClass | null>(null);
+  const [editingClass, setEditingClass] = useState<SchoolClass | null>(null);
 
-  const [showSubjectsModal, setShowSubjectsModal] =
-    useState(false);
+  const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
+
+  const [selectedClass, setSelectedClass] = useState<SchoolClass | null>(null);
+
+  const [showSubjectsModal, setShowSubjectsModal] = useState(false);
+
+  const [classStatusFilter, setClassStatusFilter] = useState<
+    "active" | "inactive" | "all"
+  >("active");
 
   async function loadData() {
     if (!school) {
       setClasses([]);
+      setAcademicYears([]);
       setSubjects([]);
       setClassSubjects([]);
+      setSelectedAcademicYearId("");
       setLoading(false);
       return;
     }
@@ -100,121 +105,166 @@ export default function ClassesSubjects() {
     setError("");
 
     const [
+      academicYearsResult,
       classesResult,
       subjectsResult,
       classSubjectsResult,
     ] = await Promise.all([
       supabase
-        .from("classes")
-        .select(`
+        .from("academic_years")
+        .select(
+          `
           id,
           name,
-          grade,
+          start_date,
+          end_date,
+          is_active
+        `,
+        )
+        .eq("school_id", school.id)
+        .order("name", { ascending: false }),
+
+      supabase
+        .from("classes")
+        .select(
+          `
+          id,
+          name,
           section,
-          academic_year,
+          academic_year_id,
           capacity,
           is_active
-        `)
+        `,
+        )
         .eq("school_id", school.id)
         .order("name"),
 
       supabase
         .from("subjects")
-        .select(`
+        .select(
+          `
           id,
           name,
           code,
           description,
           is_active
-        `)
+        `,
+        )
         .eq("school_id", school.id)
         .order("name"),
 
       supabase
         .from("class_subjects")
-        .select(`
+        .select(
+          `
           id,
           class_id,
           subject_id
-        `)
+        `,
+        )
         .eq("school_id", school.id),
     ]);
 
+    if (academicYearsResult.error) {
+      setError(academicYearsResult.error.message);
+      setLoading(false);
+      return;
+    }
+
     if (classesResult.error) {
-      setError(
-        classesResult.error.message,
-      );
+      setError(classesResult.error.message);
       setLoading(false);
       return;
     }
 
     if (subjectsResult.error) {
-      setError(
-        subjectsResult.error.message,
-      );
+      setError(subjectsResult.error.message);
       setLoading(false);
       return;
     }
 
     if (classSubjectsResult.error) {
-      setError(
-        classSubjectsResult.error.message,
-      );
+      setError(classSubjectsResult.error.message);
       setLoading(false);
       return;
     }
 
-    setClasses(
-      classesResult.data ?? [],
-    );
+    const loadedAcademicYears = academicYearsResult.data ?? [];
 
-    setSubjects(
-      subjectsResult.data ?? [],
-    );
+    setAcademicYears(loadedAcademicYears);
+    setClasses(classesResult.data ?? []);
+    setSubjects(subjectsResult.data ?? []);
+    setClassSubjects(classSubjectsResult.data ?? []);
 
-    setClassSubjects(
-      classSubjectsResult.data ?? [],
-    );
+    setSelectedAcademicYearId((current) => {
+      if (
+        academicYearFromUrl &&
+        loadedAcademicYears.some((year) => year.id === academicYearFromUrl)
+      ) {
+        return academicYearFromUrl;
+      }
+
+      if (current && loadedAcademicYears.some((year) => year.id === current)) {
+        return current;
+      }
+
+      const activeYear = loadedAcademicYears.find((year) => year.is_active);
+
+      return activeYear?.id ?? loadedAcademicYears[0]?.id ?? "";
+    });
 
     setLoading(false);
   }
 
   useEffect(() => {
     loadData();
-  }, [school]);
+  }, [school, academicYearFromUrl]);
 
   const filteredClasses = useMemo(() => {
-    const query = search
-      .toLowerCase()
-      .trim();
+    const query = search.toLowerCase().trim();
 
-    if (!query) return classes;
+    let yearClasses = selectedAcademicYearId
+      ? classes.filter(
+          (item) => item.academic_year_id === selectedAcademicYearId,
+        )
+      : classes;
 
-    return classes.filter((item) =>
+    if (classStatusFilter === "active") {
+      yearClasses = yearClasses.filter((item) => item.is_active);
+    }
+
+    if (classStatusFilter === "inactive") {
+      yearClasses = yearClasses.filter((item) => !item.is_active);
+    }
+
+    if (!query) return yearClasses;
+
+    return yearClasses.filter((item) =>
       [
         item.name,
         item.section ?? "",
-        item.academic_year ?? "",
+        academicYears.find((year) => year.id === item.academic_year_id)?.name ??
+          "",
       ]
         .join(" ")
         .toLowerCase()
         .includes(query),
     );
-  }, [classes, search]);
+  }, [
+    classes,
+    search,
+    selectedAcademicYearId,
+    academicYears,
+    classStatusFilter,
+  ]);
 
   const filteredSubjects = useMemo(() => {
-    const query = search
-      .toLowerCase()
-      .trim();
+    const query = search.toLowerCase().trim();
 
     if (!query) return subjects;
 
     return subjects.filter((item) =>
-      [
-        item.name,
-        item.code ?? "",
-        item.description ?? "",
-      ]
+      [item.name, item.code ?? "", item.description ?? ""]
         .join(" ")
         .toLowerCase()
         .includes(query),
@@ -227,9 +277,7 @@ export default function ClassesSubjects() {
     setError("");
   }
 
-  function openEditClass(
-    schoolClass: SchoolClass,
-  ) {
+  function openEditClass(schoolClass: SchoolClass) {
     setEditingClass(schoolClass);
     setShowClassModal(true);
     setError("");
@@ -241,36 +289,28 @@ export default function ClassesSubjects() {
     setError("");
   }
 
-  function openEditSubject(
-    subject: Subject,
-  ) {
+  function openEditSubject(subject: Subject) {
     setEditingSubject(subject);
     setShowSubjectModal(true);
     setError("");
   }
 
-  function openClassSubjects(
-    schoolClass: SchoolClass,
-  ) {
+  function openClassSubjects(schoolClass: SchoolClass) {
     setSelectedClass(schoolClass);
     setShowSubjectsModal(true);
     setError("");
   }
 
-  async function toggleClassStatus(
-    schoolClass: SchoolClass,
-  ) {
+  async function toggleClassStatus(schoolClass: SchoolClass) {
     setError("");
 
-    const { error: updateError } =
-      await supabase
-        .from("classes")
-        .update({
-          is_active:
-            !schoolClass.is_active,
-        })
-        .eq("id", schoolClass.id)
-        .eq("school_id", school?.id);
+    const { error: updateError } = await supabase
+      .from("classes")
+      .update({
+        is_active: !schoolClass.is_active,
+      })
+      .eq("id", schoolClass.id)
+      .eq("school_id", school?.id);
 
     if (updateError) {
       setError(updateError.message);
@@ -282,28 +322,23 @@ export default function ClassesSubjects() {
         item.id === schoolClass.id
           ? {
               ...item,
-              is_active:
-                !item.is_active,
+              is_active: !item.is_active,
             }
           : item,
       ),
     );
   }
 
-  async function toggleSubjectStatus(
-    subject: Subject,
-  ) {
+  async function toggleSubjectStatus(subject: Subject) {
     setError("");
 
-    const { error: updateError } =
-      await supabase
-        .from("subjects")
-        .update({
-          is_active:
-            !subject.is_active,
-        })
-        .eq("id", subject.id)
-        .eq("school_id", school?.id);
+    const { error: updateError } = await supabase
+      .from("subjects")
+      .update({
+        is_active: !subject.is_active,
+      })
+      .eq("id", subject.id)
+      .eq("school_id", school?.id);
 
     if (updateError) {
       setError(updateError.message);
@@ -315,146 +350,248 @@ export default function ClassesSubjects() {
         item.id === subject.id
           ? {
               ...item,
-              is_active:
-                !item.is_active,
+              is_active: !item.is_active,
             }
           : item,
       ),
     );
   }
 
-  function getSubjectCount(
-    classId: string,
-  ) {
-    return classSubjects.filter(
-      (item) =>
-        item.class_id === classId,
-    ).length;
+  function getSubjectCount(classId: string) {
+    return classSubjects.filter((item) => item.class_id === classId).length;
   }
 
   return (
     <div className="mx-auto max-w-[1400px]">
       {/* Header */}
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <BookOpen
-              size={20}
-              className="text-indigo-600"
-            />
+      <div className="mb-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <BookOpen size={20} className="text-indigo-600" />
+              <h1 className="text-xl font-semibold text-slate-900">
+                Classes & Subjects
+              </h1>
+            </div>
 
-            <h1 className="text-xl font-semibold text-slate-900">
-              Classes & Subjects
-            </h1>
+            <p className="mt-1 text-sm text-slate-500">
+              Manage classes and subjects for the selected academic year.
+            </p>
           </div>
-
-          <p className="mt-1 text-sm text-slate-500">
-            Manage your school's classes, subjects,
-            and curriculum structure.
-          </p>
         </div>
-
-        {activeTab === "classes" ? (
-          <Button onClick={openCreateClass}>
-            <Plus size={16} />
-            Add class
-          </Button>
-        ) : (
-          <Button onClick={openCreateSubject}>
-            <Plus size={16} />
-            Add subject
-          </Button>
-        )}
       </div>
 
-      {/* Error */}
-      {error && (
-        <div className="mb-5 flex items-center justify-between rounded-xl border border-red-100 bg-red-50 px-4 py-3">
-          <p className="text-sm text-red-600">
-            {error}
-          </p>
+      {/* Current academic year */}
+      {academicYears.length > 0 && (
+        <Card className="mb-6">
+          <div className="p-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Current academic year
+                  </p>
 
-          <button
-            type="button"
-            onClick={() => setError("")}
-            className="text-red-400 hover:text-red-600"
-          >
-            <X size={16} />
-          </button>
+                  {academicYears.find(
+                    (year) => year.id === selectedAcademicYearId,
+                  )?.is_active && (
+                    <span className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700">
+                      Active
+                    </span>
+                  )}
+                </div>
+
+                <h2 className="mt-1 text-lg font-semibold text-slate-900">
+                  {academicYears.find(
+                    (year) => year.id === selectedAcademicYearId,
+                  )?.name ?? "No academic year selected"}
+                </h2>
+
+                {(() => {
+                  const selectedYear = academicYears.find(
+                    (year) => year.id === selectedAcademicYearId,
+                  );
+
+                  return (
+                    <p className="mt-1 text-sm text-slate-500">
+                      {selectedYear?.start_date
+                        ? new Intl.DateTimeFormat("en-GB", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          }).format(new Date(selectedYear.start_date))
+                        : "Start date not set"}
+                      <span className="mx-2 text-slate-300">•</span>
+                      {selectedYear?.end_date
+                        ? new Intl.DateTimeFormat("en-GB", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          }).format(new Date(selectedYear.end_date))
+                        : "End date not set"}
+                    </p>
+                  );
+                })()}
+
+                <p className="mt-2 text-xs text-slate-400">
+                  Classes and subject assignments are managed separately for
+                  each academic year.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <select
+                  value={selectedAcademicYearId}
+                  onChange={(event) =>
+                    setSelectedAcademicYearId(event.target.value)
+                  }
+                  className="h-10 min-w-[220px] rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                >
+                  {academicYears.map((year) => (
+                    <option key={year.id} value={year.id}>
+                      {year.name}
+                      {year.is_active ? " • Active" : ""}
+                    </option>
+                  ))}
+                </select>
+
+                <button
+                  type="button"
+                  onClick={() => navigate("/academic-years")}
+                  className="h-10 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                >
+                  Manage academic years
+                </button>
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {academicYears.length === 0 && (
+        <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-amber-900">
+                Set up an academic year first
+              </p>
+              <p className="mt-1 text-sm text-amber-700">
+                Create an academic year before adding classes or assigning
+                curriculum.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => navigate("/academic-years")}
+              className="inline-flex h-9 items-center justify-center rounded-lg bg-amber-600 px-3 text-sm font-medium text-white hover:bg-amber-700"
+            >
+              Create academic year
+            </button>
+          </div>
         </div>
       )}
 
       {/* Tabs + Search */}
       <Card className="mb-5">
-        <div className="flex flex-col gap-4 border-b border-slate-200 px-5 pt-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex gap-6">
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab("classes");
-                setSearch("");
-              }}
-              className={[
-                "relative pb-3 text-sm font-medium",
-                activeTab === "classes"
-                  ? "text-indigo-600"
-                  : "text-slate-500 hover:text-slate-800",
-              ].join(" ")}
-            >
-              Classes
-              <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[11px]">
-                {classes.length}
-              </span>
+        {/* Top toolbar */}
+        <div className="flex flex-col border-b border-slate-200">
+          <div className="flex items-center justify-between px-5 pt-4">
+            {/* Tabs */}
+            <div className="flex gap-6">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab("classes");
+                  setSearch("");
+                }}
+                className={[
+                  "relative pb-3 text-sm font-medium",
+                  activeTab === "classes"
+                    ? "text-indigo-600"
+                    : "text-slate-500 hover:text-slate-800",
+                ].join(" ")}
+              >
+                Classes
+                <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[11px]">
+                  {filteredClasses.length}
+                </span>
+                {activeTab === "classes" && (
+                  <span className="absolute inset-x-0 bottom-0 h-0.5 bg-indigo-600" />
+                )}
+              </button>
 
-              {activeTab === "classes" && (
-                <span className="absolute inset-x-0 bottom-0 h-0.5 bg-indigo-600" />
-              )}
-            </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab("subjects");
+                  setSearch("");
+                }}
+                className={[
+                  "relative pb-3 text-sm font-medium",
+                  activeTab === "subjects"
+                    ? "text-indigo-600"
+                    : "text-slate-500 hover:text-slate-800",
+                ].join(" ")}
+              >
+                Subjects
+                <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[11px]">
+                  {subjects.length}
+                </span>
+                {activeTab === "subjects" && (
+                  <span className="absolute inset-x-0 bottom-0 h-0.5 bg-indigo-600" />
+                )}
+              </button>
+            </div>
 
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab("subjects");
-                setSearch("");
-              }}
-              className={[
-                "relative pb-3 text-sm font-medium",
-                activeTab === "subjects"
-                  ? "text-indigo-600"
-                  : "text-slate-500 hover:text-slate-800",
-              ].join(" ")}
-            >
-              Subjects
-              <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[11px]">
-                {subjects.length}
-              </span>
-
-              {activeTab === "subjects" && (
-                <span className="absolute inset-x-0 bottom-0 h-0.5 bg-indigo-600" />
-              )}
-            </button>
+            {/* Add action */}
+            {academicYears.length > 0 && (
+              <Button
+                onClick={
+                  activeTab === "classes" ? openCreateClass : openCreateSubject
+                }
+              >
+                <Plus size={16} />
+                {activeTab === "classes" ? "Add class" : "Add subject"}
+              </Button>
+            )}
           </div>
 
-          <div className="relative mb-3 sm:mb-2 sm:w-72">
-            <Search
-              size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-            />
+          {/* Search + filter */}
+          <div className="flex flex-col gap-2 px-5 py-3 sm:flex-row sm:items-center">
+            <div className="relative sm:w-72">
+              <Search
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              />
 
-            <input
-              value={search}
-              onChange={(event) =>
-                setSearch(
-                  event.target.value,
-                )
-              }
-              placeholder={
-                activeTab === "classes"
-                  ? "Search classes..."
-                  : "Search subjects..."
-              }
-              className="h-9 w-full rounded-lg border border-slate-200 pl-9 pr-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-            />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder={
+                  activeTab === "classes"
+                    ? "Search classes..."
+                    : "Search subjects..."
+                }
+                className="h-9 w-full rounded-lg border border-slate-200 pl-9 pr-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+              />
+            </div>
+
+            {activeTab === "classes" && (
+              <select
+                value={classStatusFilter}
+                onChange={(event) =>
+                  setClassStatusFilter(
+                    event.target.value as "active" | "inactive" | "all",
+                  )
+                }
+                className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+              >
+                <option value="active">Active classes</option>
+                <option value="inactive">Inactive classes</option>
+                <option value="all">All classes</option>
+              </select>
+            )}
           </div>
         </div>
 
@@ -467,6 +604,7 @@ export default function ClassesSubjects() {
           <ClassesTable
             classes={filteredClasses}
             getSubjectCount={getSubjectCount}
+            academicYears={academicYears}
             onEdit={openEditClass}
             onToggle={toggleClassStatus}
             onSubjects={openClassSubjects}
@@ -486,10 +624,10 @@ export default function ClassesSubjects() {
       {showClassModal && (
         <ClassModal
           schoolId={school?.id ?? ""}
+          academicYears={academicYears}
+          selectedAcademicYearId={selectedAcademicYearId}
           editingClass={editingClass}
-          onClose={() =>
-            setShowClassModal(false)
-          }
+          onClose={() => setShowClassModal(false)}
           onSaved={() => {
             setShowClassModal(false);
             loadData();
@@ -502,9 +640,7 @@ export default function ClassesSubjects() {
         <SubjectModal
           schoolId={school?.id ?? ""}
           editingSubject={editingSubject}
-          onClose={() =>
-            setShowSubjectModal(false)
-          }
+          onClose={() => setShowSubjectModal(false)}
           onSaved={() => {
             setShowSubjectModal(false);
             loadData();
@@ -513,24 +649,23 @@ export default function ClassesSubjects() {
       )}
 
       {/* Assign subjects modal */}
-      {showSubjectsModal &&
-        selectedClass && (
-          <ClassSubjectsModal
-            schoolId={school?.id ?? ""}
-            schoolClass={selectedClass}
-            subjects={subjects}
-            classSubjects={classSubjects}
-            onClose={() => {
-              setShowSubjectsModal(false);
-              setSelectedClass(null);
-            }}
-            onSaved={() => {
-              setShowSubjectsModal(false);
-              setSelectedClass(null);
-              loadData();
-            }}
-          />
-        )}
+      {showSubjectsModal && selectedClass && (
+        <ClassSubjectsModal
+          schoolId={school?.id ?? ""}
+          schoolClass={selectedClass}
+          subjects={subjects}
+          classSubjects={classSubjects}
+          onClose={() => {
+            setShowSubjectsModal(false);
+            setSelectedClass(null);
+          }}
+          onSaved={() => {
+            setShowSubjectsModal(false);
+            setSelectedClass(null);
+            loadData();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -542,24 +677,18 @@ export default function ClassesSubjects() {
 function ClassesTable({
   classes,
   getSubjectCount,
+  academicYears,
   onEdit,
   onToggle,
   onSubjects,
   onCreate,
 }: {
   classes: SchoolClass[];
-  getSubjectCount: (
-    classId: string,
-  ) => number;
-  onEdit: (
-    schoolClass: SchoolClass,
-  ) => void;
-  onToggle: (
-    schoolClass: SchoolClass,
-  ) => void;
-  onSubjects: (
-    schoolClass: SchoolClass,
-  ) => void;
+  getSubjectCount: (classId: string) => number;
+  academicYears: AcademicYear[];
+  onEdit: (schoolClass: SchoolClass) => void;
+  onToggle: (schoolClass: SchoolClass) => void;
+  onSubjects: (schoolClass: SchoolClass) => void;
   onCreate: () => void;
 }) {
   if (classes.length === 0) {
@@ -567,7 +696,7 @@ function ClassesTable({
       <EmptyState
         icon={Users}
         title="No classes yet"
-        description="Create your first class to start organizing students and subjects."
+        description="Create a class for this academic year to start organizing your students and curriculum."
         action="Add class"
         onAction={onCreate}
       />
@@ -607,10 +736,7 @@ function ClassesTable({
 
         <tbody className="divide-y divide-slate-100">
           {classes.map((schoolClass) => (
-            <tr
-              key={schoolClass.id}
-              className="hover:bg-slate-50"
-            >
+            <tr key={schoolClass.id} className="hover:bg-slate-50">
               <td className="px-5 py-4">
                 <div className="text-sm font-medium text-slate-900">
                   {schoolClass.name}
@@ -624,8 +750,9 @@ function ClassesTable({
               </td>
 
               <td className="px-5 py-4 text-sm text-slate-600">
-                {schoolClass.academic_year ||
-                  "—"}
+                {academicYears.find(
+                  (year) => year.id === schoolClass.academic_year_id,
+                )?.name || "—"}
               </td>
 
               <td className="px-5 py-4 text-sm text-slate-600">
@@ -635,15 +762,10 @@ function ClassesTable({
               <td className="px-5 py-4">
                 <button
                   type="button"
-                  onClick={() =>
-                    onSubjects(schoolClass)
-                  }
+                  onClick={() => onSubjects(schoolClass)}
                   className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50"
                 >
-                  {getSubjectCount(
-                    schoolClass.id,
-                  )}{" "}
-                  assigned
+                  {getSubjectCount(schoolClass.id)} assigned
                   <ChevronRight size={13} />
                 </button>
               </td>
@@ -651,9 +773,7 @@ function ClassesTable({
               <td className="px-5 py-4">
                 <button
                   type="button"
-                  onClick={() =>
-                    onToggle(schoolClass)
-                  }
+                  onClick={() => onToggle(schoolClass)}
                   className={[
                     "rounded-full px-2.5 py-1 text-[11px] font-medium",
                     schoolClass.is_active
@@ -661,18 +781,14 @@ function ClassesTable({
                       : "bg-slate-100 text-slate-500",
                   ].join(" ")}
                 >
-                  {schoolClass.is_active
-                    ? "Active"
-                    : "Inactive"}
+                  {schoolClass.is_active ? "Active" : "Inactive"}
                 </button>
               </td>
 
               <td className="px-5 py-4 text-right">
                 <button
                   type="button"
-                  onClick={() =>
-                    onEdit(schoolClass)
-                  }
+                  onClick={() => onEdit(schoolClass)}
                   className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
                 >
                   <Edit3 size={15} />
@@ -697,12 +813,8 @@ function SubjectsTable({
   onCreate,
 }: {
   subjects: Subject[];
-  onEdit: (
-    subject: Subject,
-  ) => void;
-  onToggle: (
-    subject: Subject,
-  ) => void;
+  onEdit: (subject: Subject) => void;
+  onToggle: (subject: Subject) => void;
   onCreate: () => void;
 }) {
   if (subjects.length === 0) {
@@ -746,10 +858,7 @@ function SubjectsTable({
 
         <tbody className="divide-y divide-slate-100">
           {subjects.map((subject) => (
-            <tr
-              key={subject.id}
-              className="hover:bg-slate-50"
-            >
+            <tr key={subject.id} className="hover:bg-slate-50">
               <td className="px-5 py-4">
                 <div className="text-sm font-medium text-slate-900">
                   {subject.name}
@@ -762,17 +871,14 @@ function SubjectsTable({
 
               <td className="max-w-md px-5 py-4 text-sm text-slate-500">
                 <div className="truncate">
-                  {subject.description ||
-                    "No description"}
+                  {subject.description || "No description"}
                 </div>
               </td>
 
               <td className="px-5 py-4">
                 <button
                   type="button"
-                  onClick={() =>
-                    onToggle(subject)
-                  }
+                  onClick={() => onToggle(subject)}
                   className={[
                     "rounded-full px-2.5 py-1 text-[11px] font-medium",
                     subject.is_active
@@ -780,18 +886,14 @@ function SubjectsTable({
                       : "bg-slate-100 text-slate-500",
                   ].join(" ")}
                 >
-                  {subject.is_active
-                    ? "Active"
-                    : "Inactive"}
+                  {subject.is_active ? "Active" : "Inactive"}
                 </button>
               </td>
 
               <td className="px-5 py-4 text-right">
                 <button
                   type="button"
-                  onClick={() =>
-                    onEdit(subject)
-                  }
+                  onClick={() => onEdit(subject)}
                   className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
                 >
                   <Edit3 size={15} />
@@ -811,42 +913,40 @@ function SubjectsTable({
 
 function ClassModal({
   schoolId,
+  academicYears,
+  selectedAcademicYearId,
   editingClass,
   onClose,
   onSaved,
 }: {
   schoolId: string;
+  academicYears: AcademicYear[];
+  selectedAcademicYearId: string;
   editingClass: SchoolClass | null;
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const [name, setName] = useState(
-    editingClass?.name ?? "",
+  const [name, setName] = useState(editingClass?.name ?? "");
+
+  const [section, setSection] = useState(editingClass?.section ?? "");
+
+  const [academicYearId, setAcademicYearId] = useState(
+    editingClass?.academic_year_id ??
+      selectedAcademicYearId ??
+      academicYears.find((year) => year.is_active)?.id ??
+      academicYears[0]?.id ??
+      "",
   );
 
-  const [section, setSection] = useState(
-    editingClass?.section ?? "",
+  const [capacity, setCapacity] = useState(
+    editingClass?.capacity?.toString() ?? "",
   );
 
-  const [academicYear, setAcademicYear] =
-    useState(
-      editingClass?.academic_year ?? "",
-    );
+  const [saving, setSaving] = useState(false);
 
-  const [capacity, setCapacity] =
-    useState(
-      editingClass?.capacity?.toString() ?? "",
-    );
+  const [error, setError] = useState("");
 
-  const [saving, setSaving] =
-    useState(false);
-
-  const [error, setError] =
-    useState("");
-
-  async function handleSubmit(
-    event: React.FormEvent<HTMLFormElement>,
-  ) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!name.trim()) {
@@ -859,10 +959,8 @@ function ClassModal({
       return;
     }
 
-    if (!academicYear.trim()) {
-      setError(
-        "Academic year is required.",
-      );
+    if (!academicYearId) {
+      setError("Academic year is required.");
       return;
     }
 
@@ -871,40 +969,35 @@ function ClassModal({
       return;
     }
 
-    const numericCapacity =
-      Number(capacity);
+    const numericCapacity = Number(capacity);
 
-    if (
-      !Number.isInteger(
-        numericCapacity,
-      ) ||
-      numericCapacity <= 0
-    ) {
-      setError(
-        "Capacity must be a positive number.",
-      );
+    if (!Number.isInteger(numericCapacity) || numericCapacity <= 0) {
+      setError("Capacity must be a positive number.");
       return;
     }
 
     setSaving(true);
     setError("");
 
+    const selectedYear = academicYears.find(
+      (year) => year.id === academicYearId,
+    );
+
     const payload = {
       name: name.trim(),
       section,
-      academic_year:
-        academicYear.trim(),
+      academic_year_id: academicYearId,
+      academic_year: selectedYear?.name ?? null,
       capacity: numericCapacity,
       school_id: schoolId,
     };
 
     if (editingClass) {
-      const { error: updateError } =
-        await supabase
-          .from("classes")
-          .update(payload)
-          .eq("id", editingClass.id)
-          .eq("school_id", schoolId);
+      const { error: updateError } = await supabase
+        .from("classes")
+        .update(payload)
+        .eq("id", editingClass.id)
+        .eq("school_id", schoolId);
 
       if (updateError) {
         setError(updateError.message);
@@ -912,10 +1005,9 @@ function ClassModal({
         return;
       }
     } else {
-      const { error: insertError } =
-        await supabase
-          .from("classes")
-          .insert(payload);
+      const { error: insertError } = await supabase
+        .from("classes")
+        .insert(payload);
 
       if (insertError) {
         setError(insertError.message);
@@ -929,21 +1021,9 @@ function ClassModal({
   }
 
   return (
-    <Modal
-      title={
-        editingClass
-          ? "Edit class"
-          : "Add class"
-      }
-      onClose={onClose}
-    >
-      <form
-        onSubmit={handleSubmit}
-        className="space-y-4"
-      >
-        {error && (
-          <ErrorBox message={error} />
-        )}
+    <Modal title={editingClass ? "Edit class" : "Add class"} onClose={onClose}>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {error && <ErrorBox message={error} />}
 
         {/* Class name */}
         <Input
@@ -959,50 +1039,56 @@ function ClassModal({
           <div>
             <label className="mb-1.5 block text-sm font-medium text-slate-700">
               Section
-              <span className="ml-1 text-red-500">
-                *
-              </span>
+              <span className="ml-1 text-red-500">*</span>
             </label>
 
             <select
               value={section}
-              onChange={(event) =>
-                setSection(
-                  event.target.value,
-                )
-              }
+              onChange={(event) => setSection(event.target.value)}
               required
               className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
             >
-              <option value="">
-                Select section
-              </option>
+              <option value="">Select section</option>
 
-              <option value="Creche">
-                Creche
-              </option>
+              <option value="Creche">Creche</option>
 
-              <option value="Nursery">
-                Nursery
-              </option>
+              <option value="Nursery">Nursery</option>
 
-              <option value="Primary">
-                Primary
-              </option>
+              <option value="Primary">Primary</option>
 
-              <option value="Lower Secondary">
-                Lower Secondary
-              </option>
+              <option value="Lower Secondary">Lower Secondary</option>
             </select>
           </div>
 
-          <Input
-            label="Academic year"
-            value={academicYear}
-            onChange={setAcademicYear}
-            placeholder="e.g. 2026"
-            required
-          />
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">
+              Academic year
+              <span className="ml-1 text-red-500">*</span>
+            </label>
+
+            <select
+              value={academicYearId}
+              onChange={(event) => setAcademicYearId(event.target.value)}
+              required
+              disabled={academicYears.length === 0}
+              className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 disabled:bg-slate-50 disabled:text-slate-400"
+            >
+              <option value="">Select academic year</option>
+
+              {academicYears.map((year) => (
+                <option key={year.id} value={year.id}>
+                  {year.name}
+                  {year.is_active ? " (Active)" : ""}
+                </option>
+              ))}
+            </select>
+
+            {academicYears.length === 0 && (
+              <p className="mt-1.5 text-xs text-amber-600">
+                Create an academic year first.
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Capacity */}
@@ -1019,11 +1105,7 @@ function ClassModal({
         <ModalActions
           onClose={onClose}
           saving={saving}
-          label={
-            editingClass
-              ? "Save changes"
-              : "Create class"
-          }
+          label={editingClass ? "Save changes" : "Create class"}
         />
       </form>
     </Modal>
@@ -1044,32 +1126,23 @@ function SubjectModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const [name, setName] =
-    useState(editingSubject?.name ?? "");
+  const [name, setName] = useState(editingSubject?.name ?? "");
 
-  const [code, setCode] =
-    useState(editingSubject?.code ?? "");
+  const [code, setCode] = useState(editingSubject?.code ?? "");
 
-  const [description, setDescription] =
-    useState(
-      editingSubject?.description ?? "",
-    );
+  const [description, setDescription] = useState(
+    editingSubject?.description ?? "",
+  );
 
-  const [saving, setSaving] =
-    useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const [error, setError] =
-    useState("");
+  const [error, setError] = useState("");
 
-  async function handleSubmit(
-    event: React.FormEvent<HTMLFormElement>,
-  ) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     if (!name.trim()) {
-      setError(
-        "Subject name is required.",
-      );
+      setError("Subject name is required.");
       return;
     }
 
@@ -1079,18 +1152,16 @@ function SubjectModal({
     const payload = {
       name: name.trim(),
       code: code.trim() || null,
-      description:
-        description.trim() || null,
+      description: description.trim() || null,
       school_id: schoolId,
     };
 
     if (editingSubject) {
-      const { error: updateError } =
-        await supabase
-          .from("subjects")
-          .update(payload)
-          .eq("id", editingSubject.id)
-          .eq("school_id", schoolId);
+      const { error: updateError } = await supabase
+        .from("subjects")
+        .update(payload)
+        .eq("id", editingSubject.id)
+        .eq("school_id", schoolId);
 
       if (updateError) {
         setError(updateError.message);
@@ -1098,10 +1169,9 @@ function SubjectModal({
         return;
       }
     } else {
-      const { error: insertError } =
-        await supabase
-          .from("subjects")
-          .insert(payload);
+      const { error: insertError } = await supabase
+        .from("subjects")
+        .insert(payload);
 
       if (insertError) {
         setError(insertError.message);
@@ -1116,20 +1186,11 @@ function SubjectModal({
 
   return (
     <Modal
-      title={
-        editingSubject
-          ? "Edit subject"
-          : "Add subject"
-      }
+      title={editingSubject ? "Edit subject" : "Add subject"}
       onClose={onClose}
     >
-      <form
-        onSubmit={handleSubmit}
-        className="space-y-4"
-      >
-        {error && (
-          <ErrorBox message={error} />
-        )}
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {error && <ErrorBox message={error} />}
 
         <Input
           label="Subject name"
@@ -1153,11 +1214,7 @@ function SubjectModal({
 
           <textarea
             value={description}
-            onChange={(event) =>
-              setDescription(
-                event.target.value,
-              )
-            }
+            onChange={(event) => setDescription(event.target.value)}
             rows={4}
             placeholder="Optional description"
             className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
@@ -1167,11 +1224,7 @@ function SubjectModal({
         <ModalActions
           onClose={onClose}
           saving={saving}
-          label={
-            editingSubject
-              ? "Save changes"
-              : "Create subject"
-          }
+          label={editingSubject ? "Save changes" : "Create subject"}
         />
       </form>
     </Modal>
@@ -1199,52 +1252,66 @@ function ClassSubjectsModal({
 }) {
   const assignedIds = new Set(
     classSubjects
-      .filter(
-        (item) =>
-          item.class_id ===
-          schoolClass.id,
-      )
-      .map(
-        (item) => item.subject_id,
-      ),
+      .filter((item) => item.class_id === schoolClass.id)
+      .map((item) => item.subject_id),
   );
 
-  const [selectedIds, setSelectedIds] =
-    useState<string[]>(
-      Array.from(assignedIds),
+  const [selectedIds, setSelectedIds] = useState<string[]>(
+    Array.from(assignedIds),
+  );
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [subjectSearch, setSubjectSearch] = useState("");
+
+  const activeSubjects = subjects.filter((subject) => subject.is_active);
+  const inactiveSubjects = subjects.filter((subject) => !subject.is_active);
+
+  const normalizedSearch = subjectSearch.toLowerCase().trim();
+
+  const filterSubjects = (items: Subject[]) => {
+    if (!normalizedSearch) return items;
+
+    return items.filter((subject) =>
+      [subject.name, subject.code ?? "", subject.description ?? ""]
+        .join(" ")
+        .toLowerCase()
+        .includes(normalizedSearch),
     );
+  };
 
-  const [saving, setSaving] =
-    useState(false);
+  const filteredActiveSubjects = filterSubjects(activeSubjects);
+  const filteredInactiveSubjects = filterSubjects(inactiveSubjects);
 
-  const [error, setError] =
-    useState("");
-
-  function toggleSubject(
-    subjectId: string,
-  ) {
+  function toggleSubject(subjectId: string) {
     setSelectedIds((current) =>
       current.includes(subjectId)
-        ? current.filter(
-            (id) => id !== subjectId,
-          )
+        ? current.filter((id) => id !== subjectId)
         : [...current, subjectId],
     );
+  }
+
+  function selectAllActive() {
+    setSelectedIds((current) => [
+      ...new Set([
+        ...current,
+        ...activeSubjects.map((subject) => subject.id),
+      ]),
+    ]);
+  }
+
+  function clearAll() {
+    setSelectedIds([]);
   }
 
   async function saveAssignments() {
     setSaving(true);
     setError("");
 
-    const { error: deleteError } =
-      await supabase
-        .from("class_subjects")
-        .delete()
-        .eq(
-          "class_id",
-          schoolClass.id,
-        )
-        .eq("school_id", schoolId);
+    const { error: deleteError } = await supabase
+      .from("class_subjects")
+      .delete()
+      .eq("class_id", schoolClass.id)
+      .eq("school_id", schoolId);
 
     if (deleteError) {
       setError(deleteError.message);
@@ -1253,18 +1320,15 @@ function ClassSubjectsModal({
     }
 
     if (selectedIds.length > 0) {
-      const rows = selectedIds.map(
-        (subjectId) => ({
-          school_id: schoolId,
-          class_id: schoolClass.id,
-          subject_id: subjectId,
-        }),
-      );
+      const rows = selectedIds.map((subjectId) => ({
+        school_id: schoolId,
+        class_id: schoolClass.id,
+        subject_id: subjectId,
+      }));
 
-      const { error: insertError } =
-        await supabase
-          .from("class_subjects")
-          .insert(rows);
+      const { error: insertError } = await supabase
+        .from("class_subjects")
+        .insert(rows);
 
       if (insertError) {
         setError(insertError.message);
@@ -1277,16 +1341,88 @@ function ClassSubjectsModal({
     onSaved();
   }
 
+  function SubjectRow({
+    subject,
+    inactive = false,
+  }: {
+    subject: Subject;
+    inactive?: boolean;
+  }) {
+    const selected = selectedIds.includes(subject.id);
+
+    return (
+      <button
+        key={subject.id}
+        type="button"
+        onClick={() => toggleSubject(subject.id)}
+        className={[
+          "flex w-full items-center gap-3 rounded-xl border p-3.5 text-left transition",
+          selected
+            ? "border-indigo-300 bg-indigo-50"
+            : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50",
+          inactive ? "opacity-65" : "",
+        ].join(" ")}
+      >
+        <div
+          className={[
+            "flex h-5 w-5 shrink-0 items-center justify-center rounded-md border",
+            selected
+              ? "border-indigo-600 bg-indigo-600 text-white"
+              : "border-slate-300 bg-white",
+          ].join(" ")}
+        >
+          {selected && <Check size={13} />}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-medium text-slate-900">
+            {subject.name}
+          </div>
+
+          {subject.code && (
+            <div className="mt-0.5 text-xs text-slate-500">
+              {subject.code}
+            </div>
+          )}
+        </div>
+
+        {inactive && (
+          <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-medium text-slate-500">
+            Inactive
+          </span>
+        )}
+      </button>
+    );
+  }
+
   return (
     <Modal
       title={`Subjects for ${schoolClass.name}`}
       onClose={onClose}
-      maxWidth="max-w-xl"
+      maxWidth="max-w-2xl"
     >
       <div>
-        <p className="mb-4 text-sm text-slate-500">
-          Select the subjects taught in this class.
-        </p>
+        {/* Class context */}
+        <div className="mb-5 rounded-xl border border-indigo-100 bg-indigo-50/60 px-4 py-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-indigo-500">
+            Class
+          </p>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            <p className="text-sm font-semibold text-slate-900">
+              {schoolClass.name}
+            </p>
+
+            {schoolClass.section && (
+              <span className="rounded-full bg-white px-2 py-1 text-[10px] font-medium text-slate-600">
+                {schoolClass.section}
+              </span>
+            )}
+          </div>
+
+          <p className="mt-1 text-xs text-indigo-700">
+            Academic year curriculum
+          </p>
+        </div>
 
         {error && (
           <div className="mb-4">
@@ -1296,93 +1432,142 @@ function ClassSubjectsModal({
 
         {subjects.length === 0 ? (
           <div className="rounded-xl border border-dashed border-slate-200 p-8 text-center">
-            <BookOpen
-              size={22}
-              className="mx-auto text-slate-300"
-            />
+            <BookOpen size={22} className="mx-auto text-slate-300" />
 
             <p className="mt-2 text-sm font-medium text-slate-700">
               No subjects available
             </p>
 
             <p className="mt-1 text-xs text-slate-500">
-              Create subjects first, then assign them
-              to this class.
+              Create subjects first, then assign them to this class.
             </p>
           </div>
         ) : (
-          <div className="max-h-[420px] space-y-2 overflow-y-auto">
-            {subjects.map((subject) => {
-              const selected =
-                selectedIds.includes(
-                  subject.id,
-                );
+          <>
+            {/* Search + actions */}
+            <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="relative flex-1 sm:max-w-sm">
+                <Search
+                  size={15}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                />
+                <input
+                  value={subjectSearch}
+                  onChange={(event) => setSubjectSearch(event.target.value)}
+                  placeholder="Search subjects..."
+                  className="h-9 w-full rounded-lg border border-slate-200 pl-9 pr-3 text-sm outline-none placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                />
+              </div>
 
-              return (
+              <div className="flex items-center gap-2">
                 <button
-                  key={subject.id}
                   type="button"
-                  onClick={() =>
-                    toggleSubject(
-                      subject.id,
-                    )
-                  }
-                  className={[
-                    "flex w-full items-center gap-3 rounded-xl border p-4 text-left transition",
-                    selected
-                      ? "border-indigo-300 bg-indigo-50"
-                      : "border-slate-200 hover:bg-slate-50",
-                    !subject.is_active
-                      ? "opacity-60"
-                      : "",
-                  ].join(" ")}
+                  onClick={selectAllActive}
+                  className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 >
-                  <div
-                    className={[
-                      "flex h-5 w-5 shrink-0 items-center justify-center rounded-md border",
-                      selected
-                        ? "border-indigo-600 bg-indigo-600 text-white"
-                        : "border-slate-300 bg-white",
-                    ].join(" ")}
-                  >
-                    {selected && (
-                      <Check size={13} />
-                    )}
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm font-medium text-slate-900">
-                      {subject.name}
-                    </div>
-
-                    {subject.code && (
-                      <div className="mt-1 text-xs text-slate-500">
-                        {subject.code}
-                      </div>
-                    )}
-                  </div>
-
-                  {!subject.is_active && (
-                    <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-medium text-slate-500">
-                      Inactive
-                    </span>
-                  )}
+                  Select all
                 </button>
-              );
-            })}
-          </div>
+
+                <button
+                  type="button"
+                  onClick={clearAll}
+                  className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+                >
+                  Clear all
+                </button>
+              </div>
+            </div>
+
+            {/* Selection summary */}
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-xs font-medium text-slate-600">
+                {selectedIds.length} of {subjects.length}{" "}
+                {subjects.length === 1 ? "subject" : "subjects"} selected
+              </p>
+
+              {selectedIds.length > 0 && (
+                <span className="text-[11px] text-indigo-600">
+                  Ready to save
+                </span>
+              )}
+            </div>
+
+            {/* Subject list */}
+            <div className="max-h-[430px] space-y-4 overflow-y-auto pr-1">
+              {filteredActiveSubjects.length > 0 && (
+                <section>
+                  <div className="mb-2 flex items-center justify-between">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                      Active subjects
+                    </p>
+                    <span className="text-[11px] text-slate-400">
+                      {filteredActiveSubjects.length}
+                    </span>
+                  </div>
+
+                  <div className="space-y-2">
+                    {filteredActiveSubjects.map((subject) => (
+                      <SubjectRow key={subject.id} subject={subject} />
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {filteredInactiveSubjects.length > 0 && (
+                <section>
+                  <div className="mb-2 flex items-center justify-between">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                      Inactive subjects
+                    </p>
+                    <span className="text-[11px] text-slate-400">
+                      {filteredInactiveSubjects.length}
+                    </span>
+                  </div>
+
+                  <div className="space-y-2">
+                    {filteredInactiveSubjects.map((subject) => (
+                      <SubjectRow
+                        key={subject.id}
+                        subject={subject}
+                        inactive
+                      />
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {filteredActiveSubjects.length === 0 &&
+                filteredInactiveSubjects.length === 0 && (
+                  <div className="rounded-xl border border-dashed border-slate-200 p-8 text-center">
+                    <Search
+                      size={20}
+                      className="mx-auto text-slate-300"
+                    />
+                    <p className="mt-2 text-sm font-medium text-slate-700">
+                      No subjects found
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Try a different search term.
+                    </p>
+                  </div>
+                )}
+            </div>
+          </>
         )}
 
-        <div className="mt-5 flex items-center justify-between border-t border-slate-200 pt-4">
-          <p className="text-xs text-slate-500">
-            {selectedIds.length}{" "}
-            {selectedIds.length === 1
-              ? "subject"
-              : "subjects"}{" "}
-            selected
-          </p>
+        {/* Footer */}
+        <div className="mt-5 flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-medium text-slate-600">
+              {selectedIds.length}{" "}
+              {selectedIds.length === 1 ? "subject" : "subjects"} selected
+            </p>
+            <p className="mt-0.5 text-[11px] text-slate-400">
+              Changes apply to {schoolClass.name}.
+            </p>
+          </div>
 
-          <div className="flex gap-2">
+          <div className="flex justify-end gap-2">
             <Button
               variant="secondary"
               onClick={onClose}
@@ -1391,13 +1576,8 @@ function ClassSubjectsModal({
               Cancel
             </Button>
 
-            <Button
-              onClick={saveAssignments}
-              disabled={saving}
-            >
-              {saving
-                ? "Saving..."
-                : "Save subjects"}
+            <Button onClick={saveAssignments} disabled={saving}>
+              {saving ? "Saving..." : "Save subjects"}
             </Button>
           </div>
         </div>
@@ -1429,18 +1609,13 @@ function EmptyState({
         <Icon size={22} />
       </div>
 
-      <h3 className="mt-4 text-sm font-semibold text-slate-800">
-        {title}
-      </h3>
+      <h3 className="mt-4 text-sm font-semibold text-slate-800">{title}</h3>
 
       <p className="mx-auto mt-1 max-w-sm text-sm text-slate-500">
         {description}
       </p>
 
-      <Button
-        className="mt-5"
-        onClick={onAction}
-      >
+      <Button className="mt-5" onClick={onAction}>
         <Plus size={15} />
         {action}
       </Button>
@@ -1462,15 +1637,12 @@ function Modal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
       <div
-        className={[
-          "w-full rounded-2xl bg-white shadow-xl",
-          maxWidth,
-        ].join(" ")}
+        className={["w-full rounded-2xl bg-white shadow-xl", maxWidth].join(
+          " ",
+        )}
       >
         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
-          <h2 className="text-base font-semibold text-slate-900">
-            {title}
-          </h2>
+          <h2 className="text-base font-semibold text-slate-900">{title}</h2>
 
           <button
             type="button"
@@ -1481,9 +1653,7 @@ function Modal({
           </button>
         </div>
 
-        <div className="p-6">
-          {children}
-        </div>
+        <div className="p-6">{children}</div>
       </div>
     </div>
   );
@@ -1510,20 +1680,14 @@ function Input({
     <div>
       <label className="mb-1.5 block text-sm font-medium text-slate-700">
         {label}
-        {required && (
-          <span className="ml-1 text-red-500">
-            *
-          </span>
-        )}
+        {required && <span className="ml-1 text-red-500">*</span>}
       </label>
 
       <input
         type={type}
         min={min}
         value={value}
-        onChange={(event) =>
-          onChange(event.target.value)
-        }
+        onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         required={required}
         className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
@@ -1532,16 +1696,10 @@ function Input({
   );
 }
 
-function ErrorBox({
-  message,
-}: {
-  message: string;
-}) {
+function ErrorBox({ message }: { message: string }) {
   return (
     <div className="rounded-lg border border-red-100 bg-red-50 px-3 py-2.5">
-      <p className="text-xs text-red-600">
-        {message}
-      </p>
+      <p className="text-xs text-red-600">{message}</p>
     </div>
   );
 }
@@ -1566,10 +1724,7 @@ function ModalActions({
         Cancel
       </Button>
 
-      <Button
-        type="submit"
-        disabled={saving}
-      >
+      <Button type="submit" disabled={saving}>
         {saving ? "Saving..." : label}
       </Button>
     </div>
