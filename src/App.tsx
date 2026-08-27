@@ -12,6 +12,7 @@ import StudentProfile from "./pages/StudentProfile";
 import Parents from "./pages/Parents";
 import PickupDesk from "./pages/PickupDesk";
 import PickupHistory from "./pages/PickupHistory";
+import ClassesSubjects from "./pages/ClassesSubjects";
 
 function Placeholder({ title }: { title: string }) {
   return (
@@ -71,10 +72,7 @@ export default function App() {
           <Route path="teachers" element={<Placeholder title="Teachers" />} />
 
           {/* Academics */}
-          <Route
-            path="academics"
-            element={<Placeholder title="Classes & Subjects" />}
-          />
+          <Route path="academics" element={<ClassesSubjects />} />
 
           <Route path="timetable" element={<Placeholder title="Timetable" />} />
 
