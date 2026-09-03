@@ -7,20 +7,44 @@ import {
   GraduationCap,
   Users,
   UserRound,
+  Building2,
   BookOpen,
   CalendarDays,
   ClipboardCheck,
   Wallet,
   FileText,
+  FileBarChart,
   Megaphone,
   Settings,
   ChevronDown,
   Bell,
   ShieldCheck,
   History,
+  Receipt,
+  CreditCard,
+  BarChart3,
+  type LucideIcon,
 } from "lucide-react";
 
-const navigation = [
+type NavigationChild = {
+  label: string;
+  icon: LucideIcon;
+  path: string;
+};
+
+type NavigationItem = {
+  label: string;
+  icon: LucideIcon;
+  path: string;
+  children?: NavigationChild[];
+};
+
+type NavigationSection = {
+  label: string;
+  items: NavigationItem[];
+};
+
+const navigation: NavigationSection[] = [
   {
     label: "Overview",
     items: [
@@ -31,6 +55,7 @@ const navigation = [
       },
     ],
   },
+
   {
     label: "School",
     items: [
@@ -66,6 +91,7 @@ const navigation = [
       },
     ],
   },
+
   {
     label: "Academics",
     items: [
@@ -74,23 +100,46 @@ const navigation = [
         icon: BookOpen,
         path: "/academics",
       },
+
       {
         label: "Timetable",
         icon: CalendarDays,
         path: "/timetable",
       },
+
       {
         label: "Attendance",
         icon: ClipboardCheck,
         path: "/attendance",
+        children: [
+          {
+            label: "Attendance History",
+            icon: History,
+            path: "/attendance/history",
+          },
+          {
+            label: "Attendance Reports",
+            icon: FileBarChart,
+            path: "/attendance/reports",
+          },
+        ],
       },
+
       {
         label: "Assessments",
         icon: FileText,
         path: "/assessments",
+        children: [
+          {
+            label: "Student Results",
+            icon: ClipboardCheck,
+            path: "/student-results",
+          },
+        ],
       },
     ],
   },
+
   {
     label: "Finance",
     items: [
@@ -98,16 +147,60 @@ const navigation = [
         label: "Fees & Payments",
         icon: Wallet,
         path: "/finance",
+        children: [
+          {
+            label: "Fee Structure",
+            icon: FileText,
+            path: "/finance",
+          },
+          {
+            label: "Student Billing",
+            icon: Receipt,
+            path: "/finance/billing",
+          },
+          {
+            label: "Payments",
+            icon: CreditCard,
+            path: "/finance/payments",
+          },
+          {
+            label: "Receipts",
+            icon: Receipt,
+            path: "/finance/receipts",
+          },
+          {
+            label: "Finance Reports",
+            icon: BarChart3,
+            path: "/finance/reports",
+          },
+        ],
       },
     ],
   },
+
   {
     label: "Communication",
     items: [
       {
         label: "Announcements",
         icon: Megaphone,
-        path: "/communications",
+        path: "/announcements",
+      },
+    ],
+  },
+
+  {
+    label: "Settings",
+    items: [
+      {
+        label: "School Profile",
+        icon: Building2,
+        path: "/settings/school-profile",
+      },
+      {
+        label: "Academic Settings",
+        icon: CalendarDays,
+        path: "/settings/academic",
       },
     ],
   },
@@ -139,6 +232,67 @@ function Sidebar() {
               {section.items.map((item) => {
                 const Icon = item.icon;
 
+                /*
+                 * Items with children
+                 */
+                if (item.children && item.children.length > 0) {
+                  return (
+                    <div key={item.path}>
+                      <NavLink
+                        to={item.path}
+                        end
+                        className={({ isActive }) =>
+                          [
+                            "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition",
+                            isActive
+                              ? "bg-indigo-50 text-indigo-700"
+                              : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
+                          ].join(" ")
+                        }
+                      >
+                        <Icon size={18} strokeWidth={1.8} />
+
+                        <span>{item.label}</span>
+
+                        <ChevronDown
+                          size={14}
+                          strokeWidth={1.8}
+                          className="ml-auto text-slate-400"
+                        />
+                      </NavLink>
+
+                      <div className="ml-7 mt-1 space-y-1">
+                        {item.children.map((child) => {
+                          const ChildIcon = child.icon;
+
+                          return (
+                            <NavLink
+                              key={child.path}
+                              to={child.path}
+                              end
+                              className={({ isActive }) =>
+                                [
+                                  "flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition",
+                                  isActive
+                                    ? "bg-indigo-50 text-indigo-700"
+                                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-900",
+                                ].join(" ")
+                              }
+                            >
+                              <ChildIcon size={15} strokeWidth={1.8} />
+
+                              <span>{child.label}</span>
+                            </NavLink>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                }
+
+                /*
+                 * Normal navigation item
+                 */
                 return (
                   <NavLink
                     key={item.path}
@@ -214,9 +368,8 @@ function Header() {
         </button>
       </div>
 
-      {/* Right side */}
+      {/* User */}
       <div className="flex items-center gap-4">
-        {/* Notifications */}
         <button
           type="button"
           aria-label="Notifications"
@@ -227,7 +380,6 @@ function Header() {
           <Bell size={18} strokeWidth={1.8} />
         </button>
 
-        {/* User */}
         <button type="button" className="flex items-center gap-3">
           <div className="hidden text-right sm:block">
             <div className="text-sm font-semibold text-slate-900">

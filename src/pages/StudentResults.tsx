@@ -1,0 +1,2794 @@
+import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
+import {
+  BookOpen,
+  CalendarDays,
+  ChevronDown,
+  ClipboardList,
+  GraduationCap,
+  Loader2,
+  Printer,
+  Search,
+  User,
+  Users,
+} from "lucide-react";
+
+import { useSchool } from "../context/SchoolContext";
+import { getStudents } from "../lib/students";
+import { getClasses, type SchoolClass } from "../lib/classes";
+import { supabase } from "../lib/supabase";
+
+import Avatar from "../components/ui/Avatar";
+import Badge from "../components/ui/Badge";
+import Card from "../components/ui/Card";
+
+interface Student {
+  id: string;
+  name: string;
+  studentId: string;
+  className: string;
+  academicYearId: string | null;
+  dateOfBirth: string | null;
+  age: number | null;
+  gender: "Male" | "Female";
+  nationality: string;
+  photoUrl: string | null;
+  parent: string;
+  parentPhone: string;
+  status: "Active" | "Inactive";
+  enrolledDate: string;
+}
+
+interface AcademicYear {
+  id: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+  is_current: boolean;
+  is_active: boolean;
+}
+
+interface Assessment {
+  id: string;
+  title: string;
+  assessment_type: string | null;
+  assessment_date: string;
+  max_marks: number;
+  subject_id: string;
+  class_id: string;
+  academic_year_id: string;
+  status: "Draft" | "Published";
+}
+
+interface Subject {
+  id: string;
+  name: string;
+  code: string | null;
+}
+
+interface AssessmentResult {
+  id: string;
+  assessment_id: string;
+  student_id: string;
+  marks: number | null;
+  grade: string | null;
+  remarks: string | null;
+}
+
+interface Enrollment {
+  id: string;
+  student_id: string;
+  class_id: string;
+  academic_year_id: string | null;
+  status: string;
+}
+
+interface SubjectResult {
+  subjectId: string;
+  subjectName: string;
+  subjectCode: string | null;
+  assessments: {
+    id: string;
+    title: string;
+    type: string;
+    date: string;
+    marks: number | null;
+    maxMarks: number;
+    percentage: number | null;
+    grade: string;
+    remarks: string | null;
+  }[];
+  average: number | null;
+  grade: string;
+  teacherName: string;
+}
+
+type Term = "Term 1" | "Term 2" | "Term 3";
+
+/* =========================================================
+   GRADING
+========================================================= */
+
+function getGrade(percentage: number | null): string {
+  if (percentage === null || Number.isNaN(percentage)) {
+    return "-";
+  }
+
+  if (percentage >= 90) return "A*";
+  if (percentage >= 80) return "A";
+  if (percentage >= 70) return "B";
+  if (percentage >= 60) return "C";
+  if (percentage >= 50) return "D";
+  if (percentage >= 40) return "E";
+  if (percentage >= 30) return "F";
+  if (percentage >= 20) return "G";
+
+  return "U";
+}
+
+function getGradeDescription(grade: string): string {
+  switch (grade) {
+    case "A*":
+      return "Outstanding";
+    case "A":
+      return "Excellent";
+    case "B":
+      return "Very Good";
+    case "C":
+      return "Good";
+    case "D":
+      return "Satisfactory";
+    case "E":
+      return "Pass";
+    case "F":
+      return "Weak";
+    case "G":
+      return "Very Weak";
+    case "U":
+      return "Ungraded";
+    default:
+      return "-";
+  }
+}
+
+/* =========================================================
+   DATE HELPERS
+========================================================= */
+
+function formatDate(date: string | null | undefined): string {
+  if (!date) return "-";
+
+  const parsed = new Date(date);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return date;
+  }
+
+  return parsed.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function getTermDateRange(
+  term: Term,
+  academicYear: AcademicYear | null,
+): { start: string; end: string } | null {
+  if (!academicYear) return null;
+
+  const academicStart = new Date(academicYear.start_date);
+
+  if (Number.isNaN(academicStart.getTime())) {
+    return null;
+  }
+
+  const startYear = academicStart.getFullYear();
+
+  if (term === "Term 1") {
+    return {
+      start: `${startYear}-08-01`,
+      end: `${startYear}-12-31`,
+    };
+  }
+
+  if (term === "Term 2") {
+    return {
+      start: `${startYear + 1}-01-01`,
+      end: `${startYear + 1}-03-31`,
+    };
+  }
+
+  return {
+    start: `${startYear + 1}-04-01`,
+    end: `${startYear + 1}-07-31`,
+  };
+}
+
+/* =========================================================
+   ASSESSMENT HELPERS
+========================================================= */
+
+function getAssessmentTypeLabel(type: string | null): string {
+  if (!type) return "Assessment";
+
+  const normalized = type.toLowerCase();
+
+  if (normalized.includes("cat 1") || normalized.includes("cat i")) {
+    return "CAT I";
+  }
+
+  if (normalized.includes("cat 2") || normalized.includes("cat ii")) {
+    return "CAT II";
+  }
+
+  if (
+    normalized.includes("class") ||
+    normalized.includes("cp") ||
+    normalized.includes("c.p")
+  ) {
+    return "C.P";
+  }
+
+  if (normalized.includes("homework") || normalized.includes("hw")) {
+    return "HW&Pr";
+  }
+
+  if (normalized.includes("exam")) {
+    return "Exam";
+  }
+
+  return type;
+}
+
+function getPercentage(marks: number | null, maxMarks: number): number | null {
+  if (
+    marks === null ||
+    !Number.isFinite(Number(marks)) ||
+    !Number.isFinite(Number(maxMarks)) ||
+    Number(maxMarks) <= 0
+  ) {
+    return null;
+  }
+
+  return (Number(marks) / Number(maxMarks)) * 100;
+}
+
+/* =========================================================
+   PAGE
+========================================================= */
+
+export default function StudentResults() {
+  const { school } = useSchool();
+
+  const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
+
+  const [classes, setClasses] = useState<SchoolClass[]>([]);
+
+  const [students, setStudents] = useState<Student[]>([]);
+
+  const [selectedAcademicYearId, setSelectedAcademicYearId] = useState("");
+
+  const [selectedTerm, setSelectedTerm] = useState<Term>("Term 1");
+
+  const [selectedStudentId, setSelectedStudentId] = useState("");
+
+  const [search, setSearch] = useState("");
+
+  const [assessments, setAssessments] = useState<Assessment[]>([]);
+
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+
+  const [teacherNames, setTeacherNames] = useState<Record<string, string>>({});
+
+  const [assessmentResults, setAssessmentResults] = useState<
+    AssessmentResult[]
+  >([]);
+
+  const [selectedEnrollment, setSelectedEnrollment] =
+    useState<Enrollment | null>(null);
+
+  const [selectedSectionName, setSelectedSectionName] =
+    useState("");
+
+  const [loading, setLoading] = useState(true);
+
+  const [loadingResults, setLoadingResults] = useState(false);
+
+  const [error, setError] = useState("");
+
+  const [printing, setPrinting] = useState(false);
+
+  /* =======================================================
+     INITIAL DATA
+  ======================================================= */
+
+  useEffect(() => {
+    if (!school) {
+      setLoading(false);
+      return;
+    }
+
+    const schoolId = school.id;
+
+    let cancelled = false;
+
+    async function loadInitialData() {
+      try {
+        setLoading(true);
+        setError("");
+
+        const [academicYearsResponse, classesResponse, studentsResponse] =
+          await Promise.all([
+            supabase
+              .from("academic_years")
+              .select("id, name, start_date, end_date, is_current, is_active")
+              .eq("school_id", schoolId)
+              .order("start_date", {
+                ascending: false,
+              }),
+
+            getClasses(schoolId),
+
+            getStudents(schoolId),
+          ]);
+
+        if (cancelled) return;
+
+        if (academicYearsResponse.error) {
+          throw academicYearsResponse.error;
+        }
+
+        if (classesResponse.error) {
+          throw classesResponse.error;
+        }
+
+        setAcademicYears((academicYearsResponse.data as AcademicYear[]) ?? []);
+
+        setClasses(classesResponse.data ?? []);
+        setStudents(studentsResponse.data ?? []);
+
+        const loadedYears =
+          (academicYearsResponse.data as AcademicYear[]) ?? [];
+
+        const currentYear =
+          loadedYears.find((year) => year.is_current) ??
+          loadedYears.find((year) => year.is_active) ??
+          loadedYears[0];
+
+        if (currentYear) {
+          setSelectedAcademicYearId(currentYear.id);
+        }
+      } catch (err) {
+        console.error("Error loading Student Results:", err);
+
+        if (!cancelled) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Unable to load student results.",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadInitialData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [school]);
+
+  /* =======================================================
+     SELECTED ACADEMIC YEAR
+  ======================================================= */
+
+  const selectedAcademicYear = useMemo(() => {
+    return (
+      academicYears.find((year) => year.id === selectedAcademicYearId) ?? null
+    );
+  }, [academicYears, selectedAcademicYearId]);
+
+  /* =======================================================
+     STUDENTS FOR SELECTED YEAR
+  ======================================================= */
+
+  const yearStudents = useMemo(() => {
+    if (!selectedAcademicYearId) {
+      return [];
+    }
+
+    return students.filter(
+      (student) =>
+        student.status === "Active" &&
+        student.academicYearId === selectedAcademicYearId,
+    );
+  }, [students, selectedAcademicYearId]);
+
+  /* =======================================================
+     SEARCH STUDENTS
+  ======================================================= */
+
+  const filteredStudents = useMemo(() => {
+    const query = search.trim().toLowerCase();
+
+    if (!query) {
+      return yearStudents;
+    }
+
+    return yearStudents.filter((student) => {
+      return (
+        student.name.toLowerCase().includes(query) ||
+        student.studentId.toLowerCase().includes(query) ||
+        student.className.toLowerCase().includes(query)
+      );
+    });
+  }, [yearStudents, search]);
+
+  /* =======================================================
+     SELECTED STUDENT
+  ======================================================= */
+
+  const selectedStudent = useMemo(() => {
+    return students.find((student) => student.id === selectedStudentId) ?? null;
+  }, [students, selectedStudentId]);
+
+  /* =======================================================
+     KEEP STUDENT SELECTION VALID
+  ======================================================= */
+
+  useEffect(() => {
+    if (
+      selectedStudentId &&
+      yearStudents.some((student) => student.id === selectedStudentId)
+    ) {
+      return;
+    }
+
+    if (yearStudents.length > 0) {
+      setSelectedStudentId(yearStudents[0].id);
+    } else {
+      setSelectedStudentId("");
+    }
+  }, [selectedStudentId, yearStudents]);
+
+  /* =======================================================
+     LOAD RESULTS
+  ======================================================= */
+
+  useEffect(() => {
+    if (!school || !selectedStudent || !selectedAcademicYearId) {
+      setSelectedEnrollment(null);
+      setSelectedSectionName("");
+      setAssessments([]);
+      setSubjects([]);
+      setTeacherNames({});
+      setAssessmentResults([]);
+      return;
+    }
+
+    const schoolId = school.id;
+    const student = selectedStudent;
+    const academicYearId = selectedAcademicYearId;
+    const academicYear = selectedAcademicYear;
+
+    let cancelled = false;
+
+    async function loadResults() {
+      try {
+        setLoadingResults(true);
+        setError("");
+
+        /* -----------------------------------------------
+           ENROLLMENT
+        ------------------------------------------------ */
+
+        const { data: enrollmentData, error: enrollmentError } = await supabase
+          .from("enrollments")
+          .select(
+            `
+              id,
+              student_id,
+              class_id,
+              academic_year_id,
+              status
+            `,
+          )
+          .eq("school_id", schoolId)
+          .eq("student_id", student.id)
+          .eq("academic_year_id", academicYearId)
+          .eq("status", "Active")
+          .maybeSingle();
+
+        if (enrollmentError) {
+          throw enrollmentError;
+        }
+
+        if (cancelled) return;
+
+        const enrollment = (enrollmentData as Enrollment | null) ?? null;
+
+        setSelectedEnrollment(enrollment);
+
+        if (!enrollment) {
+          setSelectedSectionName("");
+          setAssessments([]);
+          setSubjects([]);
+          setTeacherNames({});
+          setAssessmentResults([]);
+          return;
+        }
+
+        /*
+         * Determine the report-card type from the student's
+         * enrolled class and its academic section.
+         *
+         * This uses the same classes.academic_section_id
+         * relationship used by Classes & Subjects.
+         */
+        const { data: classData, error: classError } =
+          await supabase
+            .from("classes")
+            .select("id, academic_section_id")
+            .eq("school_id", schoolId)
+            .eq("id", enrollment.class_id)
+            .maybeSingle();
+
+        if (classError) {
+          throw classError;
+        }
+
+        let sectionName = "";
+
+        if (classData?.academic_section_id) {
+          const { data: sectionData, error: sectionError } =
+            await supabase
+              .from("academic_sections")
+              .select("id, name")
+              .eq("id", classData.academic_section_id)
+              .maybeSingle();
+
+          if (sectionError) {
+            throw sectionError;
+          }
+
+          sectionName = sectionData?.name ?? "";
+        }
+
+        if (cancelled) return;
+
+        setSelectedSectionName(sectionName);
+
+        /* -----------------------------------------------
+           TERM RANGE
+        ------------------------------------------------ */
+
+        const dateRange = getTermDateRange(selectedTerm, academicYear);
+
+        if (!dateRange) {
+          setAssessments([]);
+          setSubjects([]);
+          setTeacherNames({});
+          setAssessmentResults([]);
+          return;
+        }
+
+        /* -----------------------------------------------
+           ASSESSMENTS
+        ------------------------------------------------ */
+
+        const { data: assessmentData, error: assessmentError } = await supabase
+          .from("assessments")
+          .select(
+            `
+              id,
+              title,
+              assessment_type,
+              assessment_date,
+              max_marks,
+              subject_id,
+              class_id,
+              academic_year_id,
+              status
+            `,
+          )
+          .eq("school_id", schoolId)
+          .eq("academic_year_id", academicYearId)
+          .eq("class_id", enrollment.class_id)
+          .eq("status", "Published")
+          .gte("assessment_date", dateRange.start)
+          .lte("assessment_date", dateRange.end)
+          .order("assessment_date", {
+            ascending: true,
+          });
+
+        if (assessmentError) {
+          throw assessmentError;
+        }
+
+        const loadedAssessments = (assessmentData as Assessment[]) ?? [];
+
+        if (cancelled) return;
+
+        setAssessments(loadedAssessments);
+
+        /* -----------------------------------------------
+           SUBJECTS
+        ------------------------------------------------ */
+
+        const subjectIds = Array.from(
+          new Set(
+            loadedAssessments
+              .map((assessment) => assessment.subject_id)
+              .filter(Boolean),
+          ),
+        );
+
+        let loadedSubjects: Subject[] = [];
+
+        if (subjectIds.length > 0) {
+          const { data: subjectData, error: subjectError } = await supabase
+            .from("subjects")
+            .select("id, name, code")
+            .eq("school_id", schoolId)
+            .in("id", subjectIds)
+            .order("name", {
+              ascending: true,
+            });
+
+          if (subjectError) {
+            throw subjectError;
+          }
+
+          loadedSubjects = (subjectData as Subject[]) ?? [];
+        }
+
+        if (cancelled) return;
+
+        setSubjects(loadedSubjects);
+
+        /* -----------------------------------------------
+           TEACHER ASSIGNMENTS
+        ------------------------------------------------ */
+
+        const { data: assignmentData, error: assignmentError } =
+          await supabase
+            .from("teacher_assignments")
+            .select(
+              `
+                teacher_id,
+                subject_id,
+                class_id,
+                academic_year_id
+              `,
+            )
+            .eq("school_id", schoolId)
+            .eq("class_id", enrollment.class_id)
+            .eq("academic_year_id", academicYearId)
+            .in("subject_id", subjectIds);
+
+        if (assignmentError) {
+          throw assignmentError;
+        }
+
+        const assignments = (assignmentData ?? []) as {
+          teacher_id: string;
+          subject_id: string;
+          class_id: string;
+          academic_year_id: string;
+        }[];
+
+        const teacherIds = Array.from(
+          new Set(
+            assignments
+              .map((assignment) => assignment.teacher_id)
+              .filter(Boolean),
+          ),
+        );
+
+        let loadedTeacherNames: Record<string, string> = {};
+
+        if (teacherIds.length > 0) {
+          const { data: teacherData, error: teacherError } =
+            await supabase
+              .from("teachers")
+              .select(
+                "id, first_name, middle_name, last_name",
+              )
+              .eq("school_id", schoolId)
+              .in("id", teacherIds);
+
+          if (teacherError) {
+            throw teacherError;
+          }
+
+          loadedTeacherNames = Object.fromEntries(
+            ((teacherData ?? []) as {
+              id: string;
+              first_name: string;
+              middle_name: string | null;
+              last_name: string;
+            }[]).map((teacher) => [
+              teacher.id,
+              [
+                teacher.first_name,
+                teacher.middle_name,
+                teacher.last_name,
+              ]
+                .filter(Boolean)
+                .join(" "),
+            ]),
+          );
+        }
+
+        const subjectTeacherNames: Record<string, string> = {};
+
+        assignments.forEach((assignment) => {
+          const name =
+            loadedTeacherNames[assignment.teacher_id];
+
+          if (name && !subjectTeacherNames[assignment.subject_id]) {
+            subjectTeacherNames[assignment.subject_id] = name;
+          }
+        });
+
+        if (cancelled) return;
+
+        setTeacherNames(subjectTeacherNames);
+
+        /* -----------------------------------------------
+           RESULTS
+        ------------------------------------------------ */
+
+        const assessmentIds = loadedAssessments.map(
+          (assessment) => assessment.id,
+        );
+
+        if (assessmentIds.length === 0) {
+          setAssessmentResults([]);
+          return;
+        }
+
+        const { data: resultData, error: resultError } = await supabase
+          .from("assessment_results")
+          .select(
+            `
+              id,
+              assessment_id,
+              student_id,
+              marks,
+              grade,
+              remarks
+            `,
+          )
+          .eq("student_id", student.id)
+          .in("assessment_id", assessmentIds);
+
+        if (resultError) {
+          throw resultError;
+        }
+
+        if (cancelled) return;
+
+        setAssessmentResults((resultData as AssessmentResult[]) ?? []);
+      } catch (err) {
+        console.error("Error loading student results:", err);
+
+        if (!cancelled) {
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Unable to load student results.",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingResults(false);
+        }
+      }
+    }
+
+    loadResults();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    school,
+    selectedStudent,
+    selectedAcademicYearId,
+    selectedTerm,
+    selectedAcademicYear,
+  ]);
+
+  /* =======================================================
+     SUBJECT RESULTS
+  ======================================================= */
+
+  const subjectResults = useMemo<SubjectResult[]>(() => {
+    if (!selectedStudent) {
+      return [];
+    }
+
+    const resultMap = new Map<string, AssessmentResult>();
+
+    assessmentResults.forEach((result) => {
+      resultMap.set(result.assessment_id, result);
+    });
+
+    const subjectMap = new Map<string, Subject>();
+
+    subjects.forEach((subject) => {
+      subjectMap.set(subject.id, subject);
+    });
+
+    const grouped = new Map<string, Assessment[]>();
+
+    assessments.forEach((assessment) => {
+      if (!grouped.has(assessment.subject_id)) {
+        grouped.set(assessment.subject_id, []);
+      }
+
+      grouped.get(assessment.subject_id)!.push(assessment);
+    });
+
+    return Array.from(grouped.entries())
+      .map(([subjectId, subjectAssessments]) => {
+        const subject = subjectMap.get(subjectId);
+
+        const rows = subjectAssessments.map((assessment) => {
+          const result = resultMap.get(assessment.id);
+
+          const marks =
+            result?.marks === null || result?.marks === undefined
+              ? null
+              : Number(result.marks);
+
+          const maxMarks = Number(assessment.max_marks);
+
+          const percentage = getPercentage(marks, maxMarks);
+
+          return {
+            id: assessment.id,
+            title: assessment.title,
+            type: getAssessmentTypeLabel(assessment.assessment_type),
+            date: assessment.assessment_date,
+            marks,
+            maxMarks,
+            percentage,
+            grade: getGrade(percentage),
+            remarks: result?.remarks ?? null,
+          };
+        });
+
+        const percentages = rows
+          .map((row) => row.percentage)
+          .filter((percentage): percentage is number => percentage !== null);
+
+        const average =
+          percentages.length > 0
+            ? percentages.reduce((total, percentage) => total + percentage, 0) /
+              percentages.length
+            : null;
+
+        return {
+          subjectId,
+          subjectName: subject?.name ?? "Unknown Subject",
+          subjectCode: subject?.code ?? null,
+          assessments: rows,
+          average,
+          grade: getGrade(average),
+          teacherName: teacherNames[subjectId] ?? "",
+        };
+      })
+      .sort((a, b) => a.subjectName.localeCompare(b.subjectName));
+  }, [
+    assessments,
+    assessmentResults,
+    subjects,
+    selectedStudent,
+    teacherNames,
+  ]);
+
+  /* =======================================================
+     SUMMARY
+  ======================================================= */
+
+  const summary = useMemo(() => {
+    const averages = subjectResults
+      .map((subject) => subject.average)
+      .filter((average): average is number => average !== null);
+
+    const overallAverage =
+      averages.length > 0
+        ? averages.reduce((total, average) => total + average, 0) /
+          averages.length
+        : null;
+
+    const totalAssessments = subjectResults.reduce(
+      (total, subject) => total + subject.assessments.length,
+      0,
+    );
+
+    const completedAssessments = subjectResults.reduce(
+      (total, subject) =>
+        total +
+        subject.assessments.filter((assessment) => assessment.marks !== null)
+          .length,
+      0,
+    );
+
+    return {
+      subjects: subjectResults.length,
+      totalAssessments,
+      completedAssessments,
+      overallAverage,
+      overallGrade: getGrade(overallAverage),
+    };
+  }, [subjectResults]);
+
+  const isNurseryStudent = useMemo(() => {
+    const section = selectedSectionName.trim().toLowerCase();
+    const className = (selectedStudent?.className ?? "")
+      .trim()
+      .toLowerCase();
+
+    return (
+      section.includes("nursery") ||
+      section.includes("creche") ||
+      section.includes("crèche") ||
+      section.includes("preschool") ||
+      section.includes("pre-school") ||
+      section.includes("pre school") ||
+      className.includes("nursery") ||
+      className.includes("creche") ||
+      className.includes("crèche") ||
+      className.includes("preschool") ||
+      className.includes("pre-school") ||
+      className.includes("pre school")
+    );
+  }, [selectedSectionName, selectedStudent]);
+
+  async function handlePrintReportCard() {
+    if (!selectedStudent) {
+      return;
+    }
+
+    setPrinting(true);
+
+    // The printable report is rendered through a portal. Make sure
+    // every image has finished loading/decoding before opening the
+    // browser print dialog; otherwise Chrome can capture the report
+    // before the logo is painted.
+    await new Promise<void>((resolve) => {
+      window.requestAnimationFrame(() => {
+        window.setTimeout(resolve, 250);
+      });
+    });
+
+    const printRoot = document.getElementById(
+      "schoolos-report-card-print",
+    );
+
+    if (printRoot) {
+      const images = Array.from(
+        printRoot.querySelectorAll("img"),
+      );
+
+      await Promise.all(
+        images.map(async (image) => {
+          image.loading = "eager";
+
+          if (!image.complete) {
+            await new Promise<void>((resolve) => {
+              const finish = () => {
+                image.removeEventListener("load", finish);
+                image.removeEventListener("error", finish);
+                resolve();
+              };
+
+              image.addEventListener("load", finish);
+              image.addEventListener("error", finish);
+            });
+          }
+
+          if ("decode" in image) {
+            try {
+              await image.decode();
+            } catch {
+              // The image may already be decoded or may fail to decode.
+              // In either case, let the print dialog open normally.
+            }
+          }
+        }),
+      );
+    }
+
+    window.requestAnimationFrame(() => {
+      window.print();
+
+      window.setTimeout(() => {
+        setPrinting(false);
+      }, 500);
+    });
+  }
+
+  /* =======================================================
+     LOADING SCREEN
+  ======================================================= */
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[500px] items-center justify-center">
+        <div className="flex items-center gap-3 text-sm text-slate-500">
+          <Loader2 className="h-5 w-5 animate-spin" />
+          Loading student results...
+        </div>
+      </div>
+    );
+  }
+
+  /* =======================================================
+     ERROR SCREEN
+  ======================================================= */
+
+  if (error && !selectedStudent) {
+    return (
+      <div className="mx-auto max-w-[1400px]">
+        <Card className="border-red-200 bg-red-50 p-6">
+          <h2 className="font-semibold text-red-800">
+            Unable to load Student Results
+          </h2>
+
+          <p className="mt-2 text-sm text-red-700">{error}</p>
+        </Card>
+      </div>
+    );
+  }
+
+  /* =======================================================
+     UI
+  ======================================================= */
+
+  return (
+    <>
+      <div className="mx-auto max-w-[1400px] space-y-6">
+      {/* HEADER */}
+
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-600">
+            Academics
+          </p>
+
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
+            Student Results
+          </h1>
+
+          <p className="mt-1 text-sm text-slate-500">
+            View academic performance and assessment results for individual
+            students.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={handlePrintReportCard}
+          disabled={!selectedStudent || printing}
+          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Printer size={17} />
+          {printing
+            ? "Preparing..."
+            : isNurseryStudent
+              ? "Print Nursery Report Card"
+              : "Print Primary Report Card"}
+        </button>
+      </div>
+
+      {/* FILTERS */}
+
+      <Card className="p-5">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          {/* ACADEMIC YEAR */}
+
+          <div>
+            <label
+              htmlFor="academic-year"
+              className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500"
+            >
+              Academic Year
+            </label>
+
+            <div className="relative">
+              <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+
+              <select
+                id="academic-year"
+                value={selectedAcademicYearId}
+                onChange={(event) => {
+                  setSelectedAcademicYearId(event.target.value);
+                  setSearch("");
+                }}
+                className="w-full appearance-none rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-10 text-sm text-slate-700 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+              >
+                {academicYears.length === 0 ? (
+                  <option value="">No academic years</option>
+                ) : (
+                  academicYears.map((year) => (
+                    <option key={year.id} value={year.id}>
+                      {year.name}
+                      {year.is_current ? " — Current" : ""}
+                    </option>
+                  ))
+                )}
+              </select>
+
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            </div>
+          </div>
+
+          {/* TERM */}
+
+          <div>
+            <label
+              htmlFor="term"
+              className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500"
+            >
+              Term
+            </label>
+
+            <div className="relative">
+              <BookOpen className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+
+              <select
+                id="term"
+                value={selectedTerm}
+                onChange={(event) =>
+                  setSelectedTerm(event.target.value as Term)
+                }
+                className="w-full appearance-none rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-10 text-sm text-slate-700 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+              >
+                <option value="Term 1">Term 1</option>
+
+                <option value="Term 2">Term 2</option>
+
+                <option value="Term 3">Term 3</option>
+              </select>
+
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            </div>
+          </div>
+
+          {/* SEARCH */}
+
+          <div>
+            <label
+              htmlFor="student-search"
+              className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500"
+            >
+              Search Student
+            </label>
+
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+
+              <input
+                id="student-search"
+                type="text"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Name, ID or class..."
+                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+              />
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* STUDENT LIST */}
+
+      <Card className="overflow-hidden">
+        <div className="border-b border-slate-100 px-5 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-900">Students</h2>
+
+              <p className="mt-0.5 text-xs text-slate-500">
+                {filteredStudents.length} student
+                {filteredStudents.length === 1 ? "" : "s"} available
+              </p>
+            </div>
+
+            <Users className="h-5 w-5 text-slate-400" />
+          </div>
+        </div>
+
+        {filteredStudents.length === 0 ? (
+          <div className="px-5 py-12 text-center">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
+              <Users className="h-6 w-6 text-slate-400" />
+            </div>
+
+            <h3 className="mt-4 text-sm font-semibold text-slate-900">
+              No students found
+            </h3>
+
+            <p className="mt-1 text-sm text-slate-500">
+              There are no active students for the selected academic year
+              matching your search.
+            </p>
+          </div>
+        ) : (
+          <div className="max-h-[240px] overflow-y-auto">
+            <div className="grid grid-cols-1 divide-y divide-slate-100 md:grid-cols-2 md:divide-x md:divide-y">
+              {filteredStudents.map((student) => {
+                const isSelected = student.id === selectedStudentId;
+
+                return (
+                  <button
+                    key={student.id}
+                    type="button"
+                    onClick={() => setSelectedStudentId(student.id)}
+                    className={`flex items-center gap-3 px-5 py-3 text-left transition ${
+                      isSelected ? "bg-indigo-50" : "bg-white hover:bg-slate-50"
+                    }`}
+                  >
+                    {student.photoUrl ? (
+                      <img
+                        src={student.photoUrl}
+                        alt={student.name}
+                        className="h-10 w-10 shrink-0 rounded-full object-cover"
+                      />
+                    ) : (
+                      <Avatar name={student.name} />
+                    )}
+
+                    <div className="min-w-0 flex-1">
+                      <p
+                        className={`truncate text-sm font-medium ${
+                          isSelected ? "text-indigo-700" : "text-slate-900"
+                        }`}
+                      >
+                        {student.name}
+                      </p>
+
+                      <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-slate-400">
+                        <span>{student.studentId}</span>
+
+                        <span>•</span>
+
+                        <span>{student.className}</span>
+                      </div>
+                    </div>
+
+                    {isSelected && <Badge variant="success">Selected</Badge>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </Card>
+
+      {/* INLINE ERROR */}
+
+      {error && selectedStudent && (
+        <Card className="border-red-200 bg-red-50 p-4">
+          <p className="text-sm text-red-700">{error}</p>
+        </Card>
+      )}
+
+      {/* SELECTED STUDENT */}
+
+      {selectedStudent ? (
+        <div className="space-y-6">
+          {/* PROFILE */}
+
+          <Card className="p-6">
+            <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-center gap-4">
+                {selectedStudent.photoUrl ? (
+                  <img
+                    src={selectedStudent.photoUrl}
+                    alt={selectedStudent.name}
+                    className="h-16 w-16 rounded-2xl object-cover"
+                  />
+                ) : (
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-50">
+                    <Avatar name={selectedStudent.name} />
+                  </div>
+                )}
+
+                <div>
+                  <h2 className="text-xl font-semibold text-slate-900">
+                    {selectedStudent.name}
+                  </h2>
+
+                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-500">
+                    <span>ID: {selectedStudent.studentId}</span>
+
+                    <span className="hidden sm:inline">•</span>
+
+                    <span>Class: {selectedStudent.className}</span>
+                  </div>
+
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <Badge variant="success">{selectedTerm}</Badge>
+
+                    {selectedAcademicYear && (
+                      <Badge variant="default">
+                        {selectedAcademicYear.name}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="text-left md:text-right">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  Enrollment
+                </p>
+
+                <p className="mt-1 text-sm font-medium text-slate-700">
+                  {selectedEnrollment ? "Active" : "No active enrollment"}
+                </p>
+              </div>
+            </div>
+          </Card>
+
+          {/* SUMMARY */}
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Card className="p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Subjects
+                  </p>
+
+                  <p className="mt-2 text-2xl font-semibold text-slate-900">
+                    {summary.subjects}
+                  </p>
+                </div>
+
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50">
+                  <BookOpen className="h-5 w-5 text-indigo-600" />
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Assessments
+                  </p>
+
+                  <p className="mt-2 text-2xl font-semibold text-slate-900">
+                    {summary.completedAssessments}
+
+                    <span className="ml-1 text-sm font-normal text-slate-400">
+                      /{summary.totalAssessments}
+                    </span>
+                  </p>
+                </div>
+
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-50">
+                  <ClipboardList className="h-5 w-5 text-sky-600" />
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Overall Average
+                  </p>
+
+                  <p className="mt-2 text-2xl font-semibold text-slate-900">
+                    {summary.overallAverage !== null
+                      ? `${summary.overallAverage.toFixed(1)}%`
+                      : "-"}
+                  </p>
+                </div>
+
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50">
+                  <GraduationCap className="h-5 w-5 text-emerald-600" />
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Overall Grade
+                  </p>
+
+                  <p className="mt-2 text-2xl font-semibold text-slate-900">
+                    {summary.overallGrade}
+                  </p>
+
+                  <p className="mt-0.5 text-xs text-slate-400">
+                    {getGradeDescription(summary.overallGrade)}
+                  </p>
+                </div>
+
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50">
+                  <span className="text-lg font-bold text-amber-600">
+                    {summary.overallGrade}
+                  </span>
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* RESULTS */}
+
+          {loadingResults ? (
+            <Card className="p-12">
+              <div className="flex items-center justify-center gap-3 text-sm text-slate-500">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                Loading assessment results...
+              </div>
+            </Card>
+          ) : (
+            <>
+              {/* PERFORMANCE */}
+
+              <Card className="p-6">
+                <div className="mb-5">
+                  <h2 className="text-base font-semibold text-slate-900">
+                    Performance Overview
+                  </h2>
+
+                  <p className="mt-1 text-sm text-slate-500">
+                    Subject performance for {selectedTerm}.
+                  </p>
+                </div>
+
+                {subjectResults.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-slate-200 px-5 py-10 text-center">
+                    <ClipboardList className="mx-auto h-8 w-8 text-slate-300" />
+
+                    <h3 className="mt-3 text-sm font-semibold text-slate-900">
+                      No published assessments
+                    </h3>
+
+                    <p className="mt-1 text-sm text-slate-500">
+                      No published assessments were found for this student in{" "}
+                      {selectedTerm}.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {subjectResults.map((subject) => {
+                      const percentage = subject.average ?? 0;
+
+                      return (
+                        <div
+                          key={subject.subjectId}
+                          className="rounded-xl border border-slate-100 p-4"
+                        >
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                              <p className="text-sm font-semibold text-slate-900">
+                                {subject.subjectName}
+                              </p>
+
+                              {subject.subjectCode && (
+                                <p className="mt-0.5 text-xs text-slate-400">
+                                  {subject.subjectCode}
+                                </p>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                              <span className="text-sm font-semibold text-slate-700">
+                                {subject.average !== null
+                                  ? `${subject.average.toFixed(1)}%`
+                                  : "-"}
+                              </span>
+
+                              <Badge variant="default">{subject.grade}</Badge>
+                            </div>
+                          </div>
+
+                          <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
+                            <div
+                              className="h-full rounded-full bg-indigo-500 transition-all"
+                              style={{
+                                width: `${Math.min(
+                                  100,
+                                  Math.max(0, percentage),
+                                )}%`,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </Card>
+
+              {/* TABLE */}
+
+              <Card className="overflow-hidden">
+                <div className="border-b border-slate-100 px-5 py-5">
+                  <h2 className="text-base font-semibold text-slate-900">
+                    Academic Results
+                  </h2>
+
+                  <p className="mt-1 text-sm text-slate-500">
+                    Detailed assessment results for {selectedStudent.name}.
+                  </p>
+                </div>
+
+                {subjectResults.length === 0 ? (
+                  <div className="px-5 py-12 text-center">
+                    <ClipboardList className="mx-auto h-8 w-8 text-slate-300" />
+
+                    <p className="mt-3 text-sm text-slate-500">
+                      No results available for this term.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-slate-100">
+                      <thead className="bg-slate-50">
+                        <tr>
+                          <th className="whitespace-nowrap px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Subject
+                          </th>
+
+                          <th className="whitespace-nowrap px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Assessment
+                          </th>
+
+                          <th className="whitespace-nowrap px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Date
+                          </th>
+
+                          <th className="whitespace-nowrap px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Marks
+                          </th>
+
+                          <th className="whitespace-nowrap px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            %
+                          </th>
+
+                          <th className="whitespace-nowrap px-5 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Grade
+                          </th>
+
+                          <th className="whitespace-nowrap px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Remarks
+                          </th>
+                        </tr>
+                      </thead>
+
+                      <tbody className="divide-y divide-slate-100 bg-white">
+                        {subjectResults.map((subject) =>
+                          subject.assessments.map((assessment, index) => (
+                            <tr
+                              key={assessment.id}
+                              className="transition hover:bg-slate-50"
+                            >
+                              <td className="px-5 py-4">
+                                {index === 0 ? (
+                                  <div>
+                                    <p className="text-sm font-medium text-slate-900">
+                                      {subject.subjectName}
+                                    </p>
+
+                                    {subject.subjectCode && (
+                                      <p className="mt-0.5 text-xs text-slate-400">
+                                        {subject.subjectCode}
+                                      </p>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-slate-300">—</span>
+                                )}
+                              </td>
+
+                              <td className="px-5 py-4">
+                                <p className="text-sm font-medium text-slate-700">
+                                  {assessment.title}
+                                </p>
+
+                                <p className="mt-0.5 text-xs text-slate-400">
+                                  {assessment.type}
+                                </p>
+                              </td>
+
+                              <td className="whitespace-nowrap px-5 py-4 text-sm text-slate-600">
+                                {formatDate(assessment.date)}
+                              </td>
+
+                              <td className="whitespace-nowrap px-5 py-4 text-right text-sm font-medium text-slate-700">
+                                {assessment.marks !== null
+                                  ? `${assessment.marks} / ${assessment.maxMarks}`
+                                  : "-"}
+                              </td>
+
+                              <td className="whitespace-nowrap px-5 py-4 text-right text-sm font-medium text-slate-700">
+                                {assessment.percentage !== null
+                                  ? `${assessment.percentage.toFixed(1)}%`
+                                  : "-"}
+                              </td>
+
+                              <td className="px-5 py-4 text-center">
+                                <Badge variant="default">
+                                  {assessment.grade}
+                                </Badge>
+                              </td>
+
+                              <td className="min-w-[180px] px-5 py-4 text-sm text-slate-500">
+                                {assessment.remarks || "-"}
+                              </td>
+                            </tr>
+                          )),
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </Card>
+
+              {/* GRADING SCALE */}
+
+              <Card className="p-6">
+                <div className="mb-5">
+                  <h2 className="text-base font-semibold text-slate-900">
+                    High Gate Grading Scale
+                  </h2>
+
+                  <p className="mt-1 text-sm text-slate-500">
+                    Primary school grading scale.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-9">
+                  {[
+                    ["A*", "90–100"],
+                    ["A", "80–89"],
+                    ["B", "70–79"],
+                    ["C", "60–69"],
+                    ["D", "50–59"],
+                    ["E", "40–49"],
+                    ["F", "30–39"],
+                    ["G", "20–29"],
+                    ["U", "0–19"],
+                  ].map(([grade, range]) => (
+                    <div
+                      key={grade}
+                      className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-center"
+                    >
+                      <p className="text-lg font-bold text-slate-900">
+                        {grade}
+                      </p>
+
+                      <p className="mt-1 text-xs text-slate-500">{range}%</p>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </>
+          )}
+        </div>
+      ) : (
+        <Card className="p-12">
+          <div className="mx-auto max-w-md text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50">
+              <User className="h-7 w-7 text-indigo-600" />
+            </div>
+
+            <h2 className="mt-4 text-base font-semibold text-slate-900">
+              Select a student
+            </h2>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Choose a student above to view their academic results.
+            </p>
+          </div>
+        </Card>
+      )}
+      </div>
+
+      {printing && selectedStudent
+        ? createPortal(
+            <PrintableReportCard
+              schoolName={
+                school?.name ??
+                "High Gate International Academy"
+              }
+              student={selectedStudent}
+              academicYear={selectedAcademicYear}
+              term={selectedTerm}
+              className={selectedStudent.className}
+              subjectResults={subjectResults}
+              overallAverage={summary.overallAverage}
+              overallGrade={summary.overallGrade}
+              nursery={isNurseryStudent}
+            />,
+            document.body,
+          )
+        : null}
+    </>
+  );
+}
+
+/* =========================================================
+   PRINTABLE REPORT CARD
+========================================================= */
+
+function HighGateLogo({
+  width = 180,
+}: {
+  width?: number;
+}) {
+  return (
+    <img
+      src="/high-gate-logo.png"
+      alt="High Gate International Academy"
+      loading="eager"
+      decoding="sync"
+      style={{
+        display: "block",
+        width: `${width}px`,
+        height: "auto",
+        maxWidth: "100%",
+        objectFit: "contain",
+      }}
+    />
+  );
+}
+
+type PrintReportProps = {
+  schoolName: string;
+  student: Student;
+  academicYear: AcademicYear | null;
+  term: Term;
+  className: string;
+  subjectResults: SubjectResult[];
+  overallAverage: number | null;
+  overallGrade: string;
+};
+
+function PrintableReportCard(
+  props: PrintReportProps & { nursery: boolean },
+) {
+  const {
+    schoolName,
+    student,
+    academicYear,
+    term,
+    className,
+    subjectResults,
+    overallAverage,
+    overallGrade,
+    nursery,
+  } = props;
+
+  const assessmentColumns = [
+    "CAT I",
+    "CAT II",
+    "C.P",
+    "HW&Pr",
+    "Exam",
+  ];
+
+  function getMark(subject: SubjectResult, type: string) {
+    const row = subject.assessments.find(
+      (item) => item.type === type,
+    );
+
+    return row?.marks ?? null;
+  }
+
+  return (
+    <div id="schoolos-report-card-print">
+      <style>
+        {`
+          @media screen {
+            #schoolos-report-card-print {
+              display: none !important;
+            }
+          }
+
+          @media print {
+            @page {
+              size: A4 portrait;
+              margin: 7mm;
+            }
+
+            html,
+            body {
+              margin: 0 !important;
+              padding: 0 !important;
+              width: 100% !important;
+              min-height: 100% !important;
+              background: #fff !important;
+            }
+
+            body > #root {
+              display: none !important;
+            }
+
+            body > #schoolos-report-card-print {
+              display: block !important;
+              position: static !important;
+              width: 100% !important;
+              min-height: 100vh !important;
+              background: #fff !important;
+              color: #111 !important;
+            }
+
+            #schoolos-report-card-print {
+              font-family: "Times New Roman", Times, serif !important;
+              font-size: 10px !important;
+            }
+
+            #schoolos-report-card-print * {
+              visibility: visible !important;
+              box-shadow: none !important;
+            }
+
+            .hg-page {
+              page-break-after: always !important;
+              break-after: page !important;
+              min-height: 282mm !important;
+              overflow: hidden !important;
+            }
+
+            .hg-page:last-child {
+              page-break-after: auto !important;
+              break-after: auto !important;
+            }
+
+            /*
+             * Primary is intentionally one continuous document.
+             * Chrome decides where page 2 begins when page 1 is full.
+             */
+            .hg-primary-flow {
+              width: 100% !important;
+            }
+
+            .hg-primary-flow .hg-primary-table {
+              width: 100% !important;
+              border-collapse: collapse !important;
+              table-layout: fixed !important;
+            }
+
+            .hg-primary-flow .hg-primary-table thead {
+              display: table-header-group !important;
+            }
+
+            .hg-primary-flow .hg-primary-table tr {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+
+            .hg-primary-flow .hg-primary-table th,
+            .hg-primary-flow .hg-primary-table td {
+              border: 1px solid #111 !important;
+              padding: 3px 2px !important;
+              vertical-align: middle !important;
+            }
+
+            .hg-primary-flow .hg-primary-table th {
+              background: #c4df91 !important;
+              font-size: 7px !important;
+              line-height: 1.05 !important;
+            }
+
+            .hg-primary-flow .hg-primary-table td {
+              font-size: 7px !important;
+              line-height: 1.12 !important;
+            }
+
+            .hg-primary-flow .hg-primary-comment {
+              font-size: 6.3px !important;
+              line-height: 1.08 !important;
+              overflow-wrap: anywhere !important;
+            }
+
+            .hg-primary-flow .hg-primary-teacher {
+              font-size: 6.3px !important;
+              line-height: 1.08 !important;
+            }
+          }
+        `}
+      </style>
+
+      {nursery ? (
+        <NurseryPrintableReport
+          schoolName={schoolName}
+          student={student}
+          academicYear={academicYear}
+          term={term}
+          className={className}
+        />
+      ) : (
+        <PrimaryPrintableReport
+          schoolName={schoolName}
+          student={student}
+          academicYear={academicYear}
+          term={term}
+          className={className}
+          subjectResults={subjectResults}
+          overallAverage={overallAverage}
+          overallGrade={overallGrade}
+        />
+            )}
+    </div>
+  );
+}
+
+
+function PrimaryPrintableReport({
+  schoolName,
+  student,
+  academicYear,
+  term,
+  className,
+  subjectResults,
+  overallAverage,
+  overallGrade,
+}: PrintReportProps) {
+  const columns = [
+    { label: "CAT I", type: "CAT I", max: "/40" },
+    { label: "CAT II", type: "CAT II", max: "/40" },
+    { label: "C.P", type: "C.P", max: "/10" },
+    { label: "HW&Pr", type: "HW&Pr", max: "/10" },
+    { label: "Exam", type: "Exam", max: "/100" },
+  ];
+
+  const getMark = (
+    subject: SubjectResult,
+    type: string,
+  ): number | null => {
+    return (
+      subject.assessments.find(
+        (assessment) => assessment.type === type,
+      )?.marks ?? null
+    );
+  };
+
+  const getTotal = (
+    subject: SubjectResult,
+  ): number | null => {
+    const catI = getMark(subject, "CAT I");
+    const catII = getMark(subject, "CAT II");
+    const cp = getMark(subject, "C.P");
+    const hw = getMark(subject, "HW&Pr");
+    const exam = getMark(subject, "Exam");
+
+    if (
+      catI !== null &&
+      catII !== null &&
+      cp !== null &&
+      hw !== null &&
+      exam !== null
+    ) {
+      return (
+        Number(catI) +
+        Number(catII) +
+        Number(cp) +
+        Number(hw) +
+        Number(exam)
+      ) / 2;
+    }
+
+    return subject.average;
+  };
+
+  return (
+    <div className="hg-primary-flow">
+      {/* =====================================================
+          HIGH GATE PRIMARY REPORT — ONE CONTINUOUS DOCUMENT
+          The browser creates page 2 only when page 1 is full.
+      ===================================================== */}
+
+      <div className="grid grid-cols-[105px_1fr_82px] items-start gap-3">
+        <div className="pt-0.5">
+          <HighGateLogo width={100} />
+        </div>
+
+        <div className="pt-1 text-center text-[8px] leading-3.5">
+          <div>
+            Tel : + 250 79 89 80 340
+          </div>
+          <div>
+            Website : www.highgateinternational.com
+          </div>
+          <div>
+            E-mail : info@highgateinternational.com
+          </div>
+        </div>
+
+        <div className="flex justify-end pt-1">
+          <img
+            src="/educanada-logo.png"
+            alt="EduCanada"
+            loading="eager"
+            decoding="sync"
+            style={{
+              display: "block",
+              width: "68px",
+              height: "auto",
+              objectFit: "contain",
+            }}
+          />
+        </div>
+      </div>
+
+      <div className="mt-2 border-b-2 border-black pb-2 text-center">
+        <div className="text-[16px] font-bold">
+          STUDENT TERMLY REPORT
+        </div>
+      </div>
+
+      <div className="mt-2 grid grid-cols-2 gap-x-8 gap-y-1 text-[8.5px]">
+        <div>
+          <strong>NAME:</strong>{" "}
+          {student.name}
+        </div>
+
+        <div>
+          <strong>CLASS:</strong>{" "}
+          {className || "—"}
+        </div>
+
+        <div>
+          <strong>REG. NO.:</strong>{" "}
+          {student.studentId}
+        </div>
+
+        <div>
+          <strong>YEAR :</strong>{" "}
+          {academicYear?.name || "—"} -{" "}
+          <strong>TERM:</strong>{" "}
+          {term.replace("Term ", "")}
+        </div>
+      </div>
+
+      <table className="hg-primary-table mt-3">
+        <colgroup>
+          <col style={{ width: "15%" }} />
+          <col style={{ width: "5%" }} />
+          <col style={{ width: "5%" }} />
+          <col style={{ width: "4%" }} />
+          <col style={{ width: "5%" }} />
+          <col style={{ width: "5%" }} />
+          <col style={{ width: "5%" }} />
+          <col style={{ width: "4%" }} />
+          <col style={{ width: "4%" }} />
+          <col style={{ width: "38%" }} />
+          <col style={{ width: "10%" }} />
+        </colgroup>
+
+        <thead>
+          <tr>
+            <th>SUBJECT</th>
+
+            {columns.map((column) => (
+              <th
+                key={column.label}
+                className="text-center"
+              >
+                <div>{column.label}</div>
+                <div className="font-normal">
+                  {column.max}
+                </div>
+              </th>
+            ))}
+
+            <th className="text-center">
+              <div>TOT</div>
+              <div className="font-normal">
+                /100
+              </div>
+            </th>
+
+            <th className="text-center">
+              GR
+            </th>
+
+            <th className="text-center">
+              CA
+            </th>
+
+            <th>COMMENT</th>
+            <th>TEACHER</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {subjectResults.length === 0 ? (
+            <tr>
+              <td
+                colSpan={11}
+                className="py-8 text-center"
+              >
+                No assessment results available.
+              </td>
+            </tr>
+          ) : (
+            subjectResults.map((subject) => {
+              const total = getTotal(subject);
+
+              const comment =
+                subject.assessments.find(
+                  (assessment) =>
+                    assessment.remarks?.trim(),
+                )?.remarks ?? "";
+
+              return (
+                <tr
+                  key={subject.subjectId}
+                  className="hg-no-break"
+                >
+                  <td className="font-bold italic">
+                    {subject.subjectName}
+                  </td>
+
+                  {columns.map((column) => (
+                    <td
+                      key={column.label}
+                      className="text-center"
+                    >
+                      {getMark(
+                        subject,
+                        column.type,
+                      ) ?? ""}
+                    </td>
+                  ))}
+
+                  <td className="text-center font-bold">
+                    {total !== null
+                      ? Math.round(total)
+                      : ""}
+                  </td>
+
+                  <td className="text-center font-bold">
+                    {getGrade(total)}
+                  </td>
+
+                  <td className="text-center">
+                    {subject.average !== null
+                      ? Math.round(
+                          subject.average,
+                        )
+                      : ""}
+                  </td>
+
+                  <td className="hg-primary-comment">
+                    {comment}
+                  </td>
+
+                  <td className="hg-primary-teacher">
+                    {subject.teacherName || "—"}
+                  </td>
+                </tr>
+              );
+            })
+          )}
+
+          {subjectResults.length > 0 && (
+            <tr className="hg-green">
+              <td
+                colSpan={9}
+                className="text-right font-bold"
+              >
+                AVERAGE
+              </td>
+
+              <td
+                colSpan={3}
+                className="text-center font-bold"
+              >
+                {overallAverage !== null
+                  ? overallAverage.toFixed(2)
+                  : "—"}
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+
+      <div className="mt-2 text-[8.5px] font-bold">
+        Conduct : 40/40
+      </div>
+
+      <div className="mt-2 border-2 border-black">
+        <div className="bg-slate-100 px-2 py-1 text-center text-[9px] font-bold">
+          General Comment
+        </div>
+
+        <div className="min-h-[90px] px-4 py-4 text-[8.5px]">
+          &nbsp;
+        </div>
+      </div>
+
+      <div className="mt-3 text-[7.5px] leading-3">
+        <div className="font-bold">
+          ABBREVIATIONS
+        </div>
+
+        <div className="mt-1 grid grid-cols-3 gap-x-5 gap-y-1">
+          <div>
+            <strong>CAT_I</strong> : CAT (Test 1, Mid term 1)
+          </div>
+
+          <div>
+            <strong>CAT_II</strong> : CAT (Test 2, Mid term 2)
+          </div>
+
+          <div>
+            <strong>C.P</strong> : Class Participation
+          </div>
+
+          <div>
+            <strong>Exam</strong> : End of Term Exam
+          </div>
+
+          <div>
+            <strong>TOT</strong> : Total
+          </div>
+
+          <div>
+            <strong>HW&amp;Pr</strong> : Home Work &amp; Projects
+          </div>
+
+          <div>
+            <strong>GR</strong> : Grade
+          </div>
+
+          <div>
+            <strong>CA</strong> : Class Average
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-3">
+        <div className="font-bold text-[8.5px]">
+          Grading Scale
+        </div>
+
+        <table className="hg-primary-table mt-1 text-[7.5px]">
+          <tbody>
+            <tr>
+              {[
+                ["90-100", "A*"],
+                ["80-89", "A"],
+                ["70-79", "B"],
+                ["60-69", "C"],
+                ["50-59", "D"],
+                ["40-49", "E"],
+                ["30-39", "F"],
+                ["20-29", "G"],
+                ["0-19", "U"],
+              ].map(([range, grade]) => (
+                <td
+                  key={grade}
+                  className="py-1 text-center"
+                >
+                  <div>{range}</div>
+                  <div className="font-bold">
+                    {grade}
+                  </div>
+                </td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div className="mt-8 grid grid-cols-2 gap-20 text-[9px]">
+        <div>
+          <div className="font-semibold">
+            Class Teacher
+          </div>
+
+          <div className="mt-1 font-semibold">
+            {subjectResults.find(
+              (subject) => subject.teacherName,
+            )?.teacherName || "________________"}
+          </div>
+
+          <div className="mt-8 border-t border-black pt-1">
+            Signature
+          </div>
+        </div>
+
+        <div>
+          <div className="font-semibold">
+            Principal
+          </div>
+
+          <div className="mt-9 border-t border-black pt-1">
+            Signature
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-10 flex justify-center">
+        <div className="text-center text-[8px]">
+          <div className="font-bold">
+            Cambridge Assessment
+          </div>
+          <div>
+            International Education
+          </div>
+          <div className="mt-1">
+            Cambridge International School
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-8 text-center text-[6.5px]">
+        School Contacts: Website: www.highgateinternational.com /
+        Email: info@highgateinternational.com / Phone number: + 250 79 89 80 340 /
+        Report made using www.academicbridge.xyz
+      </div>
+    </div>
+  );
+}
+
+function NurseryPrintableReport({
+  schoolName,
+  student,
+  academicYear,
+  term,
+  className,
+}: {
+  schoolName: string;
+  student: Student;
+  academicYear: AcademicYear | null;
+  term: Term;
+  className: string;
+}) {
+  const pages = [
+    [
+      {
+        domain: "Domaine Langagier",
+        competency: "ECRITURE",
+        titleColor: "#89D0F0",
+        status:
+          "Votre enfant se développe avec certaines difficultés au regard de la compétence visée",
+        statusColor: "#FFAA00",
+        commentColor: "#DDEFFC",
+      },
+      {
+        domain: "Domaine Langagier",
+        competency: "EXPRESSION ORALE",
+        titleColor: "#8BC58B",
+        status:
+          "Votre enfant se développe bien au regard de la compétence visée",
+        statusColor: "#FFFF00",
+        commentColor: "#DCF0DC",
+      },
+      {
+        domain: "Domaine Langagier",
+        competency: "LECTURE",
+        titleColor: "#FF738D",
+        status:
+          "Votre enfant se développe très bien au regard de la compétence visée",
+        statusColor: "#008001",
+        commentColor: "#FFE0E7",
+      },
+      {
+        domain: "Domaine Cognitif",
+        competency: "COMPTAGE",
+        titleColor: "#8F4FA6",
+        status:
+          "Votre enfant se développe très bien au regard de la compétence visée",
+        statusColor: "#008001",
+        commentColor: "#E4D8EA",
+      },
+    ],
+    [
+      {
+        domain: "Domaine Cognitif",
+        competency: "JEUX A MATHIS",
+        titleColor: "#89D0F0",
+        status:
+          "Votre enfant se développe très bien au regard de la compétence visée",
+        statusColor: "#008001",
+        commentColor: "#DDEFFC",
+      },
+      {
+        domain: "Domaine Physique Moteur",
+        competency: "ACTIVITE DE MOTRICITE FINE",
+        titleColor: "#8BC58B",
+        status:
+          "Votre enfant se développe très bien au regard de la compétence visée",
+        statusColor: "#008001",
+        commentColor: "#DCF0DC",
+      },
+      {
+        domain: "Domaine Physique Moteur",
+        competency: "JEU DE MOTRICITE GLOBALE",
+        titleColor: "#FF738D",
+        status:
+          "Votre enfant se développe très bien au regard de la compétence visée",
+        statusColor: "#008001",
+        commentColor: "#FFE0E7",
+      },
+      {
+        domain: "Domaine Sociale",
+        competency: "CONVIVIALITE",
+        titleColor: "#8F4FA6",
+        status:
+          "Votre enfant se développe très bien au regard de la compétence visée",
+        statusColor: "#008001",
+        commentColor: "#E4D8EA",
+      },
+    ],
+    [
+      {
+        domain: "Domaine Sociale",
+        competency: "Sociabilité",
+        titleColor: "#89D0F0",
+        status:
+          "Votre enfant se développe très bien au regard de la compétence visée",
+        statusColor: "#008001",
+        commentColor: "#DDEFFC",
+      },
+      {
+        domain: "Domaine Affectif",
+        competency: "CONNAISSANCE DE SOI",
+        titleColor: "#8BC58B",
+        status:
+          "Votre enfant se développe très bien au regard de la compétence visée",
+        statusColor: "#008001",
+        commentColor: "#DCF0DC",
+      },
+    ],
+  ];
+
+  function renderCompetency(
+    item: (typeof pages)[number][number],
+  ) {
+    return (
+      <div
+        key={`${item.domain}-${item.competency}`}
+        className="hg-no-break"
+      >
+        <div className="grid grid-cols-[165px_1fr] gap-3">
+          <div className="flex items-center justify-center">
+            <div
+              className="flex h-[112px] w-[112px] items-center justify-center rounded-full px-4 text-center text-[10px] leading-tight"
+              style={{ backgroundColor: item.titleColor }}
+            >
+              {item.domain}
+            </div>
+          </div>
+
+          <div>
+            <div
+              className="flex min-h-[78px] items-center px-4 text-[13px]"
+              style={{ backgroundColor: item.titleColor }}
+            >
+              {item.competency}
+            </div>
+
+            <div
+              className="mt-1 flex min-h-[58px] items-center px-4 text-[10px]"
+              style={{ backgroundColor: item.statusColor }}
+            >
+              {item.status}
+            </div>
+          </div>
+        </div>
+
+        <div
+          className="mt-1 px-4 py-2 text-[9.2px] leading-tight"
+          style={{ backgroundColor: item.commentColor }}
+        >
+          <strong className="italic">Comment :</strong>
+          {" "}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {/* PAGE 1 */}
+      <div className="hg-page px-1.5 py-1">
+        <div
+          className="hg-blue"
+          style={{
+            width: "100%",
+            minHeight: "180px",
+            boxSizing: "border-box",
+            backgroundColor: "#064b63",
+            color: "#ffffff",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            textAlign: "center",
+            padding: "20px 28px",
+          }}
+        >
+          <div
+            style={{
+              color: "#ffffff",
+              fontFamily: '"Times New Roman", Times, serif',
+              fontSize: "28px",
+              lineHeight: "1.15",
+              fontWeight: 700,
+              fontStyle: "italic",
+              whiteSpace: "nowrap",
+            }}
+          >
+            BULLETIN DE L'ÉDUCATION PRÉSCOLAIRE
+          </div>
+
+          <div
+            style={{
+              color: "#ffffff",
+              marginTop: "28px",
+              fontFamily: '"Times New Roman", Times, serif',
+              fontSize: "24px",
+              lineHeight: "1.15",
+              fontWeight: 700,
+              fontStyle: "italic",
+              whiteSpace: "nowrap",
+            }}
+          >
+            ANNÉE SCOLAIRE {academicYear?.name ?? "—"}
+          </div>
+        </div>
+
+        <div className="mt-4 flex justify-center">
+          <HighGateLogo width={370} />
+        </div>
+
+        <div className="mt-1 text-center text-[10px] leading-4">
+          <div>KG 669 St Gasabo District, Gisozi Sector</div>
+          <div>
+            + 250 79 89 80 340 &nbsp;&nbsp;
+            www.highgateinternational.com &nbsp;&nbsp;
+            Email : info@highgateinternational.com
+          </div>
+        </div>
+
+        <div
+          className="mt-2 h-[6px]"
+          style={{ backgroundColor: "#064b63" }}
+        />
+
+        <div className="mt-3 space-y-1 text-[11px]">
+          <div className="grid grid-cols-[180px_1fr] border-b border-slate-300 pb-1">
+            <span>Nom de l'enfant :</span>
+            <strong className="italic">{student.name}</strong>
+          </div>
+
+          <div className="grid grid-cols-[180px_1fr] border-b border-slate-300 pb-1">
+            <span>Date de naissance :</span>
+            <span>{formatDate(student.dateOfBirth)}</span>
+          </div>
+
+          <div className="grid grid-cols-[180px_1fr] border-b border-slate-300 pb-1">
+            <span>Numéro matricule :</span>
+            <span>{student.studentId}</span>
+          </div>
+
+          <div className="grid grid-cols-[180px_1fr] border-b border-slate-300 pb-1">
+            <span>Classe :</span>
+            <span>{className || "—"}</span>
+          </div>
+        </div>
+
+        <div className="mt-4 text-[10px]">
+          <div className="font-bold italic">
+            DESTINATAIRE(S) DU BULLETIN
+          </div>
+
+          <div className="mt-2">
+            Père ☐ &nbsp;&nbsp; Mère ☐ &nbsp;&nbsp;
+            Tutrice ou tuteur ☐ &nbsp;&nbsp; Autre ☐
+          </div>
+
+          <div className="mt-2 grid grid-cols-[100px_1fr] gap-y-2">
+            <span>Adresse :</span>
+            <span className="border-b border-slate-300" />
+
+            <span>Numéro de téléphone :</span>
+            <span className="border-b border-slate-300" />
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-6 text-[10px]">
+          <div>
+            <div className="bg-[#C6D8E5] px-3 py-2">
+              Directeur de l'école :
+            </div>
+
+            <div className="mt-3 border-b border-slate-400 pb-2">
+              Signature:
+            </div>
+          </div>
+
+          <div>
+            <div className="bg-[#C6D8E5] px-3 py-2">
+              Enseignante :
+            </div>
+
+            <div className="mt-3 border-b border-slate-400 pb-2">
+              Signature:
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-[165px_1fr_1fr] items-center gap-5 text-[10px]">
+          <div className="hg-blue px-3 py-3">
+            Étape de la communication
+          </div>
+
+          <div className="border-b border-slate-400 pb-2">
+            Début :
+          </div>
+
+          <div className="border-b border-slate-400 pb-2">
+            Fin :
+          </div>
+        </div>
+
+        <div className="mt-5 grid grid-cols-[0.72fr_1.45fr] items-end gap-5">
+          <div className="flex justify-center">
+            <div className="text-[70px] leading-none">👧</div>
+          </div>
+
+          <div>
+            <div className="mb-1 text-[11px] font-bold italic">
+              ASSIDUITÉ
+            </div>
+
+            <table className="hg-table text-[10px]">
+              <tbody>
+                <tr>
+                  <td className="bg-[#C6D8E5] font-bold">
+                    Trimestre
+                  </td>
+
+                  <td className="bg-[#C6D8E5] text-center font-bold">
+                    {term.replace("Term ", "")}
+                  </td>
+                </tr>
+
+                <tr>
+                  <td>Jours d'absence</td>
+                  <td className="text-center">—</td>
+                </tr>
+
+                <tr>
+                  <td>Jours de classe</td>
+                  <td className="text-center">—</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="mt-4">
+          <div className="hg-blue px-3 py-2 text-[10px]">
+            LÉGENDE
+          </div>
+
+          <div className="mt-1 space-y-1.5 text-[8.8px]">
+            {[
+              [
+                "#008001",
+                "Votre enfant se développe très bien au regard de la compétence visée",
+              ],
+              [
+                "#FFFF00",
+                "Votre enfant se développe bien au regard de la compétence visée",
+              ],
+              [
+                "#FFAA00",
+                "Votre enfant se développe avec certaines difficultés au regard de la compétence visée",
+              ],
+              [
+                "#FF0000",
+                "Votre enfant se développe avec des difficultés importantes au regard de la compétence visée",
+              ],
+            ].map(([color, label]) => (
+              <div key={label} className="flex items-center gap-3">
+                <span
+                  className="inline-block h-5 w-32 shrink-0"
+                  style={{ backgroundColor: color }}
+                />
+
+                <span>{label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* PAGE 2 */}
+      <div className="hg-page px-1.5 py-1">
+        <div className="hg-blue px-5 py-4 text-center text-[19px] font-bold italic">
+          ÉTAT DE DÉVELOPPEMENT DES COMPÉTENCES
+        </div>
+
+        <div className="mt-5 space-y-3">
+          {pages[0].map(renderCompetency)}
+        </div>
+      </div>
+
+      {/* PAGE 3 */}
+      <div className="hg-page px-1.5 py-1">
+        <div className="hg-blue px-5 py-4 text-center text-[19px] font-bold italic">
+          ÉTAT DE DÉVELOPPEMENT DES COMPÉTENCES
+        </div>
+
+        <div className="mt-5 space-y-3">
+          {pages[1].map(renderCompetency)}
+        </div>
+      </div>
+
+      {/* PAGE 4 */}
+      <div className="hg-page px-1.5 py-1">
+        <div className="hg-blue px-5 py-4 text-center text-[19px] font-bold italic">
+          ÉTAT DE DÉVELOPPEMENT DES COMPÉTENCES
+        </div>
+
+        <div className="mt-5 space-y-3">
+          {pages[2].map(renderCompetency)}
+        </div>
+
+        <div className="mt-4 grid grid-cols-[1fr_125px] gap-4">
+          <div className="border-2 border-black">
+            <div className="border-b border-black px-2 py-1 text-center text-[12px] font-bold italic">
+              Commentaire du titulaire de la classe
+            </div>
+
+            <div className="min-h-[145px] px-3 py-3 text-[9px]">
+              &nbsp;
+            </div>
+          </div>
+
+          <div className="flex items-start justify-center">
+            <div className="h-[104px] w-[104px] border-2 border-black p-2 text-center text-[9px]">
+              Scan for verification
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-7 grid grid-cols-2 items-end gap-16 text-[10px]">
+          <div>Signature et cachet:</div>
+
+          <div className="text-right">
+            <div className="mb-8 font-bold italic">
+              ______________________
+            </div>
+
+            <div>Direction / École</div>
+          </div>
+        </div>
+
+        <div className="mt-12 text-center text-[8px]">
+          School Contacts: Website: www.highgateinternational.com /
+          Email: info@highgateinternational.com /
+          Phone number: + 250 79 89 80 340
+        </div>
+      </div>
+    </>
+  );
+}
+

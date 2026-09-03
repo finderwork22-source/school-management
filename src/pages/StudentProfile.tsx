@@ -44,6 +44,9 @@ interface StudentProfileData {
   enrollment: {
     class_id: string;
     class_name: string;
+    section_name: string | null;
+    stream_id: string | null;
+    stream_name: string | null;
     academic_year_id: string | null;
     academic_year_name: string | null;
   } | null;
@@ -128,8 +131,18 @@ export default function StudentProfile() {
 
           enrollments (
             class_id,
+            stream_id,
             academic_year_id,
             classes (
+              id,
+              name,
+              academic_section_id,
+              academic_sections (
+                id,
+                name
+              )
+            ),
+            class_streams:stream_id (
               id,
               name
             ),
@@ -179,6 +192,14 @@ export default function StudentProfile() {
       ? enrollment.classes[0]
       : enrollment?.classes;
 
+    const academicSection = Array.isArray(classData?.academic_sections)
+      ? classData.academic_sections[0]
+      : classData?.academic_sections;
+
+    const streamData = Array.isArray(enrollment?.class_streams)
+      ? enrollment.class_streams[0]
+      : enrollment?.class_streams;
+
     const academicYear = Array.isArray(enrollment?.academic_years)
       ? enrollment.academic_years[0]
       : enrollment?.academic_years;
@@ -213,6 +234,9 @@ export default function StudentProfile() {
         ? {
             class_id: enrollment.class_id,
             class_name: classData?.name ?? "Unassigned",
+            section_name: academicSection?.name ?? null,
+            stream_id: enrollment.stream_id ?? null,
+            stream_name: streamData?.name ?? null,
             academic_year_id: enrollment.academic_year_id,
             academic_year_name: academicYear?.name ?? null,
           }
@@ -790,15 +814,123 @@ function EditStudentModal({
 
   const [nationality, setNationality] = useState(student.nationality ?? "");
 
+  const [sectionId, setSectionId] = useState("");
   const [classId, setClassId] = useState(student.enrollment?.class_id ?? "");
+  const [streamId, setStreamId] = useState(student.enrollment?.stream_id ?? "");
+
+  const [academicSections, setAcademicSections] = useState<
+    {
+      id: string;
+      name: string;
+      display_order: number;
+      academic_year_id: string;
+      is_active: boolean;
+    }[]
+  >([]);
+
+  const [streams, setStreams] = useState<
+    {
+      id: string;
+      class_id: string;
+      name: string;
+      is_active: boolean;
+    }[]
+  >([]);
+
+  const [loadingAcademicStructure, setLoadingAcademicStructure] =
+    useState(true);
 
   const [parentName, setParentName] = useState(student.parent?.name ?? "");
 
   const [parentPhone, setParentPhone] = useState(student.parent?.phone ?? "");
 
+  const classesForSection = classes.filter(
+    (schoolClass) =>
+      schoolClass.is_active &&
+      schoolClass.academic_year_id ===
+        student.enrollment?.academic_year_id &&
+      schoolClass.academic_section_id === sectionId,
+  );
+
+  const streamsForClass = streams.filter(
+    (stream) =>
+      stream.is_active &&
+      stream.class_id === classId,
+  );
+
   const [saving, setSaving] = useState(false);
 
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAcademicStructure() {
+      setLoadingAcademicStructure(true);
+
+      const academicYearId = student.enrollment?.academic_year_id;
+
+      if (!academicYearId) {
+        setAcademicSections([]);
+        setStreams([]);
+        setLoadingAcademicStructure(false);
+        return;
+      }
+
+      const [sectionsResult, streamsResult] = await Promise.all([
+        supabase
+          .from("academic_sections")
+          .select("id, name, display_order, academic_year_id, is_active")
+          .eq("academic_year_id", academicYearId)
+          .eq("is_active", true)
+          .order("display_order", { ascending: true }),
+        supabase
+          .from("class_streams")
+          .select("id, class_id, name, is_active")
+          .eq("is_active", true),
+      ]);
+
+      if (cancelled) return;
+
+      if (sectionsResult.error) {
+        console.error("Failed to load academic sections:", sectionsResult.error);
+        setAcademicSections([]);
+      } else {
+        const uniqueSections = new Map<string, (typeof sectionsResult.data)[number]>();
+        (sectionsResult.data ?? []).forEach((section) => {
+          const key = section.name.trim().toLowerCase();
+          if (!uniqueSections.has(key)) uniqueSections.set(key, section);
+        });
+        setAcademicSections(Array.from(uniqueSections.values()));
+      }
+
+      if (streamsResult.error) {
+        console.error("Failed to load streams:", streamsResult.error);
+        setStreams([]);
+      } else {
+        setStreams(streamsResult.data ?? []);
+      }
+
+      const currentClass = classes.find(
+        (item) => item.id === student.enrollment?.class_id,
+      );
+
+      setSectionId(currentClass?.academic_section_id ?? "");
+      setStreamId(student.enrollment?.stream_id ?? "");
+      setLoadingAcademicStructure(false);
+    }
+
+    loadAcademicStructure();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    classes,
+    student.enrollment?.academic_year_id,
+    student.enrollment?.class_id,
+    student.enrollment?.stream_id,
+  ]);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -813,8 +945,18 @@ function EditStudentModal({
       return;
     }
 
+    if (!sectionId) {
+      setError("Please select a section.");
+      return;
+    }
+
     if (!classId) {
       setError("Please select a class.");
+      return;
+    }
+
+    if (streamsForClass.length > 0 && !streamId) {
+      setError("Please select a stream.");
       return;
     }
 
@@ -839,6 +981,48 @@ function EditStudentModal({
       setError(updateError.message);
       setSaving(false);
       return;
+    }
+
+    const { data: updatedEnrollment, error: enrollmentLookupError } =
+      await supabase
+        .from("enrollments")
+        .select("id")
+        .eq("student_id", student.id)
+        .eq("academic_year_id", student.enrollment?.academic_year_id ?? "")
+        .eq("status", "Active")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+    if (enrollmentLookupError) {
+      console.error(
+        "Failed to find student enrollment:",
+        enrollmentLookupError,
+      );
+
+      setError(enrollmentLookupError.message);
+      setSaving(false);
+      return;
+    }
+
+    if (updatedEnrollment?.id) {
+      const { error: streamUpdateError } = await supabase
+        .from("enrollments")
+        .update({
+          stream_id: streamId || null,
+        })
+        .eq("id", updatedEnrollment.id);
+
+      if (streamUpdateError) {
+        console.error(
+          "Failed to update student stream:",
+          streamUpdateError,
+        );
+
+        setError(streamUpdateError.message);
+        setSaving(false);
+        return;
+      }
     }
 
     await onSaved();
@@ -932,20 +1116,84 @@ function EditStudentModal({
 
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-slate-700">
+                    Section
+                  </label>
+
+                  <select
+                    value={sectionId}
+                    onChange={(event) => {
+                      setSectionId(event.target.value);
+                      setClassId("");
+                      setStreamId("");
+                    }}
+                    required
+                    disabled={loadingAcademicStructure}
+                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 disabled:bg-slate-50 disabled:text-slate-400"
+                  >
+                    <option value="">
+                      {loadingAcademicStructure
+                        ? "Loading sections..."
+                        : "Select section"}
+                    </option>
+
+                    {academicSections.map((section) => (
+                      <option key={section.id} value={section.id}>
+                        {section.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-slate-700">
                     Class
                   </label>
 
                   <select
                     value={classId}
-                    onChange={(event) => setClassId(event.target.value)}
+                    onChange={(event) => {
+                      setClassId(event.target.value);
+                      setStreamId("");
+                    }}
                     required
-                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                    disabled={!sectionId || loadingAcademicStructure}
+                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 disabled:bg-slate-50 disabled:text-slate-400"
                   >
-                    <option value="">Select class</option>
+                    <option value="">
+                      {!sectionId ? "Select section first" : "Select class"}
+                    </option>
 
-                    {classes.map((schoolClass) => (
+                    {classesForSection.map((schoolClass) => (
                       <option key={schoolClass.id} value={schoolClass.id}>
                         {schoolClass.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-slate-700">
+                    Stream
+                  </label>
+
+                  <select
+                    value={streamId}
+                    onChange={(event) => setStreamId(event.target.value)}
+                    required={streamsForClass.length > 0}
+                    disabled={!classId || loadingAcademicStructure}
+                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 disabled:bg-slate-50 disabled:text-slate-400"
+                  >
+                    <option value="">
+                      {!classId
+                        ? "Select class first"
+                        : streamsForClass.length === 0
+                          ? "No streams"
+                          : "Select stream"}
+                    </option>
+
+                    {streamsForClass.map((stream) => (
+                      <option key={stream.id} value={stream.id}>
+                        {stream.name}
                       </option>
                     ))}
                   </select>

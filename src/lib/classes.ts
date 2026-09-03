@@ -7,6 +7,7 @@ export interface SchoolClass {
   section: string | null;
   capacity: number | null;
   academic_year_id: string | null;
+  academic_section_id: string | null;
   is_active: boolean;
 }
 
@@ -24,13 +25,18 @@ export async function getClasses(
       name,
       grade,
       section,
-      academic_year_id,
       capacity,
+      academic_year_id,
+      academic_section_id,
       is_active
     `)
     .eq("school_id", schoolId)
-    .order("grade", { ascending: true })
-    .order("name", { ascending: true });
+    .order("grade", {
+      ascending: true,
+    })
+    .order("name", {
+      ascending: true,
+    });
 
   if (academicYearId) {
     query = query.eq(
@@ -49,7 +55,7 @@ export async function getClasses(
   }
 
   return {
-    data: data ?? [],
+    data: (data ?? []) as SchoolClass[],
     error: null,
   };
 }

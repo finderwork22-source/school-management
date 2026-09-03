@@ -22,7 +22,17 @@ interface SchoolClass {
   name: string;
   section: string | null;
   academic_year_id: string | null;
+  academic_section_id: string | null;
   capacity: number | null;
+  is_active: boolean;
+}
+
+interface AcademicSection {
+  id: string;
+  school_id: string;
+  academic_year_id: string;
+  name: string;
+  display_order: number;
   is_active: boolean;
 }
 
@@ -62,11 +72,15 @@ export default function ClassesSubjects() {
 
   const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
 
+  const [academicSections, setAcademicSections] = useState<AcademicSection[]>([]);
+
   const [selectedAcademicYearId, setSelectedAcademicYearId] = useState("");
 
   const [subjects, setSubjects] = useState<Subject[]>([]);
 
   const [classSubjects, setClassSubjects] = useState<ClassSubject[]>([]);
+
+  const [enrollmentCounts, setEnrollmentCounts] = useState<Record<string, number>>({});
 
   const [loading, setLoading] = useState(true);
 
@@ -94,8 +108,10 @@ export default function ClassesSubjects() {
     if (!school) {
       setClasses([]);
       setAcademicYears([]);
+      setAcademicSections([]);
       setSubjects([]);
       setClassSubjects([]);
+      setEnrollmentCounts({});
       setSelectedAcademicYearId("");
       setLoading(false);
       return;
@@ -106,9 +122,11 @@ export default function ClassesSubjects() {
 
     const [
       academicYearsResult,
+      academicSectionsResult,
       classesResult,
       subjectsResult,
       classSubjectsResult,
+      enrollmentsResult,
     ] = await Promise.all([
       supabase
         .from("academic_years")
@@ -125,6 +143,21 @@ export default function ClassesSubjects() {
         .order("name", { ascending: false }),
 
       supabase
+        .from("academic_sections")
+        .select(
+          `
+          id,
+          school_id,
+          academic_year_id,
+          name,
+          display_order,
+          is_active
+        `,
+        )
+        .eq("school_id", school.id)
+        .order("display_order", { ascending: true }),
+
+      supabase
         .from("classes")
         .select(
           `
@@ -132,6 +165,7 @@ export default function ClassesSubjects() {
           name,
           section,
           academic_year_id,
+          academic_section_id,
           capacity,
           is_active
         `,
@@ -163,10 +197,21 @@ export default function ClassesSubjects() {
         `,
         )
         .eq("school_id", school.id),
+
+      supabase
+        .from("enrollments")
+        .select("class_id, academic_year_id, status")
+        .eq("school_id", school.id),
     ]);
 
     if (academicYearsResult.error) {
       setError(academicYearsResult.error.message);
+      setLoading(false);
+      return;
+    }
+
+    if (academicSectionsResult.error) {
+      setError(academicSectionsResult.error.message);
       setLoading(false);
       return;
     }
@@ -189,12 +234,42 @@ export default function ClassesSubjects() {
       return;
     }
 
+    if (enrollmentsResult.error) {
+      setError(enrollmentsResult.error.message);
+      setLoading(false);
+      return;
+    }
+
     const loadedAcademicYears = academicYearsResult.data ?? [];
 
     setAcademicYears(loadedAcademicYears);
+    setAcademicSections(academicSectionsResult.data ?? []);
     setClasses(classesResult.data ?? []);
     setSubjects(subjectsResult.data ?? []);
     setClassSubjects(classSubjectsResult.data ?? []);
+
+    const counts: Record<string, number> = {};
+    (enrollmentsResult.data ?? []).forEach((enrollment) => {
+      if (
+        enrollment.status !== "Active" ||
+        !enrollment.class_id ||
+        !enrollment.academic_year_id
+      ) {
+        return;
+      }
+
+      const schoolClass = (classesResult.data ?? []).find(
+        (item) => item.id === enrollment.class_id,
+      );
+
+      if (
+        schoolClass?.academic_year_id === enrollment.academic_year_id
+      ) {
+        counts[enrollment.class_id] =
+          (counts[enrollment.class_id] ?? 0) + 1;
+      }
+    });
+    setEnrollmentCounts(counts);
 
     setSelectedAcademicYearId((current) => {
       if (
@@ -378,6 +453,29 @@ export default function ClassesSubjects() {
               Manage classes and subjects for the selected academic year.
             </p>
           </div>
+
+          {activeTab === "classes" && academicYears.length > 0 && (
+            <button
+              type="button"
+              onClick={openCreateClass}
+              disabled={!selectedAcademicYearId}
+              className="inline-flex h-10 shrink-0 items-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+            >
+              <Plus size={16} />
+              Add class
+            </button>
+          )}
+
+          {activeTab === "subjects" && (
+            <button
+              type="button"
+              onClick={openCreateSubject}
+              className="inline-flex h-10 shrink-0 items-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700"
+            >
+              <Plus size={16} />
+              Add subject
+            </button>
+          )}
         </div>
       </div>
 
@@ -457,7 +555,7 @@ export default function ClassesSubjects() {
 
                 <button
                   type="button"
-                  onClick={() => navigate("/academic-years")}
+                  onClick={() => navigate("/settings/academic")}
                   className="h-10 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 >
                   Manage academic years
@@ -483,7 +581,7 @@ export default function ClassesSubjects() {
 
             <button
               type="button"
-              onClick={() => navigate("/academic-years")}
+              onClick={() => navigate("/settings/academic")}
               className="inline-flex h-9 items-center justify-center rounded-lg bg-amber-600 px-3 text-sm font-medium text-white hover:bg-amber-700"
             >
               Create academic year
@@ -492,73 +590,117 @@ export default function ClassesSubjects() {
         </div>
       )}
 
-      {/* Tabs + Search */}
-      <Card className="mb-5">
-        {/* Top toolbar */}
-        <div className="flex flex-col border-b border-slate-200">
-          <div className="flex items-center justify-between px-5 pt-4">
-            {/* Tabs */}
-            <div className="flex gap-6">
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab("classes");
-                  setSearch("");
-                }}
-                className={[
-                  "relative pb-3 text-sm font-medium",
-                  activeTab === "classes"
-                    ? "text-indigo-600"
-                    : "text-slate-500 hover:text-slate-800",
-                ].join(" ")}
-              >
-                Classes
-                <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[11px]">
-                  {filteredClasses.length}
-                </span>
-                {activeTab === "classes" && (
-                  <span className="absolute inset-x-0 bottom-0 h-0.5 bg-indigo-600" />
-                )}
-              </button>
+      {/* Sections for selected academic year */}
+      {academicYears.length > 0 && selectedAcademicYearId && (
+        <Card className="mb-5">
+          <div className="p-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  Sections
+                </p>
+                <h3 className="mt-1 text-base font-semibold text-slate-900">
+                  Sections for this academic year
+                </h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  Classes are created under these sections. Configure sections
+                  in Academic Settings before adding classes.
+                </p>
+              </div>
 
               <button
                 type="button"
-                onClick={() => {
-                  setActiveTab("subjects");
-                  setSearch("");
-                }}
-                className={[
-                  "relative pb-3 text-sm font-medium",
-                  activeTab === "subjects"
-                    ? "text-indigo-600"
-                    : "text-slate-500 hover:text-slate-800",
-                ].join(" ")}
+                onClick={() =>
+                  navigate(
+                    `/settings/academic?academicYear=${selectedAcademicYearId}`,
+                  )
+                }
+                className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
               >
-                Subjects
-                <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[11px]">
-                  {subjects.length}
-                </span>
-                {activeTab === "subjects" && (
-                  <span className="absolute inset-x-0 bottom-0 h-0.5 bg-indigo-600" />
-                )}
+                Manage sections
               </button>
             </div>
 
-            {/* Add action */}
-            {academicYears.length > 0 && (
-              <Button
-                onClick={
-                  activeTab === "classes" ? openCreateClass : openCreateSubject
-                }
-              >
-                <Plus size={16} />
-                {activeTab === "classes" ? "Add class" : "Add subject"}
-              </Button>
-            )}
+            <div className="mt-4 flex flex-wrap gap-2">
+              {academicSections
+                .filter(
+                  (section) =>
+                    section.academic_year_id === selectedAcademicYearId &&
+                    section.is_active,
+                )
+                .map((section) => (
+                  <span
+                    key={section.id}
+                    className="rounded-full bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700"
+                  >
+                    {section.name}
+                  </span>
+                ))}
+
+              {academicSections.filter(
+                (section) =>
+                  section.academic_year_id === selectedAcademicYearId &&
+                  section.is_active,
+              ).length === 0 && (
+                <span className="text-sm text-amber-600">
+                  No active sections configured yet.
+                </span>
+              )}
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Tabs + Search */}
+      <Card className="mb-5">
+        <div className="flex flex-col border-b border-slate-200 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex gap-6 px-5 pt-4">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab("classes");
+                setSearch("");
+              }}
+              className={[
+                "relative pb-3 text-sm font-medium",
+                activeTab === "classes"
+                  ? "text-indigo-600"
+                  : "text-slate-500 hover:text-slate-800",
+              ].join(" ")}
+            >
+              Classes
+              <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[11px]">
+                {filteredClasses.length}
+              </span>
+              {activeTab === "classes" && (
+                <span className="absolute inset-x-0 bottom-0 h-0.5 bg-indigo-600" />
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab("subjects");
+                setSearch("");
+              }}
+              className={[
+                "relative pb-3 text-sm font-medium",
+                activeTab === "subjects"
+                  ? "text-indigo-600"
+                  : "text-slate-500 hover:text-slate-800",
+              ].join(" ")}
+            >
+              Subjects
+              <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[11px]">
+                {subjects.length}
+              </span>
+              {activeTab === "subjects" && (
+                <span className="absolute inset-x-0 bottom-0 h-0.5 bg-indigo-600" />
+              )}
+            </button>
           </div>
 
-          {/* Search + filter */}
-          <div className="flex flex-col gap-2 px-5 py-3 sm:flex-row sm:items-center">
+          <div className="flex w-full flex-col gap-2 px-5 pb-3 pt-3 sm:w-auto sm:flex-row sm:items-center sm:pb-2 sm:pt-0">
             <div className="relative sm:w-72">
               <Search
                 size={16}
@@ -604,7 +746,9 @@ export default function ClassesSubjects() {
           <ClassesTable
             classes={filteredClasses}
             getSubjectCount={getSubjectCount}
+            enrollmentCounts={enrollmentCounts}
             academicYears={academicYears}
+            academicSections={academicSections}
             onEdit={openEditClass}
             onToggle={toggleClassStatus}
             onSubjects={openClassSubjects}
@@ -625,6 +769,7 @@ export default function ClassesSubjects() {
         <ClassModal
           schoolId={school?.id ?? ""}
           academicYears={academicYears}
+          academicSections={academicSections}
           selectedAcademicYearId={selectedAcademicYearId}
           editingClass={editingClass}
           onClose={() => setShowClassModal(false)}
@@ -677,7 +822,9 @@ export default function ClassesSubjects() {
 function ClassesTable({
   classes,
   getSubjectCount,
+  enrollmentCounts,
   academicYears,
+  academicSections,
   onEdit,
   onToggle,
   onSubjects,
@@ -685,7 +832,9 @@ function ClassesTable({
 }: {
   classes: SchoolClass[];
   getSubjectCount: (classId: string) => number;
+  enrollmentCounts: Record<string, number>;
   academicYears: AcademicYear[];
+  academicSections: AcademicSection[];
   onEdit: (schoolClass: SchoolClass) => void;
   onToggle: (schoolClass: SchoolClass) => void;
   onSubjects: (schoolClass: SchoolClass) => void;
@@ -705,7 +854,7 @@ function ClassesTable({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-[760px]">
+      <table className="w-full min-w-[820px]">
         <thead>
           <tr className="border-b border-slate-200 bg-slate-50/70">
             <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400">
@@ -714,6 +863,10 @@ function ClassesTable({
 
             <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400">
               Academic year
+            </th>
+
+            <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              Students
             </th>
 
             <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400">
@@ -742,17 +895,29 @@ function ClassesTable({
                   {schoolClass.name}
                 </div>
 
-                {schoolClass.section && (
-                  <div className="mt-1 text-xs text-slate-500">
-                    Section {schoolClass.section}
-                  </div>
-                )}
+                {(() => {
+                  const sectionName =
+                    academicSections.find(
+                      (item) =>
+                        item.id === schoolClass.academic_section_id,
+                    )?.name || schoolClass.section;
+
+                  return sectionName ? (
+                    <div className="mt-1 text-xs text-slate-500">
+                      {sectionName}
+                    </div>
+                  ) : null;
+                })()}
               </td>
 
               <td className="px-5 py-4 text-sm text-slate-600">
                 {academicYears.find(
                   (year) => year.id === schoolClass.academic_year_id,
                 )?.name || "—"}
+              </td>
+
+              <td className="px-5 py-4 text-sm text-slate-600">
+                {enrollmentCounts[schoolClass.id] ?? 0}
               </td>
 
               <td className="px-5 py-4 text-sm text-slate-600">
@@ -771,18 +936,28 @@ function ClassesTable({
               </td>
 
               <td className="px-5 py-4">
-                <button
-                  type="button"
-                  onClick={() => onToggle(schoolClass)}
-                  className={[
-                    "rounded-full px-2.5 py-1 text-[11px] font-medium",
-                    schoolClass.is_active
-                      ? "bg-emerald-100 text-emerald-700"
-                      : "bg-slate-100 text-slate-500",
-                  ].join(" ")}
-                >
-                  {schoolClass.is_active ? "Active" : "Inactive"}
-                </button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onToggle(schoolClass)}
+                    className={[
+                      "rounded-full px-2.5 py-1 text-[11px] font-medium",
+                      schoolClass.is_active
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-slate-100 text-slate-500",
+                    ].join(" ")}
+                  >
+                    {schoolClass.is_active ? "Active" : "Inactive"}
+                  </button>
+
+                  {schoolClass.capacity !== null &&
+                    (enrollmentCounts[schoolClass.id] ?? 0) >=
+                      schoolClass.capacity && (
+                      <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-medium text-amber-700">
+                        Full
+                      </span>
+                    )}
+                </div>
               </td>
 
               <td className="px-5 py-4 text-right">
@@ -914,6 +1089,7 @@ function SubjectsTable({
 function ClassModal({
   schoolId,
   academicYears,
+  academicSections,
   selectedAcademicYearId,
   editingClass,
   onClose,
@@ -921,6 +1097,7 @@ function ClassModal({
 }: {
   schoolId: string;
   academicYears: AcademicYear[];
+  academicSections: AcademicSection[];
   selectedAcademicYearId: string;
   editingClass: SchoolClass | null;
   onClose: () => void;
@@ -928,7 +1105,9 @@ function ClassModal({
 }) {
   const [name, setName] = useState(editingClass?.name ?? "");
 
-  const [section, setSection] = useState(editingClass?.section ?? "");
+  const [academicSectionId, setAcademicSectionId] = useState(
+    editingClass?.academic_section_id ?? "",
+  );
 
   const [academicYearId, setAcademicYearId] = useState(
     editingClass?.academic_year_id ??
@@ -954,13 +1133,13 @@ function ClassModal({
       return;
     }
 
-    if (!section) {
-      setError("Please select a section.");
+    if (!academicYearId) {
+      setError("Academic year is required.");
       return;
     }
 
-    if (!academicYearId) {
-      setError("Academic year is required.");
+    if (!academicSectionId) {
+      setError("Please select a section.");
       return;
     }
 
@@ -979,14 +1158,30 @@ function ClassModal({
     setSaving(true);
     setError("");
 
+    const finalClassName = name.trim();
+
     const selectedYear = academicYears.find(
       (year) => year.id === academicYearId,
     );
 
+    const selectedSection = academicSections.find(
+      (item) =>
+        item.id === academicSectionId &&
+        item.academic_year_id === academicYearId &&
+        item.is_active,
+    );
+
+    if (!selectedSection) {
+      setError("Please select a valid section for this academic year.");
+      setSaving(false);
+      return;
+    }
+
     const payload = {
-      name: name.trim(),
-      section,
+      name: finalClassName,
+      section: selectedSection.name,
       academic_year_id: academicYearId,
+      academic_section_id: academicSectionId,
       academic_year: selectedYear?.name ?? null,
       capacity: numericCapacity,
       school_id: schoolId,
@@ -1043,21 +1238,37 @@ function ClassModal({
             </label>
 
             <select
-              value={section}
-              onChange={(event) => setSection(event.target.value)}
+              value={academicSectionId}
+              onChange={(event) => setAcademicSectionId(event.target.value)}
               required
-              className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+              disabled={!academicYearId}
+              className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 disabled:bg-slate-50 disabled:text-slate-400"
             >
               <option value="">Select section</option>
 
-              <option value="Creche">Creche</option>
-
-              <option value="Nursery">Nursery</option>
-
-              <option value="Primary">Primary</option>
-
-              <option value="Lower Secondary">Lower Secondary</option>
+              {academicSections
+                .filter(
+                  (item) =>
+                    item.academic_year_id === academicYearId &&
+                    item.is_active,
+                )
+                .map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
             </select>
+
+            {academicYearId &&
+              academicSections.filter(
+                (item) =>
+                  item.academic_year_id === academicYearId &&
+                  item.is_active,
+              ).length === 0 && (
+                <p className="mt-1.5 text-xs text-amber-600">
+                  Create sections for this academic year in Academic Settings first.
+                </p>
+              )}
           </div>
 
           <div>
@@ -1075,12 +1286,13 @@ function ClassModal({
             >
               <option value="">Select academic year</option>
 
-              {academicYears.map((year) => (
-                <option key={year.id} value={year.id}>
-                  {year.name}
-                  {year.is_active ? " (Active)" : ""}
-                </option>
-              ))}
+              {academicYears
+                .filter((year) => year.is_active)
+                .map((year) => (
+                  <option key={year.id} value={year.id}>
+                    {year.name}
+                  </option>
+                ))}
             </select>
 
             {academicYears.length === 0 && (
@@ -1259,28 +1471,10 @@ function ClassSubjectsModal({
   const [selectedIds, setSelectedIds] = useState<string[]>(
     Array.from(assignedIds),
   );
+
   const [saving, setSaving] = useState(false);
+
   const [error, setError] = useState("");
-  const [subjectSearch, setSubjectSearch] = useState("");
-
-  const activeSubjects = subjects.filter((subject) => subject.is_active);
-  const inactiveSubjects = subjects.filter((subject) => !subject.is_active);
-
-  const normalizedSearch = subjectSearch.toLowerCase().trim();
-
-  const filterSubjects = (items: Subject[]) => {
-    if (!normalizedSearch) return items;
-
-    return items.filter((subject) =>
-      [subject.name, subject.code ?? "", subject.description ?? ""]
-        .join(" ")
-        .toLowerCase()
-        .includes(normalizedSearch),
-    );
-  };
-
-  const filteredActiveSubjects = filterSubjects(activeSubjects);
-  const filteredInactiveSubjects = filterSubjects(inactiveSubjects);
 
   function toggleSubject(subjectId: string) {
     setSelectedIds((current) =>
@@ -1288,19 +1482,6 @@ function ClassSubjectsModal({
         ? current.filter((id) => id !== subjectId)
         : [...current, subjectId],
     );
-  }
-
-  function selectAllActive() {
-    setSelectedIds((current) => [
-      ...new Set([
-        ...current,
-        ...activeSubjects.map((subject) => subject.id),
-      ]),
-    ]);
-  }
-
-  function clearAll() {
-    setSelectedIds([]);
   }
 
   async function saveAssignments() {
@@ -1341,88 +1522,16 @@ function ClassSubjectsModal({
     onSaved();
   }
 
-  function SubjectRow({
-    subject,
-    inactive = false,
-  }: {
-    subject: Subject;
-    inactive?: boolean;
-  }) {
-    const selected = selectedIds.includes(subject.id);
-
-    return (
-      <button
-        key={subject.id}
-        type="button"
-        onClick={() => toggleSubject(subject.id)}
-        className={[
-          "flex w-full items-center gap-3 rounded-xl border p-3.5 text-left transition",
-          selected
-            ? "border-indigo-300 bg-indigo-50"
-            : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50",
-          inactive ? "opacity-65" : "",
-        ].join(" ")}
-      >
-        <div
-          className={[
-            "flex h-5 w-5 shrink-0 items-center justify-center rounded-md border",
-            selected
-              ? "border-indigo-600 bg-indigo-600 text-white"
-              : "border-slate-300 bg-white",
-          ].join(" ")}
-        >
-          {selected && <Check size={13} />}
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <div className="text-sm font-medium text-slate-900">
-            {subject.name}
-          </div>
-
-          {subject.code && (
-            <div className="mt-0.5 text-xs text-slate-500">
-              {subject.code}
-            </div>
-          )}
-        </div>
-
-        {inactive && (
-          <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-medium text-slate-500">
-            Inactive
-          </span>
-        )}
-      </button>
-    );
-  }
-
   return (
     <Modal
       title={`Subjects for ${schoolClass.name}`}
       onClose={onClose}
-      maxWidth="max-w-2xl"
+      maxWidth="max-w-xl"
     >
       <div>
-        {/* Class context */}
-        <div className="mb-5 rounded-xl border border-indigo-100 bg-indigo-50/60 px-4 py-3">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-indigo-500">
-            Class
-          </p>
-          <div className="mt-1 flex flex-wrap items-center gap-2">
-            <p className="text-sm font-semibold text-slate-900">
-              {schoolClass.name}
-            </p>
-
-            {schoolClass.section && (
-              <span className="rounded-full bg-white px-2 py-1 text-[10px] font-medium text-slate-600">
-                {schoolClass.section}
-              </span>
-            )}
-          </div>
-
-          <p className="mt-1 text-xs text-indigo-700">
-            Academic year curriculum
-          </p>
-        </div>
+        <p className="mb-4 text-sm text-slate-500">
+          Select the subjects taught in this class.
+        </p>
 
         {error && (
           <div className="mb-4">
@@ -1443,136 +1552,67 @@ function ClassSubjectsModal({
             </p>
           </div>
         ) : (
-          <>
-            {/* Search + actions */}
-            <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div className="relative flex-1 sm:max-w-sm">
-                <Search
-                  size={15}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                />
-                <input
-                  value={subjectSearch}
-                  onChange={(event) => setSubjectSearch(event.target.value)}
-                  placeholder="Search subjects..."
-                  className="h-9 w-full rounded-lg border border-slate-200 pl-9 pr-3 text-sm outline-none placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                />
-              </div>
+          <div className="max-h-[420px] space-y-2 overflow-y-auto">
+            {subjects
+              .filter((subject) => subject.is_active)
+              .map((subject) => {
+                const selected = selectedIds.includes(subject.id);
 
-              <div className="flex items-center gap-2">
+              return (
                 <button
+                  key={subject.id}
                   type="button"
-                  onClick={selectAllActive}
-                  className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                  onClick={() => toggleSubject(subject.id)}
+                  className={[
+                    "flex w-full items-center gap-3 rounded-xl border p-4 text-left transition",
+                    selected
+                      ? "border-indigo-300 bg-indigo-50"
+                      : "border-slate-200 hover:bg-slate-50",
+                    !subject.is_active ? "opacity-60" : "",
+                  ].join(" ")}
                 >
-                  Select all
-                </button>
+                  <div
+                    className={[
+                      "flex h-5 w-5 shrink-0 items-center justify-center rounded-md border",
+                      selected
+                        ? "border-indigo-600 bg-indigo-600 text-white"
+                        : "border-slate-300 bg-white",
+                    ].join(" ")}
+                  >
+                    {selected && <Check size={13} />}
+                  </div>
 
-                <button
-                  type="button"
-                  onClick={clearAll}
-                  className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-800"
-                >
-                  Clear all
-                </button>
-              </div>
-            </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium text-slate-900">
+                      {subject.name}
+                    </div>
 
-            {/* Selection summary */}
-            <div className="mb-3 flex items-center justify-between">
-              <p className="text-xs font-medium text-slate-600">
-                {selectedIds.length} of {subjects.length}{" "}
-                {subjects.length === 1 ? "subject" : "subjects"} selected
-              </p>
+                    {subject.code && (
+                      <div className="mt-1 text-xs text-slate-500">
+                        {subject.code}
+                      </div>
+                    )}
+                  </div>
 
-              {selectedIds.length > 0 && (
-                <span className="text-[11px] text-indigo-600">
-                  Ready to save
-                </span>
-              )}
-            </div>
-
-            {/* Subject list */}
-            <div className="max-h-[430px] space-y-4 overflow-y-auto pr-1">
-              {filteredActiveSubjects.length > 0 && (
-                <section>
-                  <div className="mb-2 flex items-center justify-between">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                      Active subjects
-                    </p>
-                    <span className="text-[11px] text-slate-400">
-                      {filteredActiveSubjects.length}
+                  {!subject.is_active && (
+                    <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-medium text-slate-500">
+                      Inactive
                     </span>
-                  </div>
-
-                  <div className="space-y-2">
-                    {filteredActiveSubjects.map((subject) => (
-                      <SubjectRow key={subject.id} subject={subject} />
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {filteredInactiveSubjects.length > 0 && (
-                <section>
-                  <div className="mb-2 flex items-center justify-between">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                      Inactive subjects
-                    </p>
-                    <span className="text-[11px] text-slate-400">
-                      {filteredInactiveSubjects.length}
-                    </span>
-                  </div>
-
-                  <div className="space-y-2">
-                    {filteredInactiveSubjects.map((subject) => (
-                      <SubjectRow
-                        key={subject.id}
-                        subject={subject}
-                        inactive
-                      />
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {filteredActiveSubjects.length === 0 &&
-                filteredInactiveSubjects.length === 0 && (
-                  <div className="rounded-xl border border-dashed border-slate-200 p-8 text-center">
-                    <Search
-                      size={20}
-                      className="mx-auto text-slate-300"
-                    />
-                    <p className="mt-2 text-sm font-medium text-slate-700">
-                      No subjects found
-                    </p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      Try a different search term.
-                    </p>
-                  </div>
-                )}
-            </div>
-          </>
+                  )}
+                </button>
+              );
+              })}
+          </div>
         )}
 
-        {/* Footer */}
-        <div className="mt-5 flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-xs font-medium text-slate-600">
-              {selectedIds.length}{" "}
-              {selectedIds.length === 1 ? "subject" : "subjects"} selected
-            </p>
-            <p className="mt-0.5 text-[11px] text-slate-400">
-              Changes apply to {schoolClass.name}.
-            </p>
-          </div>
+        <div className="mt-5 flex items-center justify-between border-t border-slate-200 pt-4">
+          <p className="text-xs text-slate-500">
+            {selectedIds.length}{" "}
+            {selectedIds.length === 1 ? "subject" : "subjects"} selected
+          </p>
 
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="secondary"
-              onClick={onClose}
-              disabled={saving}
-            >
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={onClose} disabled={saving}>
               Cancel
             </Button>
 

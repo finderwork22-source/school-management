@@ -37,7 +37,9 @@ interface Student {
   id: string;
   name: string;
   studentId: string;
+  sectionName: string;
   className: string;
+  streamName: string | null;
   academicYearId: string | null;
   dateOfBirth: string | null;
   age: number | null;
@@ -50,6 +52,22 @@ interface Student {
   enrolledDate: string;
 }
 
+interface AcademicSection {
+  id: string;
+  academic_year_id: string;
+  name: string;
+  display_order: number;
+  is_active: boolean;
+}
+
+interface ClassStream {
+  id: string;
+  class_id: string;
+  name: string;
+  capacity: number | null;
+  is_active: boolean;
+}
+
 const statuses = ["All statuses", "Active", "Inactive"];
 
 export default function Students() {
@@ -57,27 +75,26 @@ export default function Students() {
   const { school } = useSchool();
 
   const [students, setStudents] = useState<Student[]>([]);
-  const [schoolClasses, setSchoolClasses] = useState<SchoolClass[]>(
-    [],
-  );
+  const [schoolClasses, setSchoolClasses] = useState<SchoolClass[]>([]);
 
   const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
   const [selectedAcademicYearId, setSelectedAcademicYearId] = useState("");
+  const [academicSections, setAcademicSections] = useState<AcademicSection[]>(
+    [],
+  );
+  const [classStreams, setClassStreams] = useState<ClassStream[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const [search, setSearch] = useState("");
-  const [classFilter, setClassFilter] =
-    useState("All classes");
-  const [statusFilter, setStatusFilter] =
-    useState("All statuses");
+  const [sectionFilter, setSectionFilter] = useState("All sections");
+  const [classFilter, setClassFilter] = useState("All classes");
+  const [statusFilter, setStatusFilter] = useState("All statuses");
 
-  const [showAddModal, setShowAddModal] =
-    useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
 
-  const [selectedStudent, setSelectedStudent] =
-    useState<Student | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
   async function loadData() {
     if (!school) {
@@ -91,18 +108,11 @@ export default function Students() {
     setError("");
 
     const [
-      {
-        data: studentsData,
-        error: studentsError,
-      },
-      {
-        data: classesData,
-        error: classesError,
-      },
-      {
-        data: academicYearsData,
-        error: academicYearsError,
-      },
+      { data: studentsData, error: studentsError },
+      { data: classesData, error: classesError },
+      { data: academicYearsData, error: academicYearsError },
+      { data: sectionsData, error: sectionsError },
+      { data: streamsData, error: streamsError },
     ] = await Promise.all([
       getStudents(school.id),
       getClasses(school.id),
@@ -111,13 +121,22 @@ export default function Students() {
         .select("id, name, start_date, end_date, is_active")
         .eq("school_id", school.id)
         .order("name", { ascending: false }),
+      supabase
+        .from("academic_sections")
+        .select("id, academic_year_id, name, display_order, is_active")
+        .eq("school_id", school.id)
+        .eq("is_active", true)
+        .order("display_order", { ascending: true }),
+      supabase
+        .from("class_streams")
+        .select("id, class_id, name, capacity, is_active")
+        .eq("school_id", school.id)
+        .eq("is_active", true)
+        .order("name", { ascending: true }),
     ]);
 
     if (studentsError) {
-      console.error(
-        "Failed to load students:",
-        studentsError,
-      );
+      console.error("Failed to load students:", studentsError);
 
       setError(studentsError.message);
       setStudents([]);
@@ -126,10 +145,7 @@ export default function Students() {
     }
 
     if (classesError) {
-      console.error(
-        "Failed to load classes:",
-        classesError,
-      );
+      console.error("Failed to load classes:", classesError);
 
       setError(classesError.message);
       setSchoolClasses([]);
@@ -137,37 +153,35 @@ export default function Students() {
       setSchoolClasses(classesData);
     }
 
+    if (sectionsError) {
+      console.error("Failed to load academic sections:", sectionsError);
+      setError(sectionsError.message);
+      setAcademicSections([]);
+    } else {
+      setAcademicSections((sectionsData ?? []) as AcademicSection[]);
+    }
+
+    if (streamsError) {
+      console.error("Failed to load class streams:", streamsError);
+      setError(streamsError.message);
+      setClassStreams([]);
+    } else {
+      setClassStreams((streamsData ?? []) as ClassStream[]);
+    }
+
     if (academicYearsError) {
-      console.error(
-        "Failed to load academic years:",
-        academicYearsError,
-      );
+      console.error("Failed to load academic years:", academicYearsError);
 
       setError(academicYearsError.message);
       setAcademicYears([]);
     } else {
-      setAcademicYears(academicYearsData ?? []);
+      const loadedAcademicYears = academicYearsData ?? [];
+      setAcademicYears(loadedAcademicYears);
 
-      setSelectedAcademicYearId((current) => {
-        if (
-          current &&
-          (academicYearsData ?? []).some(
-            (year) => year.id === current,
-          )
-        ) {
-          return current;
-        }
+      // New student enrollment always uses the single active academic year.
+      const activeYear = loadedAcademicYears.find((year) => year.is_active);
 
-        const activeYear = (academicYearsData ?? []).find(
-          (year) => year.is_active,
-        );
-
-        return (
-          activeYear?.id ??
-          academicYearsData?.[0]?.id ??
-          ""
-        );
-      });
+      setSelectedAcademicYearId(activeYear?.id ?? "");
     }
 
     setLoading(false);
@@ -176,6 +190,11 @@ export default function Students() {
   useEffect(() => {
     loadData();
   }, [school]);
+
+  const activeAcademicYear = useMemo(
+    () => academicYears.find((year) => year.is_active) ?? null,
+    [academicYears],
+  );
 
   const classesForSelectedYear = useMemo(
     () =>
@@ -188,12 +207,51 @@ export default function Students() {
     [schoolClasses, selectedAcademicYearId],
   );
 
+  const sectionsForSelectedYear = useMemo(() => {
+    // Only show active sections belonging to the active academic year.
+    // Deduplicate by section name as an extra safeguard against duplicate
+    // records in the database.
+    const unique = new Map<string, AcademicSection>();
+
+    academicSections
+      .filter(
+        (section) =>
+          section.is_active &&
+          section.academic_year_id === activeAcademicYear?.id,
+      )
+      .sort((a, b) => a.display_order - b.display_order)
+      .forEach((section) => {
+        const key = section.name.trim().toLowerCase();
+
+        if (!unique.has(key)) {
+          unique.set(key, section);
+        }
+      });
+
+    return Array.from(unique.values());
+  }, [academicSections, activeAcademicYear?.id]);
+
+  const sections = useMemo(
+    () => ["All sections", ...sectionsForSelectedYear.map((item) => item.name)],
+    [sectionsForSelectedYear],
+  );
+
+  const classesForSelectedSection = useMemo(() => {
+    if (sectionFilter === "All sections") return classesForSelectedYear;
+    const section = sectionsForSelectedYear.find(
+      (item) => item.name === sectionFilter,
+    );
+    return classesForSelectedYear.filter(
+      (item) => item.academic_section_id === section?.id,
+    );
+  }, [classesForSelectedYear, sectionFilter, sectionsForSelectedYear]);
+
   const classes = useMemo(
     () => [
       "All classes",
-      ...classesForSelectedYear.map((item) => item.name),
+      ...classesForSelectedSection.map((item) => item.name),
     ],
-    [classesForSelectedYear],
+    [classesForSelectedSection],
   );
 
   const filteredStudents = useMemo(() => {
@@ -207,24 +265,23 @@ export default function Students() {
       const matchesSearch =
         !query ||
         student.name.toLowerCase().includes(query) ||
-        student.studentId
-          .toLowerCase()
-          .includes(query) ||
-        student.parent
-          .toLowerCase()
-          .includes(query);
+        student.studentId.toLowerCase().includes(query) ||
+        student.parent.toLowerCase().includes(query);
+
+      const matchesSection =
+        sectionFilter === "All sections" ||
+        student.sectionName === sectionFilter;
 
       const matchesClass =
-        classFilter === "All classes" ||
-        student.className === classFilter;
+        classFilter === "All classes" || student.className === classFilter;
 
       const matchesStatus =
-        statusFilter === "All statuses" ||
-        student.status === statusFilter;
+        statusFilter === "All statuses" || student.status === statusFilter;
 
       return (
         matchesAcademicYear &&
         matchesSearch &&
+        matchesSection &&
         matchesClass &&
         matchesStatus
       );
@@ -232,6 +289,7 @@ export default function Students() {
   }, [
     students,
     search,
+    sectionFilter,
     classFilter,
     statusFilter,
     selectedAcademicYearId,
@@ -248,74 +306,12 @@ export default function Students() {
         title="Students"
         description="Manage student records, enrollment and parent information."
         actions={
-          <Button
-            onClick={() => setShowAddModal(true)}
-          >
+          <Button onClick={() => setShowAddModal(true)}>
             <Plus size={16} />
             Add student
           </Button>
         }
       />
-
-      {academicYears.length > 0 && (
-        <Card className="mb-5">
-          <div className="p-5">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                    Current academic year
-                  </p>
-
-                  {academicYears.find(
-                    (year) => year.id === selectedAcademicYearId,
-                  )?.is_active && (
-                    <span className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700">
-                      Active
-                    </span>
-                  )}
-                </div>
-
-                <h2 className="mt-1 text-lg font-semibold text-slate-900">
-                  {academicYears.find(
-                    (year) => year.id === selectedAcademicYearId,
-                  )?.name ?? "No academic year selected"}
-                </h2>
-
-                <p className="mt-1 text-xs text-slate-500">
-                  Manage students enrolled during this academic year.
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <select
-                  value={selectedAcademicYearId}
-                  onChange={(event) => {
-                    setSelectedAcademicYearId(event.target.value);
-                    setClassFilter("All classes");
-                  }}
-                  className="h-10 min-w-[220px] rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                >
-                  {academicYears.map((year) => (
-                    <option key={year.id} value={year.id}>
-                      {year.name}
-                      {year.is_active ? " • Active" : ""}
-                    </option>
-                  ))}
-                </select>
-
-                <button
-                  type="button"
-                  onClick={() => navigate("/academic-years")}
-                  className="h-10 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                >
-                  Manage academic years
-                </button>
-              </div>
-            </div>
-          </div>
-        </Card>
-      )}
 
       <Card className="overflow-hidden">
         {/* Toolbar */}
@@ -330,9 +326,7 @@ export default function Students() {
               <input
                 type="text"
                 value={search}
-                onChange={(event) =>
-                  setSearch(event.target.value)
-                }
+                onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search by name, student ID or parent..."
                 className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
               />
@@ -340,37 +334,39 @@ export default function Students() {
 
             <div className="flex flex-wrap gap-2">
               <select
+                value={sectionFilter}
+                onChange={(event) => {
+                  setSectionFilter(event.target.value);
+                  setClassFilter("All classes");
+                }}
+                className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+              >
+                {sections.map((item) => (
+                  <option key={item}>{item}</option>
+                ))}
+              </select>
+
+              <select
                 value={classFilter}
-                onChange={(event) =>
-                  setClassFilter(event.target.value)
-                }
+                onChange={(event) => setClassFilter(event.target.value)}
                 className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
               >
                 {classes.map((item) => (
-                  <option key={item}>
-                    {item}
-                  </option>
+                  <option key={item}>{item}</option>
                 ))}
               </select>
 
               <select
                 value={statusFilter}
-                onChange={(event) =>
-                  setStatusFilter(event.target.value)
-                }
+                onChange={(event) => setStatusFilter(event.target.value)}
                 className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
               >
                 {statuses.map((item) => (
-                  <option key={item}>
-                    {item}
-                  </option>
+                  <option key={item}>{item}</option>
                 ))}
               </select>
 
-              <Button
-                variant="secondary"
-                size="md"
-              >
+              <Button variant="secondary" size="md">
                 <SlidersHorizontal size={16} />
                 Filters
               </Button>
@@ -396,18 +392,14 @@ export default function Students() {
         {/* Error */}
         {error && (
           <div className="border-b border-red-100 bg-red-50 px-5 py-3">
-            <p className="text-sm text-red-600">
-              {error}
-            </p>
+            <p className="text-sm text-red-600">{error}</p>
           </div>
         )}
 
         {/* Loading */}
         {loading ? (
           <div className="flex min-h-[300px] items-center justify-center">
-            <div className="text-sm text-slate-500">
-              Loading students...
-            </div>
+            <div className="text-sm text-slate-500">Loading students...</div>
           </div>
         ) : (
           <>
@@ -422,6 +414,10 @@ export default function Students() {
 
                     <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
                       Student ID
+                    </th>
+
+                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Section
                     </th>
 
                     <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -441,101 +437,93 @@ export default function Students() {
                 </thead>
 
                 <tbody className="divide-y divide-slate-100">
-                  {filteredStudents.map(
-                    (student) => (
-                      <tr
-                        key={student.id}
-                        className="group transition hover:bg-slate-50"
-                      >
-                        <td className="px-5 py-4">
-                          <button
-                            onClick={() =>
-                              navigate(
-                                `/students/${student.id}`,
-                              )
-                            }
-                            className="flex items-center gap-3 text-left"
-                          >
-                            {student.photoUrl ? (
-                              <img
-                                src={student.photoUrl}
-                                alt={student.name}
-                                className="h-10 w-10 rounded-full object-cover"
-                              />
-                            ) : (
-                              <Avatar name={student.name} />
-                            )}
-
-                            <div>
-                              <div className="text-sm font-medium text-slate-900 group-hover:text-indigo-700">
-                                {student.name}
-                              </div>
-
-                              <div className="mt-0.5 text-xs text-slate-400">
-                                {student.gender}
-                              </div>
-                            </div>
-                          </button>
-                        </td>
-
-                        <td className="px-5 py-4 text-sm text-slate-600">
-                          {student.studentId}
-                        </td>
-
-                        <td className="px-5 py-4">
-                          <span className="text-sm font-medium text-slate-700">
-                            {student.className}
-                          </span>
-                        </td>
-
-                        <td className="px-5 py-4">
-                          <div className="text-sm text-slate-700">
-                            {student.parent}
-                          </div>
-
-                          <div className="mt-0.5 text-xs text-slate-400">
-                            {student.parentPhone}
-                          </div>
-                        </td>
-
-                        <td className="px-5 py-4">
-                          <Badge
-                            variant={
-                              student.status ===
-                              "Active"
-                                ? "success"
-                                : "default"
-                            }
-                          >
-                            {student.status}
-                          </Badge>
-                        </td>
-
-                        <td className="px-5 py-4">
-                          <button
-                            onClick={() =>
-                              setSelectedStudent(
-                                student,
-                              )
-                            }
-                            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 opacity-0 transition hover:bg-slate-100 hover:text-slate-700 group-hover:opacity-100"
-                          >
-                            <MoreHorizontal
-                              size={17}
+                  {filteredStudents.map((student) => (
+                    <tr
+                      key={student.id}
+                      className="group transition hover:bg-slate-50"
+                    >
+                      <td className="px-5 py-4">
+                        <button
+                          onClick={() => navigate(`/students/${student.id}`)}
+                          className="flex items-center gap-3 text-left"
+                        >
+                          {student.photoUrl ? (
+                            <img
+                              src={student.photoUrl}
+                              alt={student.name}
+                              className="h-10 w-10 rounded-full object-cover"
                             />
-                          </button>
-                        </td>
-                      </tr>
-                    ),
-                  )}
+                          ) : (
+                            <Avatar name={student.name} />
+                          )}
 
-                  {filteredStudents.length ===
-                    0 && (
+                          <div>
+                            <div className="text-sm font-medium text-slate-900 group-hover:text-indigo-700">
+                              {student.name}
+                            </div>
+
+                            <div className="mt-0.5 text-xs text-slate-400">
+                              {student.gender}
+                            </div>
+                          </div>
+                        </button>
+                      </td>
+
+                      <td className="px-5 py-4 text-sm text-slate-600">
+                        {student.studentId}
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <span className="text-sm font-medium text-slate-700">
+                          {student.sectionName}
+                        </span>
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <span className="text-sm font-medium text-slate-700">
+                          {student.className}
+                        </span>
+                        {student.streamName && (
+                          <div className="mt-0.5 text-xs text-slate-400">
+                            {student.streamName}
+                          </div>
+                        )}
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <div className="text-sm text-slate-700">
+                          {student.parent}
+                        </div>
+
+                        <div className="mt-0.5 text-xs text-slate-400">
+                          {student.parentPhone}
+                        </div>
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <Badge
+                          variant={
+                            student.status === "Active" ? "success" : "default"
+                          }
+                        >
+                          {student.status}
+                        </Badge>
+                      </td>
+
+                      <td className="px-5 py-4">
+                        <button
+                          onClick={() => setSelectedStudent(student)}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 opacity-0 transition hover:bg-slate-100 hover:text-slate-700 group-hover:opacity-100"
+                        >
+                          <MoreHorizontal size={17} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+
+                  {filteredStudents.length === 0 && (
                     <tr>
-                      <td
-                        colSpan={6}
-                        className="px-5 py-16 text-center"
-                      >
+                      <td colSpan={7} className="px-5 py-16 text-center">
                         <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500">
                           <UserRound size={18} />
                         </div>
@@ -545,8 +533,7 @@ export default function Students() {
                         </h3>
 
                         <p className="mt-1 text-sm text-slate-500">
-                          Try changing your search
-                          or filters.
+                          Try changing your search or filters.
                         </p>
                       </td>
                     </tr>
@@ -557,9 +544,7 @@ export default function Students() {
 
             {/* Pagination */}
             <div className="flex items-center justify-between border-t border-slate-200 px-5 py-3">
-              <p className="text-xs text-slate-500">
-                Page 1 of 1
-              </p>
+              <p className="text-xs text-slate-500">Page 1 of 1</p>
 
               <div className="flex gap-1">
                 <button
@@ -587,11 +572,12 @@ export default function Students() {
 
       {showAddModal && (
         <AddStudentModal
-          classes={classesForSelectedYear}
+          academicYear={activeAcademicYear}
+          sections={sectionsForSelectedYear}
+          classes={schoolClasses}
+          streams={classStreams}
           schoolId={school?.id ?? ""}
-          onClose={() =>
-            setShowAddModal(false)
-          }
+          onClose={() => setShowAddModal(false)}
           onCreated={async () => {
             setShowAddModal(false);
             await loadData();
@@ -602,9 +588,7 @@ export default function Students() {
       {selectedStudent && (
         <StudentDetails
           student={selectedStudent}
-          onClose={() =>
-            setSelectedStudent(null)
-          }
+          onClose={() => setSelectedStudent(null)}
         />
       )}
     </div>
@@ -612,63 +596,80 @@ export default function Students() {
 }
 
 interface AddStudentModalProps {
+  academicYear: AcademicYear | null;
+  sections: AcademicSection[];
   classes: SchoolClass[];
+  streams: ClassStream[];
   schoolId: string;
   onClose: () => void;
   onCreated: () => Promise<void>;
 }
 
 function AddStudentModal({
+  academicYear,
+  sections,
   classes,
+  streams,
   schoolId,
   onClose,
   onCreated,
 }: AddStudentModalProps) {
-  const [firstName, setFirstName] =
-    useState("");
+  const [firstName, setFirstName] = useState("");
 
-  const [lastName, setLastName] =
-    useState("");
+  const [lastName, setLastName] = useState("");
 
-  const [dateOfBirth, setDateOfBirth] =
-    useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
 
-  const [nationality, setNationality] =
-    useState("Rwandan");
+  const [nationality, setNationality] = useState("Rwandan");
 
-  const [photoFile, setPhotoFile] =
-    useState<File | null>(null);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
 
-  const [photoPreview, setPhotoPreview] =
-    useState("");
+  const [photoPreview, setPhotoPreview] = useState("");
 
-  const [classId, setClassId] =
-    useState("");
+  const [sectionId, setSectionId] = useState("");
 
-  const [parent, setParent] =
-    useState("");
+  const [classId, setClassId] = useState("");
 
-  const [parentPhone, setParentPhone] =
-    useState("");
+  const [streamId, setStreamId] = useState("");
 
-  const [gender, setGender] =
-    useState<"Male" | "Female">("Male");
+  const [parent, setParent] = useState("");
 
-  const [saving, setSaving] =
-    useState(false);
+  const [parentPhone, setParentPhone] = useState("");
 
-  const [error, setError] =
-    useState("");
+  const [gender, setGender] = useState<"Male" | "Female">("Male");
 
-  async function handleSubmit(
-    event: FormEvent,
-  ) {
+  const [saving, setSaving] = useState(false);
+
+  const [error, setError] = useState("");
+
+  const classesForSection = useMemo(() => {
+    if (!sectionId) return [];
+    return classes.filter(
+      (schoolClass) =>
+        schoolClass.academic_section_id === sectionId &&
+        schoolClass.is_active &&
+        schoolClass.academic_year_id === academicYear?.id,
+    );
+  }, [classes, sectionId, academicYear?.id]);
+
+  const streamsForClass = useMemo(
+    () =>
+      streams.filter(
+        (stream) => stream.class_id === classId && stream.is_active,
+      ),
+    [streams, classId],
+  );
+
+  async function handleSubmit(event: FormEvent) {
     event.preventDefault();
 
     if (!schoolId) {
-      setError(
-        "No school is associated with your account.",
-      );
+      setError("No school is associated with your account.");
+      return;
+    }
+
+    if (!academicYear) {
+      setError("No active academic year is configured.");
       return;
     }
 
@@ -682,15 +683,23 @@ function AddStudentModal({
       return;
     }
 
+    if (!sectionId) {
+      setError("Please select a section.");
+      return;
+    }
+
     if (!classId) {
       setError("Please select a class.");
       return;
     }
 
+    if (streamsForClass.length > 0 && !streamId) {
+      setError("Please select a stream.");
+      return;
+    }
+
     if (!parent.trim()) {
-      setError(
-        "Parent or guardian name is required.",
-      );
+      setError("Parent or guardian name is required.");
       return;
     }
 
@@ -700,8 +709,7 @@ function AddStudentModal({
     let uploadedPhotoUrl = "";
 
     if (photoFile) {
-      const extension =
-        photoFile.name.split(".").pop()?.toLowerCase() || "jpg";
+      const extension = photoFile.name.split(".").pop()?.toLowerCase() || "jpg";
 
       const filePath = `${schoolId}/${crypto.randomUUID()}.${extension}`;
 
@@ -714,47 +722,36 @@ function AddStudentModal({
         });
 
       if (uploadError) {
-        console.error(
-          "Failed to upload student photo:",
-          uploadError,
-        );
+        console.error("Failed to upload student photo:", uploadError);
 
-        setError(
-          `Photo upload failed: ${uploadError.message}`,
-        );
+        setError(`Photo upload failed: ${uploadError.message}`);
         setSaving(false);
         return;
       }
 
       const {
         data: { publicUrl },
-      } = supabase.storage
-        .from("student-photos")
-        .getPublicUrl(filePath);
+      } = supabase.storage.from("student-photos").getPublicUrl(filePath);
 
       uploadedPhotoUrl = publicUrl;
     }
 
-    const { data, error: createError } =
-      await supabase.rpc("create_student", {
-        p_school_id: schoolId,
-        p_first_name: firstName.trim(),
-        p_last_name: lastName.trim(),
-        p_gender: gender,
-        p_class_id: classId,
-        p_date_of_birth: dateOfBirth || null,
-        p_nationality: nationality.trim() || null,
-        p_photo_url: uploadedPhotoUrl || null,
-        p_parent_name: parent.trim(),
-        p_parent_phone:
-          parentPhone.trim() || "",
-      });
+    const { data, error: createError } = await supabase.rpc("create_student", {
+      p_school_id: schoolId,
+      p_first_name: firstName.trim(),
+      p_last_name: lastName.trim(),
+      p_gender: gender,
+      p_class_id: classId,
+      p_stream_id: streamId || null,
+      p_date_of_birth: dateOfBirth || null,
+      p_nationality: nationality.trim() || null,
+      p_photo_url: uploadedPhotoUrl || null,
+      p_parent_name: parent.trim(),
+      p_parent_phone: parentPhone.trim() || "",
+    });
 
     if (createError) {
-      console.error(
-        "Failed to create student:",
-        createError,
-      );
+      console.error("Failed to create student:", createError);
 
       setError(createError.message);
       setSaving(false);
@@ -762,9 +759,7 @@ function AddStudentModal({
     }
 
     if (!data) {
-      setError(
-        "Student was not created.",
-      );
+      setError("Student was not created.");
       setSaving(false);
       return;
     }
@@ -803,9 +798,7 @@ function AddStudentModal({
           <div className="space-y-5 p-6">
             {error && (
               <div className="rounded-lg border border-red-100 bg-red-50 px-4 py-3">
-                <p className="text-sm text-red-600">
-                  {error}
-                </p>
+                <p className="text-sm text-red-600">{error}</p>
               </div>
             )}
 
@@ -852,25 +845,62 @@ function AddStudentModal({
                   <select
                     value={gender}
                     onChange={(event) =>
-                      setGender(
-                        event.target.value as
-                          | "Male"
-                          | "Female",
-                      )
+                      setGender(event.target.value as "Male" | "Female")
                     }
                     className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                   >
-                    <option value="Male">
-                      Male
-                    </option>
+                    <option value="Male">Male</option>
 
-                    <option value="Female">
-                      Female
-                    </option>
+                    <option value="Female">Female</option>
                   </select>
                 </div>
 
-                {/* REAL CLASS SELECT */}
+                {/* ACTIVE ACADEMIC YEAR */}
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-slate-700">
+                    Academic Year
+                  </label>
+
+                  <div className="flex h-10 items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700">
+                    <span>
+                      {academicYear?.name ?? "No active academic year"}
+                    </span>
+
+                    {academicYear && (
+                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                        Active
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* SECTION */}
+                <div>
+                  <label className="mb-1.5 block text-xs font-medium text-slate-700">
+                    Section
+                  </label>
+
+                  <select
+                    value={sectionId}
+                    onChange={(event) => {
+                      setSectionId(event.target.value);
+                      setClassId("");
+                      setStreamId("");
+                    }}
+                    required
+                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  >
+                    <option value="">Select section</option>
+
+                    {sections.map((section) => (
+                      <option key={section.id} value={section.id}>
+                        {section.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* CLASS */}
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-slate-700">
                     Class
@@ -878,28 +908,49 @@ function AddStudentModal({
 
                   <select
                     value={classId}
-                    onChange={(event) =>
-                      setClassId(
-                        event.target.value,
-                      )
-                    }
+                    onChange={(event) => {
+                      setClassId(event.target.value);
+                      setStreamId("");
+                    }}
                     required
-                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                    disabled={!sectionId}
+                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none disabled:bg-slate-50 disabled:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                   >
                     <option value="">
-                      Select class
+                      {sectionId ? "Select class" : "Select section first"}
                     </option>
 
-                    {classes.map((schoolClass) => (
-                      <option
-                        key={schoolClass.id}
-                        value={schoolClass.id}
-                      >
+                    {classesForSection.map((schoolClass) => (
+                      <option key={schoolClass.id} value={schoolClass.id}>
                         {schoolClass.name}
                       </option>
                     ))}
                   </select>
                 </div>
+
+                {/* STREAM */}
+                {streamsForClass.length > 0 && (
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-slate-700">
+                      Stream
+                    </label>
+
+                    <select
+                      value={streamId}
+                      onChange={(event) => setStreamId(event.target.value)}
+                      required
+                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                    >
+                      <option value="">Select stream</option>
+
+                      {streamsForClass.map((stream) => (
+                        <option key={stream.id} value={stream.id}>
+                          {stream.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 <div className="sm:col-span-2">
                   <label className="mb-1.5 block text-xs font-medium text-slate-700">
@@ -915,10 +966,7 @@ function AddStudentModal({
                           className="h-full w-full object-cover"
                         />
                       ) : (
-                        <UserRound
-                          size={28}
-                          className="text-slate-300"
-                        />
+                        <UserRound size={28} className="text-slate-300" />
                       )}
                     </div>
 
@@ -931,23 +979,19 @@ function AddStudentModal({
                           accept="image/jpeg,image/png,image/webp"
                           className="hidden"
                           onChange={(event) => {
-                            const file =
-                              event.target.files?.[0] ?? null;
+                            const file = event.target.files?.[0] ?? null;
 
                             if (!file) return;
 
                             if (file.size > 5 * 1024 * 1024) {
-                              setError(
-                                "Photo must be 5 MB or smaller.",
-                              );
+                              setError("Photo must be 5 MB or smaller.");
                               return;
                             }
 
                             setError("");
                             setPhotoFile(file);
 
-                            const previewUrl =
-                              URL.createObjectURL(file);
+                            const previewUrl = URL.createObjectURL(file);
                             setPhotoPreview(previewUrl);
                           }}
                         />
@@ -997,13 +1041,8 @@ function AddStudentModal({
               Cancel
             </Button>
 
-            <Button
-              type="submit"
-              disabled={saving}
-            >
-              {saving
-                ? "Creating..."
-                : "Add student"}
+            <Button type="submit" disabled={saving}>
+              {saving ? "Creating..." : "Add student"}
             </Button>
           </div>
         </form>
@@ -1038,9 +1077,7 @@ function Field({
       <input
         type={type}
         value={value}
-        onChange={(event) =>
-          onChange(event.target.value)
-        }
+        onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         required={required}
         className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
@@ -1054,10 +1091,7 @@ interface StudentDetailsProps {
   onClose: () => void;
 }
 
-function StudentDetails({
-  student,
-  onClose,
-}: StudentDetailsProps) {
+function StudentDetails({ student, onClose }: StudentDetailsProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
       <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl">
@@ -1070,20 +1104,13 @@ function StudentDetails({
                 className="h-12 w-12 rounded-full object-cover"
               />
             ) : (
-              <Avatar
-                name={student.name}
-                size="lg"
-              />
+              <Avatar name={student.name} size="lg" />
             )}
 
             <div>
-              <h2 className="font-semibold text-slate-900">
-                {student.name}
-              </h2>
+              <h2 className="font-semibold text-slate-900">{student.name}</h2>
 
-              <p className="mt-1 text-sm text-slate-500">
-                {student.studentId}
-              </p>
+              <p className="mt-1 text-sm text-slate-500">{student.studentId}</p>
             </div>
           </div>
 
@@ -1097,23 +1124,17 @@ function StudentDetails({
         </div>
 
         <div className="grid grid-cols-2 gap-px bg-slate-200">
-          <InfoItem
-            label="Class"
-            value={student.className}
-          />
+          <InfoItem label="Section" value={student.sectionName} />
 
-          <InfoItem
-            label="Gender"
-            value={student.gender}
-          />
+          <InfoItem label="Class" value={student.className} />
+
+          <InfoItem label="Stream" value={student.streamName ?? "—"} />
+
+          <InfoItem label="Gender" value={student.gender} />
 
           <InfoItem
             label="Date of birth"
-            value={
-              student.dateOfBirth
-                ? formatDate(student.dateOfBirth)
-                : "—"
-            }
+            value={student.dateOfBirth ? formatDate(student.dateOfBirth) : "—"}
           />
 
           <InfoItem
@@ -1125,37 +1146,19 @@ function StudentDetails({
             }
           />
 
-          <InfoItem
-            label="Nationality"
-            value={student.nationality || "—"}
-          />
+          <InfoItem label="Nationality" value={student.nationality || "—"} />
 
-          <InfoItem
-            label="Parent"
-            value={student.parent}
-          />
+          <InfoItem label="Parent" value={student.parent} />
 
-          <InfoItem
-            label="Phone"
-            value={student.parentPhone}
-          />
+          <InfoItem label="Phone" value={student.parentPhone} />
 
-          <InfoItem
-            label="Status"
-            value={student.status}
-          />
+          <InfoItem label="Status" value={student.status} />
 
-          <InfoItem
-            label="Enrolled"
-            value={student.enrolledDate}
-          />
+          <InfoItem label="Enrolled" value={student.enrolledDate} />
         </div>
 
         <div className="flex justify-end border-t border-slate-200 p-4">
-          <Button
-            variant="secondary"
-            onClick={onClose}
-          >
+          <Button variant="secondary" onClick={onClose}>
             Close
           </Button>
         </div>
@@ -1172,22 +1175,14 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
-function InfoItem({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
+function InfoItem({ label, value }: { label: string; value: string }) {
   return (
     <div className="bg-white p-4">
       <div className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
         {label}
       </div>
 
-      <div className="mt-1 text-sm font-medium text-slate-900">
-        {value}
-      </div>
+      <div className="mt-1 text-sm font-medium text-slate-900">{value}</div>
     </div>
   );
 }
