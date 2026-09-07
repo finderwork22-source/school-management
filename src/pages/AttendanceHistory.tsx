@@ -64,13 +64,6 @@ interface AttendanceRecord {
   created_at: string;
 }
 
-interface HistoryRow {
-  record: AttendanceRecord;
-  student: Student | null;
-  className: string;
-  sectionName: string;
-}
-
 const STATUS_OPTIONS: {
   value: AttendanceStatus | "";
   label: string;

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, CalendarDays, Check, Edit3, Layers3, Loader2, Plus, Power, Trash2, X } from "lucide-react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { useSchool } from "../context/SchoolContext";
 import { supabase } from "../lib/supabase";
 import Button from "../components/ui/Button";
@@ -18,7 +18,7 @@ function formatDate(value:string|null){
 }
 
 export default function AcademicSettings(){
-  const {school}=useSchool(); const navigate=useNavigate(); const [params,setParams]=useSearchParams();
+  const {school}=useSchool(); const [params,setParams]=useSearchParams();
   const structureYearId=params.get("academicYear");
   const [years,setYears]=useState<AcademicYear[]>([]); const [sections,setSections]=useState<AcademicSection[]>([]);
   const [loading,setLoading]=useState(true); const [saving,setSaving]=useState(false); const [error,setError]=useState("");
@@ -71,9 +71,60 @@ export default function AcademicSettings(){
     catch(e){setError(e instanceof Error?e.message:"Unable to activate academic year.");}finally{setSaving(false);}
   }
   async function deleteYear(y:AcademicYear){
-    if(!school)return;if(y.is_active){setError("Set another academic year active before deleting this year.");return;}
+    if(!school)return;
+    if(y.is_active){setError("Set another academic year active before deleting this year.");return;}
     if(!window.confirm(`Delete academic year "${y.name}"? This can affect records linked to this year.`))return;
-    setSaving(true);setError("");try{const {error}=await supabase.from("academic_years").delete().eq("id",y.id).eq("school_id",school.id);if(error)throw error;await loadData();}catch(e){setError(e instanceof Error?e.message:"Unable to delete academic year.");}finally{setSaving(false);}
+
+    setSaving(true);
+    setError("");
+
+    try{
+      const [
+        classesResult,
+        enrollmentsResult,
+        assessmentsResult,
+        feeStructuresResult,
+        teacherAssignmentsResult,
+        invoicesResult,
+      ] = await Promise.all([
+        supabase.from("classes").select("id",{count:"exact",head:true}).eq("school_id",school.id).eq("academic_year_id",y.id),
+        supabase.from("enrollments").select("id",{count:"exact",head:true}).eq("school_id",school.id).eq("academic_year_id",y.id),
+        supabase.from("assessments").select("id",{count:"exact",head:true}).eq("school_id",school.id).eq("academic_year_id",y.id),
+        supabase.from("fee_structures").select("id",{count:"exact",head:true}).eq("school_id",school.id).eq("academic_year_id",y.id),
+        supabase.from("teacher_assignments").select("id",{count:"exact",head:true}).eq("school_id",school.id).eq("academic_year_id",y.id),
+        supabase.from("student_invoices").select("id",{count:"exact",head:true}).eq("school_id",school.id).eq("academic_year_id",y.id),
+      ]);
+
+      const checks = [
+        ["classes",classesResult],
+        ["student enrollments",enrollmentsResult],
+        ["assessments",assessmentsResult],
+        ["fee structures",feeStructuresResult],
+        ["teacher assignments",teacherAssignmentsResult],
+        ["student invoices",invoicesResult],
+      ] as const;
+
+      const failed = checks.find(([,result]) => result.error);
+      if(failed) throw failed[1].error;
+
+      const linked = checks
+        .filter(([,result]) => (result.count ?? 0) > 0)
+        .map(([label,result]) => `${result.count} ${label}`);
+
+      if(linked.length){
+        setError(`This academic year cannot be deleted because it has linked records: ${linked.join(", ")}. Deactivate it instead to preserve historical records.`);
+        return;
+      }
+
+      const {error}=await supabase.from("academic_years").delete().eq("id",y.id).eq("school_id",school.id);
+      if(error)throw error;
+
+      await loadData();
+    }catch(e){
+      setError(e instanceof Error?e.message:"Unable to delete academic year.");
+    }finally{
+      setSaving(false);
+    }
   }
   function openCreateSection(){if(!structureYear)return;setEditingSection(null);setSectionName("");setSectionOrder(String(structureSections.length+1));setError("");setShowSectionModal(true);}
   function openEditSection(s:AcademicSection){setEditingSection(s);setSectionName(s.name);setSectionOrder(String(s.display_order));setError("");setShowSectionModal(true);}

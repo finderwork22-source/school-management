@@ -15,7 +15,6 @@ import {
 
 import { useSchool } from "../context/SchoolContext";
 import { getStudents } from "../lib/students";
-import { getClasses, type SchoolClass } from "../lib/classes";
 import { supabase } from "../lib/supabase";
 
 import Avatar from "../components/ui/Avatar";
@@ -263,8 +262,6 @@ export default function StudentResults() {
 
   const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
 
-  const [classes, setClasses] = useState<SchoolClass[]>([]);
-
   const [students, setStudents] = useState<Student[]>([]);
 
   const [selectedAcademicYearId, setSelectedAcademicYearId] = useState("");
@@ -318,7 +315,7 @@ export default function StudentResults() {
         setLoading(true);
         setError("");
 
-        const [academicYearsResponse, classesResponse, studentsResponse] =
+        const [academicYearsResponse, studentsResponse] =
           await Promise.all([
             supabase
               .from("academic_years")
@@ -328,7 +325,6 @@ export default function StudentResults() {
                 ascending: false,
               }),
 
-            getClasses(schoolId),
 
             getStudents(schoolId),
           ]);
@@ -339,13 +335,8 @@ export default function StudentResults() {
           throw academicYearsResponse.error;
         }
 
-        if (classesResponse.error) {
-          throw classesResponse.error;
-        }
-
         setAcademicYears((academicYearsResponse.data as AcademicYear[]) ?? []);
 
-        setClasses(classesResponse.data ?? []);
         setStudents(studentsResponse.data ?? []);
 
         const loadedYears =
@@ -1778,22 +1769,6 @@ function PrintableReportCard(
     nursery,
   } = props;
 
-  const assessmentColumns = [
-    "CAT I",
-    "CAT II",
-    "C.P",
-    "HW&Pr",
-    "Exam",
-  ];
-
-  function getMark(subject: SubjectResult, type: string) {
-    const row = subject.assessments.find(
-      (item) => item.type === type,
-    );
-
-    return row?.marks ?? null;
-  }
-
   return (
     <div id="schoolos-report-card-print">
       <style>
@@ -1935,14 +1910,12 @@ function PrintableReportCard(
 
 
 function PrimaryPrintableReport({
-  schoolName,
   student,
   academicYear,
   term,
   className,
   subjectResults,
   overallAverage,
-  overallGrade,
 }: PrintReportProps) {
   const columns = [
     { label: "CAT I", type: "CAT I", max: "/40" },
@@ -2345,7 +2318,6 @@ function PrimaryPrintableReport({
 }
 
 function NurseryPrintableReport({
-  schoolName,
   student,
   academicYear,
   term,

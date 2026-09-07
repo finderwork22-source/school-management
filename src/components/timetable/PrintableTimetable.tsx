@@ -38,45 +38,29 @@ const BREAKS = [
   },
 ];
 
-function formatTime(time?: string) {
-  if (!time) return "";
-  return time.slice(0, 5);
+function normalizeTime(value?: string) {
+  if (!value) return "";
+  return value.slice(0, 5);
 }
 
-function normalizeTime(time?: string) {
-  if (!time) return "";
-  return time.slice(0, 5);
-}
+function timeToMinutes(value: string) {
+  const normalized = normalizeTime(value);
 
-function timeToMinutes(time?: string) {
-  if (!time) return 0;
+  if (!normalized || !normalized.includes(":")) {
+    return 0;
+  }
 
-  const [hours, minutes] = time
-    .slice(0, 5)
+  const [hours, minutes] = normalized
     .split(":")
     .map(Number);
 
   return (hours || 0) * 60 + (minutes || 0);
 }
 
-function isBreak(
-  startTime: string,
-  endTime: string,
-) {
-  return BREAKS.some(
-    (breakTime) =>
-      breakTime.start === startTime &&
-      breakTime.end === endTime,
-  );
-}
-
 function getSubjectColor(subject: string) {
-  const value = (subject || "").toLowerCase();
+  const value = (subject || "").toLowerCase().trim();
 
-  if (
-    value.includes("math") ||
-    value.includes("cambridge math")
-  ) {
+  if (value.includes("math")) {
     return "#00a9e0";
   }
 
@@ -129,7 +113,10 @@ function getSubjectColor(subject: string) {
     return "#b77777";
   }
 
-  if (value.includes("gp")) {
+  if (
+    value === "gp" ||
+    value.includes(" gp")
+  ) {
     return "#769b35";
   }
 
@@ -137,13 +124,18 @@ function getSubjectColor(subject: string) {
     return "#777777";
   }
 
-  return "#333333";
+  if (
+    value === "pe" ||
+    value.includes(" pe")
+  ) {
+    return "#555555";
+  }
+
+  return "#222222";
 }
 
-function buildTimeRows(
-  lessons: PrintableLesson[] = [],
-) {
-  const uniqueTimes = new Map<
+function buildRows(lessons: PrintableLesson[] = []) {
+  const timeMap = new Map<
     string,
     {
       start: string;
@@ -154,120 +146,91 @@ function buildTimeRows(
   lessons.forEach((lesson) => {
     if (!lesson) return;
 
-    const start = normalizeTime(
-      lesson.startTime,
-    );
-
-    const end = normalizeTime(
-      lesson.endTime,
-    );
+    const start = normalizeTime(lesson.startTime);
+    const end = normalizeTime(lesson.endTime);
 
     if (!start || !end) return;
 
-    if (isBreak(start, end)) {
+    const isBreak = BREAKS.some(
+      (breakItem) =>
+        breakItem.start === start &&
+        breakItem.end === end
+    );
+
+    if (isBreak) {
       return;
     }
 
     const key = `${start}-${end}`;
 
-    if (!uniqueTimes.has(key)) {
-      uniqueTimes.set(key, {
+    if (!timeMap.has(key)) {
+      timeMap.set(key, {
         start,
         end,
       });
     }
   });
 
-  const rows = Array.from(
-    uniqueTimes.values(),
+  const lessonRows = Array.from(
+    timeMap.values()
+  ).map((time) => ({
+    type: "lesson" as const,
+    start: time.start,
+    end: time.end,
+  }));
+
+  const breakRows = BREAKS.map(
+    (breakItem) => ({
+      type: "break" as const,
+      start: breakItem.start,
+      end: breakItem.end,
+      label: breakItem.label,
+    })
   );
 
-  rows.sort(
+  return [
+    ...lessonRows,
+    ...breakRows,
+  ].sort(
     (a, b) =>
       timeToMinutes(a.start) -
-      timeToMinutes(b.start),
+      timeToMinutes(b.start)
   );
-
-  const result: Array<
-    | {
-        type: "lesson";
-        start: string;
-        end: string;
-      }
-    | {
-        type: "break";
-        start: string;
-        end: string;
-        label: string;
-      }
-  > = [];
-
-  rows.forEach((row) => {
-    result.push({
-      type: "lesson",
-      start: row.start,
-      end: row.end,
-    });
-  });
-
-  BREAKS.forEach((breakTime) => {
-    result.push({
-      type: "break",
-      start: breakTime.start,
-      end: breakTime.end,
-      label: breakTime.label,
-    });
-  });
-
-  result.sort(
-    (a, b) =>
-      timeToMinutes(a.start) -
-      timeToMinutes(b.start),
-  );
-
-  return result;
 }
 
-function getLesson(
+function findLesson(
   lessons: PrintableLesson[] = [],
   day: string,
   start: string,
-  end: string,
+  end: string
 ) {
   return lessons.find(
     (lesson) =>
       lesson &&
       lesson.day === day &&
-      normalizeTime(
-        lesson.startTime,
-      ) === start &&
-      normalizeTime(
-        lesson.endTime,
-      ) === end,
+      normalizeTime(lesson.startTime) === start &&
+      normalizeTime(lesson.endTime) === end
   );
 }
 
 function getSubjectSummary(
-  lessons: PrintableLesson[] = [],
+  lessons: PrintableLesson[] = []
 ) {
-  const counts = new Map<
-    string,
-    number
-  >();
+  const counts = new Map<string, number>();
 
   lessons.forEach((lesson) => {
     if (!lesson?.subject) return;
 
     counts.set(
       lesson.subject,
-      (counts.get(lesson.subject) ?? 0) + 1,
+      (counts.get(lesson.subject) ?? 0) + 1
     );
   });
 
   return Array.from(
-    counts.entries(),
+    counts.entries()
   ).sort((a, b) =>
-    a[0].localeCompare(b[0]),
+    a[0].localeCompare(b[0])
   );
 }
 
@@ -278,41 +241,34 @@ export default function PrintableTimetable({
   lessons = [],
   logoUrl = "/high-gate-logo.png",
 }: PrintableTimetableProps) {
-
   /*
-   * Always use a safe array.
+   * Always work with a safe array.
+   *
+   * This prevents:
+   * "Cannot read properties of undefined
+   * (reading 'forEach')"
    */
   const safeLessons = Array.isArray(lessons)
     ? lessons
     : [];
 
-  const rows = buildTimeRows(
-    safeLessons,
-  );
+  const rows = buildRows(safeLessons);
 
-  const subjectSummary =
-    getSubjectSummary(
-      safeLessons,
-    );
-
-  const totalLessons =
-    safeLessons.length;
+  const summary =
+    getSubjectSummary(safeLessons);
 
   /*
-   * The printable timetable must be
-   * rendered OUTSIDE #root.
+   * Render directly into document.body instead
+   * of inside #root.
    *
-   * Your print CSS hides #root,
-   * so rendering here allows the timetable
-   * to remain visible during printing.
+   * This is important because the print CSS
+   * hides #root.
    */
-  if (
-    typeof document === "undefined"
-  ) {
+  if (typeof document === "undefined") {
     return null;
   }
 
-  const printableContent = (
+  return createPortal(
     <div className="print-timetable">
 
       {/* =====================================================
@@ -343,17 +299,13 @@ export default function PrintableTimetable({
 
         <div className="print-logo-wrapper">
 
-          {logoUrl ? (
+          {logoUrl && (
             <img
               src={logoUrl}
               alt=""
               className="print-logo"
-              onError={(event) => {
-                event.currentTarget.style.display =
-                  "none";
-              }}
             />
-          ) : null}
+          )}
 
         </div>
 
@@ -361,7 +313,7 @@ export default function PrintableTimetable({
 
 
       {/* =====================================================
-          TABLE
+          TIMETABLE TABLE
       ===================================================== */}
 
       <table className="print-table">
@@ -406,97 +358,87 @@ export default function PrintableTimetable({
 
         <tbody>
 
-          {rows.map(
-            (row, index) => {
+          {rows.map((row, index) => {
 
-              /*
-               * BREAK
-               */
+            /*
+             * BREAK ROW
+             */
 
-              if (
-                row.type === "break"
-              ) {
-                return (
-                  <tr
-                    key={`break-${index}`}
-                    className="print-break-row"
-                  >
-
-                    <td className="print-time">
-                      {row.start} -{" "}
-                      {row.end}
-                    </td>
-
-                    <td
-                      colSpan={6}
-                      className="print-break-label"
-                    >
-                      {row.label}
-                    </td>
-
-                  </tr>
-                );
-              }
-
-
-              /*
-               * LESSON ROW
-               */
-
+            if (row.type === "break") {
               return (
                 <tr
-                  key={`${row.start}-${row.end}`}
+                  key={`break-${index}`}
+                  className="print-break-row"
                 >
 
                   <td className="print-time">
-                    {row.start} -{" "}
-                    {row.end}
+                    {row.start} - {row.end}
                   </td>
 
-                  {DAYS.map(
-                    (day) => {
-
-                      const lesson =
-                        getLesson(
-                          safeLessons,
-                          day,
-                          row.start,
-                          row.end,
-                        );
-
-                      return (
-                        <td
-                          key={day}
-                          className="print-subject-cell"
-                        >
-
-                          {lesson ? (
-                            <span
-                              className="print-subject"
-                              style={{
-                                color:
-                                  getSubjectColor(
-                                    lesson.subject,
-                                  ),
-                              }}
-                            >
-                              {
-                                lesson.subject
-                              }
-                            </span>
-                          ) : null}
-
-                        </td>
-                      );
-
-                    },
-                  )}
+                  <td
+                    colSpan={6}
+                    className="print-break-label"
+                  >
+                    {row.label}
+                  </td>
 
                 </tr>
               );
+            }
 
-            },
-          )}
+
+            /*
+             * NORMAL LESSON ROW
+             */
+
+            return (
+              <tr
+                key={`${row.start}-${row.end}`}
+              >
+
+                <td className="print-time">
+                  {row.start} - {row.end}
+                </td>
+
+                {DAYS.map((day) => {
+
+                  const lesson =
+                    findLesson(
+                      safeLessons,
+                      day,
+                      row.start,
+                      row.end
+                    );
+
+                  return (
+                    <td
+                      key={day}
+                      className="print-subject-cell"
+                    >
+
+                      {lesson && (
+                        <span
+                          className="print-subject"
+                          style={{
+                            color:
+                              getSubjectColor(
+                                lesson.subject
+                              ),
+                          }}
+                        >
+                          {lesson.subject}
+                        </span>
+                      )}
+
+                    </td>
+                  );
+
+                })}
+
+              </tr>
+            );
+
+          })}
 
         </tbody>
 
@@ -518,39 +460,32 @@ export default function PrintableTimetable({
                 Subjects On TimeTable:
               </strong>{" "}
 
-              {subjectSummary.length >
-              0
-                ? subjectSummary.map(
+              {summary.length > 0
+                ? summary.map(
                     (
-                      [
-                        subject,
-                        count,
-                      ],
-                      index,
+                      [subject, count],
+                      index
                     ) => (
                       <React.Fragment
                         key={subject}
                       >
 
-                        {subject}{" "}
-                        ({count})
+                        {subject} ({count})
 
                         {index <
-                        subjectSummary.length -
-                          1
+                        summary.length - 1
                           ? " | "
                           : ""}
 
                       </React.Fragment>
-                    ),
+                    )
                   )
                 : "None"}
 
               <br />
 
               <strong>
-                =&gt; Total:{" "}
-                {totalLessons}
+                =&gt; Total: {safeLessons.length}
               </strong>
 
             </td>
@@ -568,49 +503,56 @@ export default function PrintableTimetable({
 
       <div className="print-footer">
 
-        <div>
-          Valid from :
+        <div className="print-footer-valid">
+
+          <span>
+            Valid from :
+          </span>
 
           <span className="print-line">
             ____________________
           </span>
 
-          To :
+          <span>
+            To :
+          </span>
 
           <span className="print-line">
             ____________________
           </span>
+
         </div>
 
 
-        <div>
-          Prepared by :
+        <div className="print-footer-signature">
 
-          <span className="print-line prepared-line">
-            __________________________
+          <span>
+            Prepared by :
           </span>
+
+          <span className="print-line">
+            ____________________
+          </span>
+
         </div>
 
 
-        <div>
-          Approved by :
+        <div className="print-footer-signature">
 
-          <span className="print-line approved-line">
-            __________________________
+          <span>
+            Approved by :
           </span>
+
+          <span className="print-line">
+            ____________________
+          </span>
+
         </div>
 
       </div>
 
-    </div>
-  );
+    </div>,
 
-  /*
-   * IMPORTANT:
-   * Render outside #root.
-   */
-  return createPortal(
-    printableContent,
-    document.body,
+    document.body
   );
 }

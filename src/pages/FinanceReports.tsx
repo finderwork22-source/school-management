@@ -3,11 +3,9 @@ import { createPortal } from "react-dom";
 import {
   BarChart3,
   CalendarDays,
-  FileText,
   Loader2,
   Printer,
   Search,
-  X,
 } from "lucide-react";
 
 import { useSchool } from "../context/SchoolContext";
@@ -381,43 +379,6 @@ export default function FinanceReports() {
   }, [
     classesForSelectedYear,
     selectedClassId,
-  ]);
-
-  const studentClassMap = useMemo(() => {
-    const map = new Map<
-      string,
-      {
-        classId: string;
-        className: string;
-      }
-    >();
-
-    enrollments.forEach((enrollment) => {
-      if (
-        enrollment.academic_year_id !==
-          selectedAcademicYearId ||
-        enrollment.status !== "Active"
-      ) {
-        return;
-      }
-
-      const schoolClass = classes.find(
-        (item) => item.id === enrollment.class_id,
-      );
-
-      if (!schoolClass) return;
-
-      map.set(enrollment.student_id, {
-        classId: schoolClass.id,
-        className: schoolClass.name,
-      });
-    });
-
-    return map;
-  }, [
-    enrollments,
-    classes,
-    selectedAcademicYearId,
   ]);
 
   const filteredInvoices = useMemo(() => {
