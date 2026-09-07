@@ -1,4 +1,5 @@
-import { Outlet, NavLink, useNavigate } from "react-router-dom";
+import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
+import { normalizeRole, canAccessPath } from "../../lib/permissions";
 import { useAuth } from "../../context/AuthContext";
 import { useSchool } from "../../context/SchoolContext";
 import { supabase } from "../../lib/supabase";
@@ -214,6 +215,8 @@ const navigation: NavigationSection[] = [
 
 function Sidebar() {
   const navigate = useNavigate();
+  const { membership } = useSchool();
+  const role = normalizeRole(membership?.role);
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -222,116 +225,127 @@ function Sidebar() {
 
   return (
     <aside className="hidden h-screen w-64 shrink-0 border-r border-slate-200 bg-white lg:flex lg:flex-col">
-      {/* Logo */}
       <div className="flex h-20 items-center border-b border-slate-200 px-6">
         <div>
           <div className="text-lg font-bold tracking-tight text-slate-900">
             School<span className="text-indigo-600">OS</span>
           </div>
-
           <div className="text-xs text-slate-500">School Management</div>
         </div>
       </div>
 
-      {/* Navigation */}
       <div className="flex-1 overflow-y-auto px-3 py-5">
-        {navigation.map((section) => (
-          <div key={section.label} className="mb-6">
-            <div className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-              {section.label}
-            </div>
+        {navigation.map((section) => {
+          const visibleItems = section.items
+            .map((item) => {
+              if (!item.children?.length) {
+                return canAccessPath(role, item.path) ? item : null;
+              }
 
-            <nav className="space-y-1">
-              {section.items.map((item) => {
-                const Icon = item.icon;
+              const visibleChildren = item.children.filter((child) =>
+                canAccessPath(role, child.path),
+              );
 
-                /*
-                 * Items with children
-                 */
-                if (item.children && item.children.length > 0) {
-                  return (
-                    <div key={item.path}>
-                      <NavLink
-                        to={item.path}
-                        end
-                        className={({ isActive }) =>
-                          [
-                            "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition",
-                            isActive
-                              ? "bg-indigo-50 text-indigo-700"
-                              : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
-                          ].join(" ")
-                        }
-                      >
-                        <Icon size={18} strokeWidth={1.8} />
+              if (visibleChildren.length === 0) return null;
 
-                        <span>{item.label}</span>
+              return {
+                ...item,
+                children: visibleChildren,
+                path: canAccessPath(role, item.path)
+                  ? item.path
+                  : visibleChildren[0].path,
+              };
+            })
+            .filter(Boolean) as NavigationItem[];
 
-                        <ChevronDown
-                          size={14}
-                          strokeWidth={1.8}
-                          className="ml-auto text-slate-400"
-                        />
-                      </NavLink>
+          if (visibleItems.length === 0) return null;
 
-                      <div className="ml-7 mt-1 space-y-1">
-                        {item.children.map((child) => {
-                          const ChildIcon = child.icon;
+          return (
+            <div key={section.label} className="mb-6">
+              <div className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                {section.label}
+              </div>
 
-                          return (
-                            <NavLink
-                              key={child.path}
-                              to={child.path}
-                              end
-                              className={({ isActive }) =>
-                                [
-                                  "flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition",
-                                  isActive
-                                    ? "bg-indigo-50 text-indigo-700"
-                                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-900",
-                                ].join(" ")
-                              }
-                            >
-                              <ChildIcon size={15} strokeWidth={1.8} />
+              <nav className="space-y-1">
+                {visibleItems.map((item) => {
+                  const Icon = item.icon;
 
-                              <span>{child.label}</span>
-                            </NavLink>
-                          );
-                        })}
+                  if (item.children && item.children.length > 0) {
+                    return (
+                      <div key={item.path}>
+                        <NavLink
+                          to={item.path}
+                          end={item.path === "/"}
+                          className={({ isActive }) =>
+                            [
+                              "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition",
+                              isActive
+                                ? "bg-indigo-50 text-indigo-700"
+                                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
+                            ].join(" ")
+                          }
+                        >
+                          <Icon size={18} strokeWidth={1.8} />
+                          <span>{item.label}</span>
+                          <ChevronDown
+                            size={14}
+                            strokeWidth={1.8}
+                            className="ml-auto text-slate-400"
+                          />
+                        </NavLink>
+
+                        <div className="ml-7 mt-1 space-y-1">
+                          {item.children.map((child) => {
+                            const ChildIcon = child.icon;
+                            return (
+                              <NavLink
+                                key={child.path}
+                                to={child.path}
+                                end
+                                className={({ isActive }) =>
+                                  [
+                                    "flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition",
+                                    isActive
+                                      ? "bg-indigo-50 text-indigo-700"
+                                      : "text-slate-500 hover:bg-slate-50 hover:text-slate-900",
+                                  ].join(" ")
+                                }
+                              >
+                                <ChildIcon size={15} strokeWidth={1.8} />
+                                <span>{child.label}</span>
+                              </NavLink>
+                            );
+                          })}
+                        </div>
                       </div>
-                    </div>
+                    );
+                  }
+
+                  return (
+                    <NavLink
+                      key={item.path}
+                      to={item.path}
+                      end={item.path === "/"}
+                      className={({ isActive }) =>
+                        [
+                          "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition",
+                          isActive
+                            ? "bg-indigo-50 text-indigo-700"
+                            : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
+                        ].join(" ")
+                      }
+                    >
+                      <Icon size={18} strokeWidth={1.8} />
+                      <span>{item.label}</span>
+                    </NavLink>
                   );
-                }
-
-                /*
-                 * Normal navigation item
-                 */
-                return (
-                  <NavLink
-                    key={item.path}
-                    to={item.path}
-                    end={item.path === "/"}
-                    className={({ isActive }) =>
-                      [
-                        "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition",
-                        isActive
-                          ? "bg-indigo-50 text-indigo-700"
-                          : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
-                      ].join(" ")
-                    }
-                  >
-                    <Icon size={18} strokeWidth={1.8} />
-
-                    <span>{item.label}</span>
-                  </NavLink>
-                );
-              })}
-            </nav>
-          </div>
-        ))}
+                })}
+              </nav>
+            </div>
+          );
+        })}
       </div>
 
-      {/* Logout */}
       <div className="border-t border-slate-200 p-3">
         <button
           type="button"
@@ -407,7 +421,35 @@ function Header() {
   );
 }
 
+function AccessDenied() {
+  return (
+    <div className="mx-auto flex min-h-[60vh] max-w-xl items-center justify-center">
+      <div className="w-full rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-600">
+          <ShieldCheck size={22} />
+        </div>
+        <h1 className="mt-4 text-xl font-semibold text-slate-900">Access denied</h1>
+        <p className="mt-2 text-sm leading-6 text-slate-500">
+          You do not have permission to access this section of SchoolOS.
+        </p>
+        <NavLink
+          to="/"
+          className="mt-5 inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700"
+        >
+          Back to dashboard
+        </NavLink>
+      </div>
+    </div>
+  );
+}
+
 export default function AppLayout() {
+  const { membership } = useSchool();
+  const location = useLocation();
+  const role = normalizeRole(membership?.role);
+  const hasLoadedRole = Boolean(membership?.role);
+  const allowed = !hasLoadedRole || canAccessPath(role, location.pathname);
+
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50">
       <Sidebar />
@@ -416,7 +458,7 @@ export default function AppLayout() {
         <Header />
 
         <main className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-5 sm:p-8">
-          <Outlet />
+          {allowed ? <Outlet /> : <AccessDenied />}
         </main>
       </div>
     </div>

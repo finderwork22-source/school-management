@@ -8,6 +8,7 @@ import {
   Plus,
   Search,
   User,
+  Wallet,
   X,
 } from "lucide-react";
 import { useSchool } from "../context/SchoolContext";
@@ -137,6 +138,10 @@ export default function StudentBilling() {
     useState("");
 
   const [search, setSearch] = useState("");
+
+  const [statusFilter, setStatusFilter] = useState<
+    Invoice["status"] | "All"
+  >("All");
 
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] =
@@ -528,6 +533,13 @@ export default function StudentBilling() {
             return false;
           }
 
+          if (
+            statusFilter !== "All" &&
+            invoice.status !== statusFilter
+          ) {
+            return false;
+          }
+
           if (selectedClassId) {
             const enrollment =
               enrollments.find(
@@ -588,6 +600,7 @@ export default function StudentBilling() {
       selectedTerm,
       selectedClassId,
       search,
+      statusFilter,
     ]);
 
   /*
@@ -1008,7 +1021,7 @@ export default function StudentBilling() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1180px] space-y-6">
+    <div className="mx-auto w-full max-w-[1320px] space-y-6">
       {/* HEADER */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
@@ -1036,7 +1049,7 @@ export default function StudentBilling() {
           className="h-10 shrink-0 px-5"
         >
           <Plus className="mr-2 h-4 w-4" />
-          Generate Bill
+          Create Invoice
         </Button>
       </div>
 
@@ -1062,79 +1075,104 @@ export default function StudentBilling() {
         <Card className="border-slate-200 shadow-none">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-medium text-slate-500">
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
                 Invoices
               </p>
 
               <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
                 {summary.invoices}
               </p>
+
+              <p className="mt-1 text-xs text-slate-400">
+                {selectedTerm} billing
+              </p>
             </div>
 
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-50">
               <FileText className="h-5 w-5 text-indigo-600" />
             </div>
           </div>
         </Card>
 
         <Card className="border-slate-200 shadow-none">
-          <div>
-            <p className="text-xs font-medium text-slate-500">
-              Total Billed
-            </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                Total Billed
+              </p>
 
-            <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
-              {formatMoney(
-                summary.totalBilled,
-              )}
+              <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
+                {formatMoney(summary.totalBilled)}
+                <span className="ml-1 text-sm font-medium text-slate-400">
+                  RWF
+                </span>
+              </p>
 
-              <span className="ml-1 text-sm font-medium text-slate-400">
-                RWF
-              </span>
-            </p>
+              <p className="mt-1 text-xs text-slate-400">
+                Amount invoiced
+              </p>
+            </div>
+
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100">
+              <Wallet className="h-5 w-5 text-slate-600" />
+            </div>
           </div>
         </Card>
 
         <Card className="border-slate-200 shadow-none">
-          <div>
-            <p className="text-xs font-medium text-slate-500">
-              Total Paid
-            </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                Total Paid
+              </p>
 
-            <p className="mt-1 text-2xl font-semibold tracking-tight text-emerald-600">
-              {formatMoney(
-                summary.totalPaid,
-              )}
+              <p className="mt-1 text-2xl font-semibold tracking-tight text-emerald-600">
+                {formatMoney(summary.totalPaid)}
+                <span className="ml-1 text-sm font-medium text-emerald-500">
+                  RWF
+                </span>
+              </p>
 
-              <span className="ml-1 text-sm font-medium text-emerald-500">
-                RWF
-              </span>
-            </p>
+              <p className="mt-1 text-xs text-slate-400">
+                Collected to date
+              </p>
+            </div>
+
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50">
+              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+            </div>
           </div>
         </Card>
 
         <Card className="border-slate-200 shadow-none">
-          <div>
-            <p className="text-xs font-medium text-slate-500">
-              Outstanding
-            </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                Outstanding
+              </p>
 
-            <p className="mt-1 text-2xl font-semibold tracking-tight text-red-600">
-              {formatMoney(
-                summary.totalBalance,
-              )}
+              <p className="mt-1 text-2xl font-semibold tracking-tight text-red-600">
+                {formatMoney(summary.totalBalance)}
+                <span className="ml-1 text-sm font-medium text-red-500">
+                  RWF
+                </span>
+              </p>
 
-              <span className="ml-1 text-sm font-medium text-red-500">
-                RWF
-              </span>
-            </p>
+              <p className="mt-1 text-xs text-slate-400">
+                Remaining balance
+              </p>
+            </div>
+
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-50">
+              <FileText className="h-5 w-5 text-red-600" />
+            </div>
           </div>
         </Card>
       </div>
 
       {/* FILTERS */}
       <Card className="border-slate-200 shadow-none">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
           <div>
             <label className="mb-1.5 block text-xs font-medium text-slate-600">
               Academic year
@@ -1281,6 +1319,28 @@ export default function StudentBilling() {
               />
             </div>
           </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-slate-600">
+              Invoice status
+            </label>
+
+            <select
+              value={statusFilter}
+              onChange={(event) =>
+                setStatusFilter(
+                  event.target.value as Invoice["status"] | "All",
+                )
+              }
+              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+            >
+              <option value="All">All statuses</option>
+              <option value="Unpaid">Unpaid</option>
+              <option value="Partially Paid">Partially Paid</option>
+              <option value="Paid">Paid</option>
+              <option value="Cancelled">Cancelled</option>
+            </select>
+          </div>
         </div>
       </Card>
 
@@ -1359,7 +1419,7 @@ export default function StudentBilling() {
 
       {/* STUDENT INVOICES */}
       <Card className="overflow-hidden border-slate-200 p-0 shadow-none">
-        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+        <div className="flex flex-col gap-3 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-sm font-semibold text-slate-900">
               Student Invoices
@@ -1368,12 +1428,16 @@ export default function StudentBilling() {
             <p className="mt-1 text-xs text-slate-500">
               {visibleInvoices.length}{" "}
               invoice
-              {visibleInvoices.length ===
-              1
-                ? ""
-                : "s"}{" "}
-              for {selectedTerm}
+              {visibleInvoices.length === 1 ? "" : "s"}{" "}
+              matching your current filters
             </p>
+          </div>
+
+          <div className="text-xs text-slate-400">
+            {selectedTerm}
+            {statusFilter !== "All"
+              ? ` · ${statusFilter}`
+              : ""}
           </div>
         </div>
 
@@ -1826,7 +1890,7 @@ export default function StudentBilling() {
       {/* GENERATE BILL MODAL */}
       {showGenerateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-[1px]">
-          <div className="w-full max-w-2xl overflow-hidden rounded-xl bg-white shadow-2xl">
+          <div className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/5">
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
               <div>

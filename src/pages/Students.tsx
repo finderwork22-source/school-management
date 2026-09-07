@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 
 import { useSchool } from "../context/SchoolContext";
-import { getStudents } from "../lib/students";
+import { getStudents, type Student } from "../lib/students";
 import { getClasses, type SchoolClass } from "../lib/classes";
 import { supabase } from "../lib/supabase";
 
@@ -23,8 +23,6 @@ import Badge from "../components/ui/Badge";
 import Avatar from "../components/ui/Avatar";
 import PageHeader from "../components/ui/PageHeader";
 
-type StudentStatus = "Active" | "Inactive";
-
 interface AcademicYear {
   id: string;
   name: string;
@@ -33,38 +31,11 @@ interface AcademicYear {
   is_active: boolean;
 }
 
-interface Student {
-  id: string;
-  name: string;
-  studentId: string;
-  sectionName: string;
-  className: string;
-  streamName: string | null;
-  academicYearId: string | null;
-  dateOfBirth: string | null;
-  age: number | null;
-  gender: "Male" | "Female";
-  nationality: string;
-  photoUrl: string | null;
-  parent: string;
-  parentPhone: string;
-  status: StudentStatus;
-  enrolledDate: string;
-}
-
 interface AcademicSection {
   id: string;
   academic_year_id: string;
   name: string;
   display_order: number;
-  is_active: boolean;
-}
-
-interface ClassStream {
-  id: string;
-  class_id: string;
-  name: string;
-  capacity: number | null;
   is_active: boolean;
 }
 
@@ -82,7 +53,6 @@ export default function Students() {
   const [academicSections, setAcademicSections] = useState<AcademicSection[]>(
     [],
   );
-  const [classStreams, setClassStreams] = useState<ClassStream[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -112,7 +82,6 @@ export default function Students() {
       { data: classesData, error: classesError },
       { data: academicYearsData, error: academicYearsError },
       { data: sectionsData, error: sectionsError },
-      { data: streamsData, error: streamsError },
     ] = await Promise.all([
       getStudents(school.id),
       getClasses(school.id),
@@ -127,12 +96,6 @@ export default function Students() {
         .eq("school_id", school.id)
         .eq("is_active", true)
         .order("display_order", { ascending: true }),
-      supabase
-        .from("class_streams")
-        .select("id, class_id, name, capacity, is_active")
-        .eq("school_id", school.id)
-        .eq("is_active", true)
-        .order("name", { ascending: true }),
     ]);
 
     if (studentsError) {
@@ -159,14 +122,6 @@ export default function Students() {
       setAcademicSections([]);
     } else {
       setAcademicSections((sectionsData ?? []) as AcademicSection[]);
-    }
-
-    if (streamsError) {
-      console.error("Failed to load class streams:", streamsError);
-      setError(streamsError.message);
-      setClassStreams([]);
-    } else {
-      setClassStreams((streamsData ?? []) as ClassStream[]);
     }
 
     if (academicYearsError) {
@@ -483,11 +438,6 @@ export default function Students() {
                         <span className="text-sm font-medium text-slate-700">
                           {student.className}
                         </span>
-                        {student.streamName && (
-                          <div className="mt-0.5 text-xs text-slate-400">
-                            {student.streamName}
-                          </div>
-                        )}
                       </td>
 
                       <td className="px-5 py-4">
@@ -575,7 +525,6 @@ export default function Students() {
           academicYear={activeAcademicYear}
           sections={sectionsForSelectedYear}
           classes={schoolClasses}
-          streams={classStreams}
           schoolId={school?.id ?? ""}
           onClose={() => setShowAddModal(false)}
           onCreated={async () => {
@@ -599,7 +548,6 @@ interface AddStudentModalProps {
   academicYear: AcademicYear | null;
   sections: AcademicSection[];
   classes: SchoolClass[];
-  streams: ClassStream[];
   schoolId: string;
   onClose: () => void;
   onCreated: () => Promise<void>;
@@ -609,7 +557,6 @@ function AddStudentModal({
   academicYear,
   sections,
   classes,
-  streams,
   schoolId,
   onClose,
   onCreated,
@@ -630,8 +577,6 @@ function AddStudentModal({
 
   const [classId, setClassId] = useState("");
 
-  const [streamId, setStreamId] = useState("");
-
   const [parent, setParent] = useState("");
 
   const [parentPhone, setParentPhone] = useState("");
@@ -651,14 +596,6 @@ function AddStudentModal({
         schoolClass.academic_year_id === academicYear?.id,
     );
   }, [classes, sectionId, academicYear?.id]);
-
-  const streamsForClass = useMemo(
-    () =>
-      streams.filter(
-        (stream) => stream.class_id === classId && stream.is_active,
-      ),
-    [streams, classId],
-  );
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -690,11 +627,6 @@ function AddStudentModal({
 
     if (!classId) {
       setError("Please select a class.");
-      return;
-    }
-
-    if (streamsForClass.length > 0 && !streamId) {
-      setError("Please select a stream.");
       return;
     }
 
@@ -742,7 +674,6 @@ function AddStudentModal({
       p_last_name: lastName.trim(),
       p_gender: gender,
       p_class_id: classId,
-      p_stream_id: streamId || null,
       p_date_of_birth: dateOfBirth || null,
       p_nationality: nationality.trim() || null,
       p_photo_url: uploadedPhotoUrl || null,
@@ -771,7 +702,7 @@ function AddStudentModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
-      <div className="w-full max-w-xl rounded-2xl bg-white shadow-xl">
+      <div className="flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
           <div>
@@ -794,8 +725,8 @@ function AddStudentModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="space-y-5 p-6">
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain p-6">
             {error && (
               <div className="rounded-lg border border-red-100 bg-red-50 px-4 py-3">
                 <p className="text-sm text-red-600">{error}</p>
@@ -885,7 +816,7 @@ function AddStudentModal({
                     onChange={(event) => {
                       setSectionId(event.target.value);
                       setClassId("");
-                      setStreamId("");
+
                     }}
                     required
                     className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
@@ -910,7 +841,7 @@ function AddStudentModal({
                     value={classId}
                     onChange={(event) => {
                       setClassId(event.target.value);
-                      setStreamId("");
+
                     }}
                     required
                     disabled={!sectionId}
@@ -927,30 +858,6 @@ function AddStudentModal({
                     ))}
                   </select>
                 </div>
-
-                {/* STREAM */}
-                {streamsForClass.length > 0 && (
-                  <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-700">
-                      Stream
-                    </label>
-
-                    <select
-                      value={streamId}
-                      onChange={(event) => setStreamId(event.target.value)}
-                      required
-                      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                    >
-                      <option value="">Select stream</option>
-
-                      {streamsForClass.map((stream) => (
-                        <option key={stream.id} value={stream.id}>
-                          {stream.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
 
                 <div className="sm:col-span-2">
                   <label className="mb-1.5 block text-xs font-medium text-slate-700">
@@ -1031,7 +938,7 @@ function AddStudentModal({
           </div>
 
           {/* Footer */}
-          <div className="flex justify-end gap-2 border-t border-slate-200 px-6 py-4">
+          <div className="flex shrink-0 justify-end gap-2 border-t border-slate-200 bg-white px-6 py-4">
             <Button
               type="button"
               variant="secondary"
@@ -1127,8 +1034,6 @@ function StudentDetails({ student, onClose }: StudentDetailsProps) {
           <InfoItem label="Section" value={student.sectionName} />
 
           <InfoItem label="Class" value={student.className} />
-
-          <InfoItem label="Stream" value={student.streamName ?? "—"} />
 
           <InfoItem label="Gender" value={student.gender} />
 
