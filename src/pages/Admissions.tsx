@@ -794,7 +794,7 @@ export default function Admissions() {
 
   if (!school) {
     return (
-      <div className="mx-auto max-w-[1400px]">
+      <div className="mx-auto w-full min-w-0 max-w-[1400px]">
         <div className="rounded-xl border border-slate-200 bg-white p-10 text-center">
           <GraduationCap className="mx-auto h-10 w-10 text-slate-300" />
 
@@ -802,7 +802,7 @@ export default function Admissions() {
             Select a school
           </h2>
 
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 max-w-full break-words text-sm text-slate-500">
             Select a school before managing
             admissions.
           </p>
@@ -813,19 +813,19 @@ export default function Admissions() {
 
   return (
     <>
-      <div className="mx-auto max-w-[1400px]">
+      <div className="mx-auto w-full min-w-0 max-w-[1400px]">
         {/* Header */}
-        <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
+        <div className="mb-6 flex min-w-0 w-full flex-col gap-4 sm:mb-7 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
               School
             </p>
 
-            <h1 className="mt-1 text-2xl font-semibold text-slate-900">
+            <h1 className="mt-1 break-words text-2xl font-semibold text-slate-900 sm:text-2xl">
               Admissions
             </h1>
 
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 max-w-full break-words text-sm text-slate-500">
               Manage applications, admission
               decisions and enrollment.
             </p>
@@ -834,7 +834,7 @@ export default function Admissions() {
           <button
             type="button"
             onClick={openNew}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700"
+            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 sm:w-auto"
           >
             <Plus size={17} />
             New Application
@@ -849,7 +849,7 @@ export default function Admissions() {
         )}
 
         {/* Metrics */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-6">
+        <div className="grid w-full min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 2xl:grid-cols-6">
           <MetricCard
             icon={<FileText size={18} />}
             label="Total Applications"
@@ -888,9 +888,9 @@ export default function Admissions() {
         </div>
 
         {/* Applications */}
-        <div className="mt-6 rounded-xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-200 p-5">
-            <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+        <div className="mt-5 min-w-0 w-full max-w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm sm:mt-6">
+          <div className="min-w-0 border-b border-slate-200 p-4 sm:p-5">
+            <div className="flex min-w-0 flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
               <div>
                 <h2 className="text-sm font-semibold text-slate-900">
                   Applications
@@ -902,7 +902,7 @@ export default function Admissions() {
                 </p>
               </div>
 
-              <div className="flex flex-col gap-2 sm:flex-row">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:items-center">
                 <div className="relative">
                   <Search
                     size={16}
@@ -915,7 +915,7 @@ export default function Admissions() {
                       setSearch(event.target.value)
                     }
                     placeholder="Search applications..."
-                    className="h-10 w-full min-w-[240px] rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-700 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                    className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-700 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                   />
                 </div>
 
@@ -924,7 +924,7 @@ export default function Admissions() {
                   onChange={(event) =>
                     setYearFilter(event.target.value)
                   }
-                  className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-indigo-500"
+                  className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-indigo-500"
                 >
                   <option value="All">
                     All academic years
@@ -949,7 +949,7 @@ export default function Admissions() {
                         | AdmissionStatus,
                     )
                   }
-                  className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-indigo-500"
+                  className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-indigo-500"
                 >
                   {STATUS_OPTIONS.map((status) => (
                     <option
@@ -981,8 +981,43 @@ export default function Admissions() {
               onAdd={openNew}
             />
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-[1100px] w-full">
+            <>
+            <div className="md:hidden divide-y divide-slate-100">
+              {filtered.map((application) => (
+                <div key={application.id} className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-indigo-50 text-indigo-600">
+                        {application.photo_url ? (
+                          <img src={application.photo_url} alt={name(application)} className="h-full w-full object-cover" />
+                        ) : (
+                          <UserRound size={18} />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-semibold text-slate-900">{name(application)}</div>
+                        <div className="mt-0.5 truncate text-xs font-medium text-indigo-700">{application.application_number || "—"}</div>
+                      </div>
+                    </div>
+                    <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${STATUS_STYLES[application.status]}`}>
+                      {application.status}
+                    </span>
+                  </div>
+                  <div className="mt-4 grid min-w-0 grid-cols-1 gap-3 rounded-lg bg-slate-50 p-3 sm:grid-cols-2">
+                    <div><p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Academic Year</p><p className="mt-1 text-xs font-medium text-slate-700">{yearMap.get(application.academic_year_id) || "—"}</p></div>
+                    <div><p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Section</p><p className="mt-1 text-xs font-medium text-slate-700">{application.section_id ? sectionMap.get(application.section_id) || "—" : "—"}</p></div>
+                    <div><p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Class</p><p className="mt-1 text-xs font-medium text-slate-700">{application.class_id ? classMap.get(application.class_id) || "—" : "Not assigned"}</p></div>
+                    <div><p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Applied</p><p className="mt-1 text-xs font-medium text-slate-700">{date(application.application_date)}</p></div>
+                  </div>
+                  <button type="button" onClick={() => navigate(`/admissions/${application.id}`)} className="mt-3 inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600">
+                    View Application <ArrowRight size={13} />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="hidden overflow-x-auto md:block">
+              <table className="min-w-[1000px] w-full">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50">
                     {[
@@ -1022,7 +1057,7 @@ export default function Admissions() {
                         </td>
 
                         <td className="px-5 py-4">
-                          <div className="flex items-center gap-3">
+                          <div className="flex min-w-0 items-center gap-3">
                             <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-indigo-50 text-indigo-600">
                               {application.photo_url ? (
                                 <img
@@ -1118,11 +1153,12 @@ export default function Admissions() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
 
           {!loading &&
             filtered.length > 0 && (
-              <div className="border-t border-slate-100 px-5 py-3 text-xs text-slate-400">
+              <div className="border-t border-slate-100 px-4 py-3 text-xs text-slate-400 sm:px-5">
                 Showing {filtered.length} of{" "}
                 {applications.length} applications
               </div>
@@ -1167,8 +1203,8 @@ function MetricCard({
   value: number;
 }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex items-center gap-3">
+    <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
+      <div className="flex min-w-0 items-center gap-3">
         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
           {icon}
         </div>
@@ -1266,10 +1302,10 @@ function NewApplicationModal({
   onRemovePhoto: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
-      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/40 p-0 sm:items-center sm:p-4">
+      <div className="flex max-h-[96vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:max-h-[90vh] sm:rounded-2xl">
         {/* Modal header */}
-        <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-6 py-4">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 px-4 py-4 sm:px-6">
           <div>
             <h2 className="text-base font-semibold text-slate-900">
               New Admission Application
@@ -1292,7 +1328,7 @@ function NewApplicationModal({
         </div>
 
         {/* Modal body */}
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-6">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:p-6">
           {error && (
             <ErrorBox
               error={error}
@@ -1311,7 +1347,7 @@ function NewApplicationModal({
                 description="Choose the academic year and intended school section."
               />
 
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div className="mt-4 grid min-w-0 gap-4 sm:grid-cols-2">
                 <SelectField
                   label="Academic year"
                   value={
@@ -1397,7 +1433,7 @@ function NewApplicationModal({
                 description="Basic information about the applicant."
               />
 
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div className="mt-4 grid min-w-0 gap-4 sm:grid-cols-2">
                 <InputField
                   label="First name"
                   value={form.firstName}
@@ -1488,7 +1524,7 @@ function NewApplicationModal({
                     Applicant photo
                   </label>
 
-                  <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+                  <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50/60 p-3 sm:p-4">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                       {/* Preview */}
                       <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-dashed border-slate-300 bg-white">
@@ -1514,7 +1550,7 @@ function NewApplicationModal({
                       </div>
 
                       <div className="min-w-0">
-                        <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50">
+                        <label className="inline-flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 sm:w-auto">
                           <ImagePlus
                             size={16}
                           />
@@ -1554,7 +1590,7 @@ function NewApplicationModal({
                               onRemovePhoto
                             }
                             disabled={saving}
-                            className="ml-2 text-xs font-medium text-red-500 hover:text-red-600"
+                            className="mt-2 block text-xs font-medium text-red-500 hover:text-red-600 sm:ml-2 sm:mt-0 sm:inline-block"
                           >
                             Remove
                           </button>
@@ -1582,7 +1618,7 @@ function NewApplicationModal({
                 description="Optional information about the applicant's previous school."
               />
 
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div className="mt-4 grid min-w-0 gap-4 sm:grid-cols-2">
                 <InputField
                   label="Previous school"
                   value={
@@ -1640,12 +1676,12 @@ function NewApplicationModal({
         </div>
 
         {/* Footer */}
-        <div className="flex shrink-0 justify-end gap-2 border-t border-slate-100 px-6 py-4">
+        <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-slate-100 px-4 py-4 sm:flex-row sm:justify-end sm:px-6">
           <button
             type="button"
             onClick={onClose}
             disabled={saving}
-            className="h-10 rounded-lg border border-slate-200 px-4 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+            className="h-10 w-full rounded-lg border border-slate-200 px-4 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50 sm:w-auto"
           >
             Cancel
           </button>
@@ -1654,7 +1690,7 @@ function NewApplicationModal({
             type="button"
             onClick={onSave}
             disabled={saving}
-            className="inline-flex h-10 items-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60"
+            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60 sm:w-auto"
           >
             {saving && (
               <Loader2

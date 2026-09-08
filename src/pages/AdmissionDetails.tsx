@@ -12,11 +12,9 @@ import {
 import {
   AlertCircle,
   ArrowLeft,
-  CalendarDays,
   Check,
   CheckCircle2,
   Clock3,
-  Download,
   ExternalLink,
   File,
   FileCheck2,
@@ -27,7 +25,6 @@ import {
   MessageSquare,
   MoreVertical,
   Paperclip,
-  RefreshCw,
   Trash2,
   Upload,
   UserRound,
@@ -978,25 +975,6 @@ export default function AdmissionDetails() {
     ).format(date);
   };
 
-  const formatFileSize = (
-    bytes: number,
-  ) => {
-    if (bytes < 1024) {
-      return `${bytes} B`;
-    }
-
-    if (bytes < 1024 * 1024) {
-      return `${(
-        bytes / 1024
-      ).toFixed(1)} KB`;
-    }
-
-    return `${(
-      bytes /
-      (1024 * 1024)
-    ).toFixed(1)} MB`;
-  };
-
   function getFileIcon(
     fileName: string,
   ) {
@@ -1383,7 +1361,7 @@ export default function AdmissionDetails() {
                   </button>
                 </div>
               ) : (
-                <div className="relative rounded-xl border border-slate-200">
+                <div className="overflow-hidden rounded-xl border border-slate-200">
                   <div className="divide-y divide-slate-100">
                     {documents.map(
                       (document) => (
@@ -1872,11 +1850,7 @@ function DocumentRow({
     useState(false);
 
   return (
-    <div
-      className={`relative flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between ${
-        showActions ? "z-30" : "z-0"
-      }`}
-    >
+    <div className="relative flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 items-start gap-3">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
           {getFileIcon(
@@ -1961,7 +1935,7 @@ function DocumentRow({
           </button>
 
           {showActions && (
-            <div className="absolute right-0 top-10 z-[60] w-48 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl">
+            <div className="absolute right-0 top-10 z-20 w-48 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl">
               {document.status !==
                 "Verified" && (
                 <button
