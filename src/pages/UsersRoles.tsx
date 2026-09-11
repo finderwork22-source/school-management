@@ -167,6 +167,7 @@ export default function UsersRoles() {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showRoles, setShowRoles] = useState(false);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
+  const [inviteSuccess, setInviteSuccess] = useState("");
 
   async function loadData() {
     if (!school) {
@@ -576,14 +577,27 @@ export default function UsersRoles() {
         )}
       </Card>
 
+      {inviteSuccess && (
+        <div className="mb-5 flex items-center justify-between rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3">
+          <p className="text-sm text-emerald-700">{inviteSuccess}</p>
+          <button
+            type="button"
+            onClick={() => setInviteSuccess("")}
+            className="text-emerald-500 hover:text-emerald-700"
+            aria-label="Dismiss success message"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       {showInviteModal && (
         <InviteUserModal
           onClose={() => setShowInviteModal(false)}
-          onCreated={() => {
+          onCreated={(message) => {
             setShowInviteModal(false);
-            setError(
-              "The invitation form is ready. User account creation should be connected to a secure Supabase server function before invitations are sent.",
-            );
+            setInviteSuccess(message);
+            void loadData();
           }}
         />
       )}
@@ -722,21 +736,58 @@ function InviteUserModal({
   onCreated,
 }: {
   onClose: () => void;
-  onCreated: () => void;
+  onCreated: (message: string) => void;
 }) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Role>("Teacher");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!firstName.trim() || !lastName.trim() || !email.trim()) {
+    const cleanFirstName = firstName.trim();
+    const cleanLastName = lastName.trim();
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (!cleanFirstName || !cleanLastName || !cleanEmail) {
+      setError("Please complete all required fields.");
       return;
     }
 
-    onCreated();
+    setSaving(true);
+    setError("");
+
+    const { data, error: functionError } = await supabase.functions.invoke(
+      "invite-school-user",
+      {
+        body: {
+          firstName: cleanFirstName,
+          lastName: cleanLastName,
+          email: cleanEmail,
+          role,
+        },
+      },
+    );
+
+    if (functionError) {
+      setError(functionError.message || "Unable to send the invitation.");
+      setSaving(false);
+      return;
+    }
+
+    if (!data?.success) {
+      setError(data?.error || "Unable to send the invitation.");
+      setSaving(false);
+      return;
+    }
+
+    onCreated(
+      `Invitation sent to ${cleanEmail}. They were assigned the ${role} role.`,
+    );
+    setSaving(false);
   }
 
   return (
@@ -810,15 +861,21 @@ function InviteUserModal({
               </p>
             </div>
 
+            {error && (
+              <div className="rounded-xl border border-red-100 bg-red-50 p-4">
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
+            )}
+
             <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 p-4">
               <p className="text-xs font-semibold text-indigo-900">
-                Before sending invitations
+                What happens next?
               </p>
 
               <p className="mt-1 text-xs leading-5 text-indigo-700">
-                SchoolOS will need a secure server-side invitation function to
-                create authentication accounts. The browser should never use
-                Supabase service-role credentials.
+                The staff member will receive a secure Supabase invitation email.
+                Their SchoolOS account will be created with the selected role and
+                linked to this school.
               </p>
             </div>
           </div>
@@ -834,9 +891,10 @@ function InviteUserModal({
 
             <button
               type="submit"
-              className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700"
+              disabled={saving}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Prepare invitation
+              {saving ? "Sending invitation..." : "Send invitation"}
             </button>
           </div>
         </form>

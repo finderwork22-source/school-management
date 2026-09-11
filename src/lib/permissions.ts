@@ -11,6 +11,7 @@ export const ROLE_ACCESS: Record<UserRole, string[]> = {
   CEO: ["*"],
   Principal: ["*"],
   "Head of Academics": [
+    "/profile",
     "/students",
     "/students/:id",
     "/teachers",
@@ -25,6 +26,7 @@ export const ROLE_ACCESS: Record<UserRole, string[]> = {
   ],
   Secretary: [
     "/",
+    "/profile",
     "/admissions",
     "/students",
     "/students/:id",
@@ -35,9 +37,9 @@ export const ROLE_ACCESS: Record<UserRole, string[]> = {
   ],
   Teacher: [
     "/",
+    "/profile",
     "/students",
     "/students/:id",
-    "/teachers",
     "/academics",
     "/timetable",
     "/attendance",

@@ -1,27 +1,41 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
 import {
-  Search,
-  Plus,
-  SlidersHorizontal,
-  MoreHorizontal,
-  ChevronLeft,
+  BookOpen,
+  Check,
   ChevronRight,
-  UserRound,
-  ImagePlus,
+  Edit3,
+  Plus,
+  Search,
+  Users,
   X,
 } from "lucide-react";
 
-import { useSchool } from "../context/SchoolContext";
-import { getStudents, type Student } from "../lib/students";
-import { getClasses, type SchoolClass } from "../lib/classes";
 import { supabase } from "../lib/supabase";
+import { useSchool } from "../context/SchoolContext";
+import { normalizeRole } from "../lib/permissions";
 
-import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
-import Badge from "../components/ui/Badge";
-import Avatar from "../components/ui/Avatar";
-import PageHeader from "../components/ui/PageHeader";
+import Button from "../components/ui/Button";
+
+interface SchoolClass {
+  id: string;
+  name: string;
+  section: string | null;
+  academic_year_id: string | null;
+  academic_section_id: string | null;
+  capacity: number | null;
+  is_active: boolean;
+}
+
+interface AcademicSection {
+  id: string;
+  school_id: string;
+  academic_year_id: string;
+  name: string;
+  display_order: number;
+  is_active: boolean;
+}
 
 interface AcademicYear {
   id: string;
@@ -31,45 +45,77 @@ interface AcademicYear {
   is_active: boolean;
 }
 
-interface AcademicSection {
+interface Subject {
   id: string;
-  academic_year_id: string;
   name: string;
-  display_order: number;
+  code: string | null;
+  description: string | null;
   is_active: boolean;
 }
 
-const statuses = ["All statuses", "Active", "Inactive"];
+interface ClassSubject {
+  id: string;
+  class_id: string;
+  subject_id: string;
+}
 
-export default function Students() {
+type Tab = "classes" | "subjects";
+
+export default function ClassesSubjects() {
+  const { school, membership } = useSchool();
+  const role = normalizeRole(membership?.role);
+  const isTeacher = role === "Teacher";
   const navigate = useNavigate();
-  const { school } = useSchool();
+  const [searchParams] = useSearchParams();
+  const academicYearFromUrl = searchParams.get("academicYear");
 
-  const [students, setStudents] = useState<Student[]>([]);
-  const [schoolClasses, setSchoolClasses] = useState<SchoolClass[]>([]);
+  const [activeTab, setActiveTab] = useState<Tab>("classes");
+
+  const [classes, setClasses] = useState<SchoolClass[]>([]);
 
   const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
+
+  const [academicSections, setAcademicSections] = useState<AcademicSection[]>([]);
+
   const [selectedAcademicYearId, setSelectedAcademicYearId] = useState("");
-  const [academicSections, setAcademicSections] = useState<AcademicSection[]>(
-    [],
-  );
+
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+
+  const [classSubjects, setClassSubjects] = useState<ClassSubject[]>([]);
+
+  const [enrollmentCounts, setEnrollmentCounts] = useState<Record<string, number>>({});
 
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+
+  const [, setError] = useState("");
 
   const [search, setSearch] = useState("");
-  const [sectionFilter, setSectionFilter] = useState("All sections");
-  const [classFilter, setClassFilter] = useState("All classes");
-  const [statusFilter, setStatusFilter] = useState("All statuses");
 
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [showClassModal, setShowClassModal] = useState(false);
 
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [showSubjectModal, setShowSubjectModal] = useState(false);
+
+  const [editingClass, setEditingClass] = useState<SchoolClass | null>(null);
+
+  const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
+
+  const [selectedClass, setSelectedClass] = useState<SchoolClass | null>(null);
+
+  const [showSubjectsModal, setShowSubjectsModal] = useState(false);
+
+  const [classStatusFilter, setClassStatusFilter] = useState<
+    "active" | "inactive" | "all"
+  >("active");
 
   async function loadData() {
     if (!school) {
-      setStudents([]);
-      setSchoolClasses([]);
+      setClasses([]);
+      setAcademicYears([]);
+      setAcademicSections([]);
+      setSubjects([]);
+      setClassSubjects([]);
+      setEnrollmentCounts({});
+      setSelectedAcademicYearId("");
       setLoading(false);
       return;
     }
@@ -78,1016 +124,1730 @@ export default function Students() {
     setError("");
 
     const [
-      { data: studentsData, error: studentsError },
-      { data: classesData, error: classesError },
-      { data: academicYearsData, error: academicYearsError },
-      { data: sectionsData, error: sectionsError },
+      academicYearsResult,
+      academicSectionsResult,
+      classesResult,
+      subjectsResult,
+      classSubjectsResult,
+      enrollmentsResult,
     ] = await Promise.all([
-      getStudents(school.id),
-      getClasses(school.id),
       supabase
         .from("academic_years")
-        .select("id, name, start_date, end_date, is_active")
+        .select(
+          `
+          id,
+          name,
+          start_date,
+          end_date,
+          is_active
+        `,
+        )
         .eq("school_id", school.id)
         .order("name", { ascending: false }),
+
       supabase
         .from("academic_sections")
-        .select("id, academic_year_id, name, display_order, is_active")
+        .select(
+          `
+          id,
+          school_id,
+          academic_year_id,
+          name,
+          display_order,
+          is_active
+        `,
+        )
         .eq("school_id", school.id)
-        .eq("is_active", true)
         .order("display_order", { ascending: true }),
+
+      supabase
+        .from("classes")
+        .select(
+          `
+          id,
+          name,
+          section,
+          academic_year_id,
+          academic_section_id,
+          capacity,
+          is_active
+        `,
+        )
+        .eq("school_id", school.id)
+        .order("name"),
+
+      supabase
+        .from("subjects")
+        .select(
+          `
+          id,
+          name,
+          code,
+          description,
+          is_active
+        `,
+        )
+        .eq("school_id", school.id)
+        .order("name"),
+
+      supabase
+        .from("class_subjects")
+        .select(
+          `
+          id,
+          class_id,
+          subject_id
+        `,
+        )
+        .eq("school_id", school.id),
+
+      supabase
+        .from("enrollments")
+        .select("class_id, academic_year_id, status")
+        .eq("school_id", school.id),
     ]);
 
-    if (studentsError) {
-      console.error("Failed to load students:", studentsError);
-
-      setError(studentsError.message);
-      setStudents([]);
-    } else {
-      setStudents(studentsData);
+    if (academicYearsResult.error) {
+      setError(academicYearsResult.error.message);
+      setLoading(false);
+      return;
     }
 
-    if (classesError) {
-      console.error("Failed to load classes:", classesError);
-
-      setError(classesError.message);
-      setSchoolClasses([]);
-    } else {
-      setSchoolClasses(classesData);
+    if (academicSectionsResult.error) {
+      setError(academicSectionsResult.error.message);
+      setLoading(false);
+      return;
     }
 
-    if (sectionsError) {
-      console.error("Failed to load academic sections:", sectionsError);
-      setError(sectionsError.message);
-      setAcademicSections([]);
-    } else {
-      setAcademicSections((sectionsData ?? []) as AcademicSection[]);
+    if (classesResult.error) {
+      setError(classesResult.error.message);
+      setLoading(false);
+      return;
     }
 
-    if (academicYearsError) {
-      console.error("Failed to load academic years:", academicYearsError);
+    if (subjectsResult.error) {
+      setError(subjectsResult.error.message);
+      setLoading(false);
+      return;
+    }
 
-      setError(academicYearsError.message);
-      setAcademicYears([]);
-    } else {
-      const loadedAcademicYears = academicYearsData ?? [];
-      setAcademicYears(loadedAcademicYears);
+    if (classSubjectsResult.error) {
+      setError(classSubjectsResult.error.message);
+      setLoading(false);
+      return;
+    }
 
-      // New student enrollment always uses the single active academic year.
+    if (enrollmentsResult.error) {
+      setError(enrollmentsResult.error.message);
+      setLoading(false);
+      return;
+    }
+
+    const loadedAcademicYears = academicYearsResult.data ?? [];
+
+    setAcademicYears(loadedAcademicYears);
+    setAcademicSections(academicSectionsResult.data ?? []);
+    setClasses(classesResult.data ?? []);
+    setSubjects(subjectsResult.data ?? []);
+    setClassSubjects(classSubjectsResult.data ?? []);
+
+    const counts: Record<string, number> = {};
+    (enrollmentsResult.data ?? []).forEach((enrollment) => {
+      if (
+        enrollment.status !== "Active" ||
+        !enrollment.class_id ||
+        !enrollment.academic_year_id
+      ) {
+        return;
+      }
+
+      const schoolClass = (classesResult.data ?? []).find(
+        (item) => item.id === enrollment.class_id,
+      );
+
+      if (
+        schoolClass?.academic_year_id === enrollment.academic_year_id
+      ) {
+        counts[enrollment.class_id] =
+          (counts[enrollment.class_id] ?? 0) + 1;
+      }
+    });
+    setEnrollmentCounts(counts);
+
+    setSelectedAcademicYearId((current) => {
+      if (
+        academicYearFromUrl &&
+        loadedAcademicYears.some((year) => year.id === academicYearFromUrl)
+      ) {
+        return academicYearFromUrl;
+      }
+
+      if (current && loadedAcademicYears.some((year) => year.id === current)) {
+        return current;
+      }
+
       const activeYear = loadedAcademicYears.find((year) => year.is_active);
 
-      setSelectedAcademicYearId(activeYear?.id ?? "");
-    }
+      return activeYear?.id ?? loadedAcademicYears[0]?.id ?? "";
+    });
 
     setLoading(false);
   }
 
   useEffect(() => {
     loadData();
-  }, [school]);
+  }, [school, academicYearFromUrl]);
 
-  const activeAcademicYear = useMemo(
-    () => academicYears.find((year) => year.is_active) ?? null,
-    [academicYears],
-  );
-
-  const classesForSelectedYear = useMemo(
-    () =>
-      schoolClasses.filter(
-        (item) =>
-          (!selectedAcademicYearId ||
-            item.academic_year_id === selectedAcademicYearId) &&
-          item.is_active,
-      ),
-    [schoolClasses, selectedAcademicYearId],
-  );
-
-  const sectionsForSelectedYear = useMemo(() => {
-    // Only show active sections belonging to the active academic year.
-    // Deduplicate by section name as an extra safeguard against duplicate
-    // records in the database.
-    const unique = new Map<string, AcademicSection>();
-
-    academicSections
-      .filter(
-        (section) =>
-          section.is_active &&
-          section.academic_year_id === activeAcademicYear?.id,
-      )
-      .sort((a, b) => a.display_order - b.display_order)
-      .forEach((section) => {
-        const key = section.name.trim().toLowerCase();
-
-        if (!unique.has(key)) {
-          unique.set(key, section);
-        }
-      });
-
-    return Array.from(unique.values());
-  }, [academicSections, activeAcademicYear?.id]);
-
-  const sections = useMemo(
-    () => ["All sections", ...sectionsForSelectedYear.map((item) => item.name)],
-    [sectionsForSelectedYear],
-  );
-
-  const classesForSelectedSection = useMemo(() => {
-    if (sectionFilter === "All sections") return classesForSelectedYear;
-    const section = sectionsForSelectedYear.find(
-      (item) => item.name === sectionFilter,
-    );
-    return classesForSelectedYear.filter(
-      (item) => item.academic_section_id === section?.id,
-    );
-  }, [classesForSelectedYear, sectionFilter, sectionsForSelectedYear]);
-
-  const classes = useMemo(
-    () => [
-      "All classes",
-      ...classesForSelectedSection.map((item) => item.name),
-    ],
-    [classesForSelectedSection],
-  );
-
-  const filteredStudents = useMemo(() => {
+  const filteredClasses = useMemo(() => {
     const query = search.toLowerCase().trim();
 
-    return students.filter((student) => {
-      const matchesAcademicYear =
-        !selectedAcademicYearId ||
-        student.academicYearId === selectedAcademicYearId;
+    let yearClasses = selectedAcademicYearId
+      ? classes.filter(
+          (item) => item.academic_year_id === selectedAcademicYearId,
+        )
+      : classes;
 
-      const matchesSearch =
-        !query ||
-        student.name.toLowerCase().includes(query) ||
-        student.studentId.toLowerCase().includes(query) ||
-        student.parent.toLowerCase().includes(query);
+    if (classStatusFilter === "active") {
+      yearClasses = yearClasses.filter((item) => item.is_active);
+    }
 
-      const matchesSection =
-        sectionFilter === "All sections" ||
-        student.sectionName === sectionFilter;
+    if (classStatusFilter === "inactive") {
+      yearClasses = yearClasses.filter((item) => !item.is_active);
+    }
 
-      const matchesClass =
-        classFilter === "All classes" || student.className === classFilter;
+    if (!query) return yearClasses;
 
-      const matchesStatus =
-        statusFilter === "All statuses" || student.status === statusFilter;
-
-      return (
-        matchesAcademicYear &&
-        matchesSearch &&
-        matchesSection &&
-        matchesClass &&
-        matchesStatus
-      );
-    });
+    return yearClasses.filter((item) =>
+      [
+        item.name,
+        item.section ?? "",
+        academicYears.find((year) => year.id === item.academic_year_id)?.name ??
+          "",
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(query),
+    );
   }, [
-    students,
+    classes,
     search,
-    sectionFilter,
-    classFilter,
-    statusFilter,
     selectedAcademicYearId,
+    academicYears,
+    classStatusFilter,
   ]);
 
-  const activeStudents = students.filter(
-    (student) => student.status === "Active",
-  ).length;
+  const filteredSubjects = useMemo(() => {
+    const query = search.toLowerCase().trim();
+
+    if (!query) return subjects;
+
+    return subjects.filter((item) =>
+      [item.name, item.code ?? "", item.description ?? ""]
+        .join(" ")
+        .toLowerCase()
+        .includes(query),
+    );
+  }, [subjects, search]);
+
+  function openCreateClass() {
+    if (isTeacher) return;
+    setEditingClass(null);
+    setShowClassModal(true);
+    setError("");
+  }
+
+  function openEditClass(schoolClass: SchoolClass) {
+    if (isTeacher) return;
+    setEditingClass(schoolClass);
+    setShowClassModal(true);
+    setError("");
+  }
+
+  function openCreateSubject() {
+    if (isTeacher) return;
+    setEditingSubject(null);
+    setShowSubjectModal(true);
+    setError("");
+  }
+
+  function openEditSubject(subject: Subject) {
+    if (isTeacher) return;
+    setEditingSubject(subject);
+    setShowSubjectModal(true);
+    setError("");
+  }
+
+  function openClassSubjects(schoolClass: SchoolClass) {
+    setSelectedClass(schoolClass);
+    setShowSubjectsModal(true);
+    setError("");
+  }
+
+  async function toggleClassStatus(schoolClass: SchoolClass) {
+    if (isTeacher) return;
+    setError("");
+
+    const { error: updateError } = await supabase
+      .from("classes")
+      .update({
+        is_active: !schoolClass.is_active,
+      })
+      .eq("id", schoolClass.id)
+      .eq("school_id", school?.id);
+
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
+
+    setClasses((current) =>
+      current.map((item) =>
+        item.id === schoolClass.id
+          ? {
+              ...item,
+              is_active: !item.is_active,
+            }
+          : item,
+      ),
+    );
+  }
+
+  async function toggleSubjectStatus(subject: Subject) {
+    if (isTeacher) return;
+    setError("");
+
+    const { error: updateError } = await supabase
+      .from("subjects")
+      .update({
+        is_active: !subject.is_active,
+      })
+      .eq("id", subject.id)
+      .eq("school_id", school?.id);
+
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
+
+    setSubjects((current) =>
+      current.map((item) =>
+        item.id === subject.id
+          ? {
+              ...item,
+              is_active: !item.is_active,
+            }
+          : item,
+      ),
+    );
+  }
+
+  function getSubjectCount(classId: string) {
+    return classSubjects.filter((item) => item.class_id === classId).length;
+  }
 
   return (
     <div className="mx-auto max-w-[1400px]">
-      <PageHeader
-        eyebrow="School"
-        title="Students"
-        description="Manage student records, enrollment and parent information."
-        actions={
-          <Button onClick={() => setShowAddModal(true)}>
-            <Plus size={16} />
-            Add student
-          </Button>
-        }
-      />
+      {/* Header */}
+      <div className="mb-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <BookOpen size={20} className="text-indigo-600" />
+              <h1 className="text-xl font-semibold text-slate-900">
+                {isTeacher ? "My Classes & Subjects" : "Classes & Subjects"}
+              </h1>
+            </div>
 
-      <Card className="overflow-hidden">
-        {/* Toolbar */}
-        <div className="border-b border-slate-200 p-4">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-            <div className="relative min-w-0 flex-1">
+            <p className="mt-1 text-sm text-slate-500">
+              {isTeacher
+                ? "View classes and subjects relevant to your teaching responsibilities."
+                : "Manage classes and subjects for the selected academic year."}
+            </p>
+          </div>
+
+          {!isTeacher && activeTab === "classes" && academicYears.length > 0 && (
+            <button
+              type="button"
+              onClick={openCreateClass}
+              disabled={!selectedAcademicYearId}
+              className="inline-flex h-10 shrink-0 items-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+            >
+              <Plus size={16} />
+              Add class
+            </button>
+          )}
+
+          {!isTeacher && activeTab === "subjects" && (
+            <button
+              type="button"
+              onClick={openCreateSubject}
+              className="inline-flex h-10 shrink-0 items-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700"
+            >
+              <Plus size={16} />
+              Add subject
+            </button>
+          )}
+        </div>
+      </div>
+
+      {isTeacher && (
+        <div className="mb-5 rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-3">
+          <p className="text-sm font-medium text-indigo-900">Teaching view</p>
+          <p className="mt-1 text-xs leading-5 text-indigo-700">
+            You can view academic information here, but classes, sections, subjects, and curriculum assignments are managed by school administrators.
+          </p>
+        </div>
+      )}
+
+      {/* Current academic year */}
+      {academicYears.length > 0 && (
+        <Card className="mb-6">
+          <div className="p-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Current academic year
+                  </p>
+
+                  {academicYears.find(
+                    (year) => year.id === selectedAcademicYearId,
+                  )?.is_active && (
+                    <span className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700">
+                      Active
+                    </span>
+                  )}
+                </div>
+
+                <h2 className="mt-1 text-lg font-semibold text-slate-900">
+                  {academicYears.find(
+                    (year) => year.id === selectedAcademicYearId,
+                  )?.name ?? "No academic year selected"}
+                </h2>
+
+                {(() => {
+                  const selectedYear = academicYears.find(
+                    (year) => year.id === selectedAcademicYearId,
+                  );
+
+                  return (
+                    <p className="mt-1 text-sm text-slate-500">
+                      {selectedYear?.start_date
+                        ? new Intl.DateTimeFormat("en-GB", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          }).format(new Date(selectedYear.start_date))
+                        : "Start date not set"}
+                      <span className="mx-2 text-slate-300">•</span>
+                      {selectedYear?.end_date
+                        ? new Intl.DateTimeFormat("en-GB", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          }).format(new Date(selectedYear.end_date))
+                        : "End date not set"}
+                    </p>
+                  );
+                })()}
+
+                <p className="mt-2 text-xs text-slate-400">
+                  Classes and subject assignments are managed separately for
+                  each academic year.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <select
+                  value={selectedAcademicYearId}
+                  onChange={(event) =>
+                    setSelectedAcademicYearId(event.target.value)
+                  }
+                  className="h-10 min-w-[220px] rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                >
+                  {academicYears.map((year) => (
+                    <option key={year.id} value={year.id}>
+                      {year.name}
+                      {year.is_active ? " • Active" : ""}
+                    </option>
+                  ))}
+                </select>
+
+                {!isTeacher && (
+                  <button
+                    type="button"
+                    onClick={() => navigate("/settings/academic")}
+                    className="h-10 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                  >
+                    Manage academic years
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {academicYears.length === 0 && (
+        <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-amber-900">
+                Set up an academic year first
+              </p>
+              <p className="mt-1 text-sm text-amber-700">
+                Create an academic year before adding classes or assigning
+                curriculum.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => navigate("/settings/academic")}
+              className="inline-flex h-9 items-center justify-center rounded-lg bg-amber-600 px-3 text-sm font-medium text-white hover:bg-amber-700"
+            >
+              Create academic year
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Sections for selected academic year */}
+      {academicYears.length > 0 && selectedAcademicYearId && (
+        <Card className="mb-5">
+          <div className="p-5">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  Sections
+                </p>
+                <h3 className="mt-1 text-base font-semibold text-slate-900">
+                  Sections for this academic year
+                </h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  Classes are created under these sections. Configure sections
+                  in Academic Settings before adding classes.
+                </p>
+              </div>
+
+              {!isTeacher && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    navigate(
+                      `/settings/academic?academicYear=${selectedAcademicYearId}`,
+                    )
+                  }
+                  className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  Manage sections
+                </button>
+              )}
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              {academicSections
+                .filter(
+                  (section) =>
+                    section.academic_year_id === selectedAcademicYearId &&
+                    section.is_active,
+                )
+                .map((section) => (
+                  <span
+                    key={section.id}
+                    className="rounded-full bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700"
+                  >
+                    {section.name}
+                  </span>
+                ))}
+
+              {academicSections.filter(
+                (section) =>
+                  section.academic_year_id === selectedAcademicYearId &&
+                  section.is_active,
+              ).length === 0 && (
+                <span className="text-sm text-amber-600">
+                  No active sections configured yet.
+                </span>
+              )}
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Tabs + Search */}
+      <Card className="mb-5">
+        <div className="flex flex-col border-b border-slate-200 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex gap-6 px-5 pt-4">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab("classes");
+                setSearch("");
+              }}
+              className={[
+                "relative pb-3 text-sm font-medium",
+                activeTab === "classes"
+                  ? "text-indigo-600"
+                  : "text-slate-500 hover:text-slate-800",
+              ].join(" ")}
+            >
+              Classes
+              <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[11px]">
+                {filteredClasses.length}
+              </span>
+              {activeTab === "classes" && (
+                <span className="absolute inset-x-0 bottom-0 h-0.5 bg-indigo-600" />
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab("subjects");
+                setSearch("");
+              }}
+              className={[
+                "relative pb-3 text-sm font-medium",
+                activeTab === "subjects"
+                  ? "text-indigo-600"
+                  : "text-slate-500 hover:text-slate-800",
+              ].join(" ")}
+            >
+              Subjects
+              <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[11px]">
+                {subjects.length}
+              </span>
+              {!isTeacher && activeTab === "subjects" && (
+                <span className="absolute inset-x-0 bottom-0 h-0.5 bg-indigo-600" />
+              )}
+            </button>
+          </div>
+
+          <div className="flex w-full flex-col gap-2 px-5 pb-3 pt-3 sm:w-auto sm:flex-row sm:items-center sm:pb-2 sm:pt-0">
+            <div className="relative sm:w-72">
               <Search
-                size={17}
+                size={16}
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
               />
 
               <input
-                type="text"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search by name, student ID or parent..."
-                className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                placeholder={
+                  activeTab === "classes"
+                    ? "Search classes..."
+                    : "Search subjects..."
+                }
+                className="h-9 w-full rounded-lg border border-slate-200 pl-9 pr-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
               />
             </div>
 
-            <div className="flex flex-wrap gap-2">
+            {activeTab === "classes" && (
               <select
-                value={sectionFilter}
-                onChange={(event) => {
-                  setSectionFilter(event.target.value);
-                  setClassFilter("All classes");
-                }}
-                className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                value={classStatusFilter}
+                onChange={(event) =>
+                  setClassStatusFilter(
+                    event.target.value as "active" | "inactive" | "all",
+                  )
+                }
+                className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
               >
-                {sections.map((item) => (
-                  <option key={item}>{item}</option>
-                ))}
+                <option value="active">Active classes</option>
+                <option value="inactive">Inactive classes</option>
+                <option value="all">All classes</option>
               </select>
-
-              <select
-                value={classFilter}
-                onChange={(event) => setClassFilter(event.target.value)}
-                className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-              >
-                {classes.map((item) => (
-                  <option key={item}>{item}</option>
-                ))}
-              </select>
-
-              <select
-                value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value)}
-                className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-              >
-                {statuses.map((item) => (
-                  <option key={item}>{item}</option>
-                ))}
-              </select>
-
-              <Button variant="secondary" size="md">
-                <SlidersHorizontal size={16} />
-                Filters
-              </Button>
-            </div>
+            )}
           </div>
         </div>
 
-        {/* Summary */}
-        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
-          <p className="text-sm text-slate-500">
-            Showing{" "}
-            <span className="font-medium text-slate-900">
-              {filteredStudents.length}
-            </span>{" "}
-            students
-          </p>
-
-          <p className="hidden text-xs text-slate-400 sm:block">
-            {activeStudents} active students
-          </p>
-        </div>
-
-        {/* Error */}
-        {error && (
-          <div className="border-b border-red-100 bg-red-50 px-5 py-3">
-            <p className="text-sm text-red-600">{error}</p>
-          </div>
-        )}
-
-        {/* Loading */}
+        {/* Content */}
         {loading ? (
-          <div className="flex min-h-[300px] items-center justify-center">
-            <div className="text-sm text-slate-500">Loading students...</div>
+          <div className="p-12 text-center text-sm text-slate-500">
+            Loading...
           </div>
+        ) : activeTab === "classes" ? (
+          <ClassesTable
+            classes={filteredClasses}
+            getSubjectCount={getSubjectCount}
+            enrollmentCounts={enrollmentCounts}
+            academicYears={academicYears}
+            academicSections={academicSections}
+            onEdit={openEditClass}
+            onToggle={toggleClassStatus}
+            onSubjects={openClassSubjects}
+            onCreate={openCreateClass}
+            canManage={!isTeacher}
+          />
         ) : (
-          <>
-            {/* Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[800px]">
-                <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50/70 text-left">
-                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Student
-                    </th>
-
-                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Student ID
-                    </th>
-
-                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Section
-                    </th>
-
-                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Class
-                    </th>
-
-                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Parent / Guardian
-                    </th>
-
-                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                      Status
-                    </th>
-
-                    <th className="w-12 px-5 py-3" />
-                  </tr>
-                </thead>
-
-                <tbody className="divide-y divide-slate-100">
-                  {filteredStudents.map((student) => (
-                    <tr
-                      key={student.id}
-                      className="group transition hover:bg-slate-50"
-                    >
-                      <td className="px-5 py-4">
-                        <button
-                          onClick={() => navigate(`/students/${student.id}`)}
-                          className="flex items-center gap-3 text-left"
-                        >
-                          {student.photoUrl ? (
-                            <img
-                              src={student.photoUrl}
-                              alt={student.name}
-                              className="h-10 w-10 rounded-full object-cover"
-                            />
-                          ) : (
-                            <Avatar name={student.name} />
-                          )}
-
-                          <div>
-                            <div className="text-sm font-medium text-slate-900 group-hover:text-indigo-700">
-                              {student.name}
-                            </div>
-
-                            <div className="mt-0.5 text-xs text-slate-400">
-                              {student.gender}
-                            </div>
-                          </div>
-                        </button>
-                      </td>
-
-                      <td className="px-5 py-4 text-sm text-slate-600">
-                        {student.studentId}
-                      </td>
-
-                      <td className="px-5 py-4">
-                        <span className="text-sm font-medium text-slate-700">
-                          {student.sectionName}
-                        </span>
-                      </td>
-
-                      <td className="px-5 py-4">
-                        <span className="text-sm font-medium text-slate-700">
-                          {student.className}
-                        </span>
-                      </td>
-
-                      <td className="px-5 py-4">
-                        <div className="text-sm text-slate-700">
-                          {student.parent}
-                        </div>
-
-                        <div className="mt-0.5 text-xs text-slate-400">
-                          {student.parentPhone}
-                        </div>
-                      </td>
-
-                      <td className="px-5 py-4">
-                        <Badge
-                          variant={
-                            student.status === "Active" ? "success" : "default"
-                          }
-                        >
-                          {student.status}
-                        </Badge>
-                      </td>
-
-                      <td className="px-5 py-4">
-                        <button
-                          onClick={() => setSelectedStudent(student)}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 opacity-0 transition hover:bg-slate-100 hover:text-slate-700 group-hover:opacity-100"
-                        >
-                          <MoreHorizontal size={17} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-
-                  {filteredStudents.length === 0 && (
-                    <tr>
-                      <td colSpan={7} className="px-5 py-16 text-center">
-                        <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500">
-                          <UserRound size={18} />
-                        </div>
-
-                        <h3 className="mt-3 text-sm font-semibold text-slate-900">
-                          No students found
-                        </h3>
-
-                        <p className="mt-1 text-sm text-slate-500">
-                          Try changing your search or filters.
-                        </p>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Pagination */}
-            <div className="flex items-center justify-between border-t border-slate-200 px-5 py-3">
-              <p className="text-xs text-slate-500">Page 1 of 1</p>
-
-              <div className="flex gap-1">
-                <button
-                  disabled
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-300"
-                >
-                  <ChevronLeft size={15} />
-                </button>
-
-                <button className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-xs font-medium text-white">
-                  1
-                </button>
-
-                <button
-                  disabled
-                  className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-300"
-                >
-                  <ChevronRight size={15} />
-                </button>
-              </div>
-            </div>
-          </>
+          <SubjectsTable
+            subjects={filteredSubjects}
+            onEdit={openEditSubject}
+            onToggle={toggleSubjectStatus}
+            onCreate={openCreateSubject}
+            canManage={!isTeacher}
+          />
         )}
       </Card>
 
-      {showAddModal && (
-        <AddStudentModal
-          academicYear={activeAcademicYear}
-          sections={sectionsForSelectedYear}
-          classes={schoolClasses}
+      {/* Class modal */}
+      {showClassModal && (
+        <ClassModal
           schoolId={school?.id ?? ""}
-          onClose={() => setShowAddModal(false)}
-          onCreated={async () => {
-            setShowAddModal(false);
-            await loadData();
+          academicYears={academicYears}
+          academicSections={academicSections}
+          selectedAcademicYearId={selectedAcademicYearId}
+          editingClass={editingClass}
+          onClose={() => setShowClassModal(false)}
+          onSaved={() => {
+            setShowClassModal(false);
+            loadData();
           }}
         />
       )}
 
-      {selectedStudent && (
-        <StudentDetails
-          student={selectedStudent}
-          onClose={() => setSelectedStudent(null)}
+      {/* Subject modal */}
+      {showSubjectModal && (
+        <SubjectModal
+          schoolId={school?.id ?? ""}
+          editingSubject={editingSubject}
+          onClose={() => setShowSubjectModal(false)}
+          onSaved={() => {
+            setShowSubjectModal(false);
+            loadData();
+          }}
+        />
+      )}
+
+      {/* Assign subjects modal */}
+      {showSubjectsModal && selectedClass && (
+        <ClassSubjectsModal
+          schoolId={school?.id ?? ""}
+          schoolClass={selectedClass}
+          subjects={subjects}
+          classSubjects={classSubjects}
+          canManage={!isTeacher}
+          onClose={() => {
+            setShowSubjectsModal(false);
+            setSelectedClass(null);
+          }}
+          onSaved={() => {
+            setShowSubjectsModal(false);
+            setSelectedClass(null);
+            loadData();
+          }}
         />
       )}
     </div>
   );
 }
 
-interface AddStudentModalProps {
-  academicYear: AcademicYear | null;
-  sections: AcademicSection[];
+/* -------------------------------------------------------------------------- */
+/* Classes table                                                               */
+/* -------------------------------------------------------------------------- */
+
+function ClassesTable({
+  classes,
+  getSubjectCount,
+  enrollmentCounts,
+  academicYears,
+  academicSections,
+  onEdit,
+  onToggle,
+  onSubjects,
+  onCreate,
+  canManage,
+}: {
   classes: SchoolClass[];
-  schoolId: string;
-  onClose: () => void;
-  onCreated: () => Promise<void>;
+  getSubjectCount: (classId: string) => number;
+  enrollmentCounts: Record<string, number>;
+  academicYears: AcademicYear[];
+  academicSections: AcademicSection[];
+  onEdit: (schoolClass: SchoolClass) => void;
+  onToggle: (schoolClass: SchoolClass) => void;
+  onSubjects: (schoolClass: SchoolClass) => void;
+  onCreate: () => void;
+  canManage: boolean;
+}) {
+  if (classes.length === 0) {
+    return (
+      <EmptyState
+        icon={Users}
+        title="No classes yet"
+        description="Create a class for this academic year to start organizing your students and curriculum."
+        action="Add class"
+        onAction={onCreate}
+        showAction={canManage}
+      />
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[820px]">
+        <thead>
+          <tr className="border-b border-slate-200 bg-slate-50/70">
+            <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              Class
+            </th>
+
+            <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              Academic year
+            </th>
+
+            <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              Students
+            </th>
+
+            <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              Capacity
+            </th>
+
+            <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              Subjects
+            </th>
+
+            <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              Status
+            </th>
+
+            <th className="px-5 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              Actions
+            </th>
+          </tr>
+        </thead>
+
+        <tbody className="divide-y divide-slate-100">
+          {classes.map((schoolClass) => (
+            <tr key={schoolClass.id} className="hover:bg-slate-50">
+              <td className="px-5 py-4">
+                <div className="text-sm font-medium text-slate-900">
+                  {schoolClass.name}
+                </div>
+
+                {(() => {
+                  const sectionName =
+                    academicSections.find(
+                      (item) =>
+                        item.id === schoolClass.academic_section_id,
+                    )?.name || schoolClass.section;
+
+                  return sectionName ? (
+                    <div className="mt-1 text-xs text-slate-500">
+                      {sectionName}
+                    </div>
+                  ) : null;
+                })()}
+              </td>
+
+              <td className="px-5 py-4 text-sm text-slate-600">
+                {academicYears.find(
+                  (year) => year.id === schoolClass.academic_year_id,
+                )?.name || "—"}
+              </td>
+
+              <td className="px-5 py-4 text-sm text-slate-600">
+                {enrollmentCounts[schoolClass.id] ?? 0}
+              </td>
+
+              <td className="px-5 py-4 text-sm text-slate-600">
+                {schoolClass.capacity ?? "—"}
+              </td>
+
+              <td className="px-5 py-4">
+                <button
+                  type="button"
+                  onClick={() => onSubjects(schoolClass)}
+                  className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50"
+                >
+                  {getSubjectCount(schoolClass.id)} assigned
+                  <ChevronRight size={13} />
+                </button>
+              </td>
+
+              <td className="px-5 py-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  {canManage ? (
+                    <button
+                      type="button"
+                      onClick={() => onToggle(schoolClass)}
+                      className={[
+                        "rounded-full px-2.5 py-1 text-[11px] font-medium",
+                        schoolClass.is_active
+                          ? "bg-emerald-100 text-emerald-700"
+                          : "bg-slate-100 text-slate-500",
+                      ].join(" ")}
+                    >
+                      {schoolClass.is_active ? "Active" : "Inactive"}
+                    </button>
+                  ) : (
+                    <span
+                      className={[
+                        "rounded-full px-2.5 py-1 text-[11px] font-medium",
+                        schoolClass.is_active
+                          ? "bg-emerald-100 text-emerald-700"
+                          : "bg-slate-100 text-slate-500",
+                      ].join(" ")}
+                    >
+                      {schoolClass.is_active ? "Active" : "Inactive"}
+                    </span>
+                  )}
+
+                  {schoolClass.capacity !== null &&
+                    (enrollmentCounts[schoolClass.id] ?? 0) >=
+                      schoolClass.capacity && (
+                      <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-medium text-amber-700">
+                        Full
+                      </span>
+                    )}
+                </div>
+              </td>
+
+              <td className="px-5 py-4 text-right">
+                {canManage && (
+                  <button
+                    type="button"
+                    onClick={() => onEdit(schoolClass)}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                  >
+                    <Edit3 size={15} />
+                  </button>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
-function AddStudentModal({
-  academicYear,
-  sections,
-  classes,
+/* -------------------------------------------------------------------------- */
+/* Subjects table                                                              */
+/* -------------------------------------------------------------------------- */
+
+function SubjectsTable({
+  subjects,
+  onEdit,
+  onToggle,
+  onCreate,
+  canManage,
+}: {
+  subjects: Subject[];
+  onEdit: (subject: Subject) => void;
+  onToggle: (subject: Subject) => void;
+  onCreate: () => void;
+  canManage: boolean;
+}) {
+  if (subjects.length === 0) {
+    return (
+      <EmptyState
+        icon={BookOpen}
+        title="No subjects yet"
+        description="Create subjects that can be assigned to your classes."
+        action="Add subject"
+        onAction={onCreate}
+        showAction={canManage}
+      />
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[700px]">
+        <thead>
+          <tr className="border-b border-slate-200 bg-slate-50/70">
+            <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              Subject
+            </th>
+
+            <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              Code
+            </th>
+
+            <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              Description
+            </th>
+
+            <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              Status
+            </th>
+
+            <th className="px-5 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+              Actions
+            </th>
+          </tr>
+        </thead>
+
+        <tbody className="divide-y divide-slate-100">
+          {subjects.map((subject) => (
+            <tr key={subject.id} className="hover:bg-slate-50">
+              <td className="px-5 py-4">
+                <div className="text-sm font-medium text-slate-900">
+                  {subject.name}
+                </div>
+              </td>
+
+              <td className="px-5 py-4 text-sm text-slate-600">
+                {subject.code || "—"}
+              </td>
+
+              <td className="max-w-md px-5 py-4 text-sm text-slate-500">
+                <div className="truncate">
+                  {subject.description || "No description"}
+                </div>
+              </td>
+
+              <td className="px-5 py-4">
+                {canManage ? (
+                  <button
+                    type="button"
+                    onClick={() => onToggle(subject)}
+                    className={[
+                      "rounded-full px-2.5 py-1 text-[11px] font-medium",
+                      subject.is_active
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-slate-100 text-slate-500",
+                    ].join(" ")}
+                  >
+                    {subject.is_active ? "Active" : "Inactive"}
+                  </button>
+                ) : (
+                  <span
+                    className={[
+                      "rounded-full px-2.5 py-1 text-[11px] font-medium",
+                      subject.is_active
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-slate-100 text-slate-500",
+                    ].join(" ")}
+                  >
+                    {subject.is_active ? "Active" : "Inactive"}
+                  </span>
+                )}
+              </td>
+
+              <td className="px-5 py-4 text-right">
+                {canManage && (
+                  <button
+                    type="button"
+                    onClick={() => onEdit(subject)}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                  >
+                    <Edit3 size={15} />
+                  </button>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Class modal                                                                 */
+/* -------------------------------------------------------------------------- */
+
+function ClassModal({
   schoolId,
+  academicYears,
+  academicSections,
+  selectedAcademicYearId,
+  editingClass,
   onClose,
-  onCreated,
-}: AddStudentModalProps) {
-  const [firstName, setFirstName] = useState("");
+  onSaved,
+}: {
+  schoolId: string;
+  academicYears: AcademicYear[];
+  academicSections: AcademicSection[];
+  selectedAcademicYearId: string;
+  editingClass: SchoolClass | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [name, setName] = useState(editingClass?.name ?? "");
 
-  const [lastName, setLastName] = useState("");
+  const [academicSectionId, setAcademicSectionId] = useState(
+    editingClass?.academic_section_id ?? "",
+  );
 
-  const [dateOfBirth, setDateOfBirth] = useState("");
+  const [academicYearId, setAcademicYearId] = useState(
+    editingClass?.academic_year_id ??
+      selectedAcademicYearId ??
+      academicYears.find((year) => year.is_active)?.id ??
+      academicYears[0]?.id ??
+      "",
+  );
 
-  const [nationality, setNationality] = useState("Rwandan");
-
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-
-  const [photoPreview, setPhotoPreview] = useState("");
-
-  const [sectionId, setSectionId] = useState("");
-
-  const [classId, setClassId] = useState("");
-
-  const [parent, setParent] = useState("");
-
-  const [parentPhone, setParentPhone] = useState("");
-
-  const [gender, setGender] = useState<"Male" | "Female">("Male");
+  const [capacity, setCapacity] = useState(
+    editingClass?.capacity?.toString() ?? "",
+  );
 
   const [saving, setSaving] = useState(false);
 
   const [error, setError] = useState("");
 
-  const classesForSection = useMemo(() => {
-    if (!sectionId) return [];
-    return classes.filter(
-      (schoolClass) =>
-        schoolClass.academic_section_id === sectionId &&
-        schoolClass.is_active &&
-        schoolClass.academic_year_id === academicYear?.id,
-    );
-  }, [classes, sectionId, academicYear?.id]);
-
-  async function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!schoolId) {
-      setError("No school is associated with your account.");
+    if (!name.trim()) {
+      setError("Class name is required.");
       return;
     }
 
-    if (!academicYear) {
-      setError("No active academic year is configured.");
+    if (!academicYearId) {
+      setError("Academic year is required.");
       return;
     }
 
-    if (!firstName.trim()) {
-      setError("First name is required.");
-      return;
-    }
-
-    if (!lastName.trim()) {
-      setError("Last name is required.");
-      return;
-    }
-
-    if (!sectionId) {
+    if (!academicSectionId) {
       setError("Please select a section.");
       return;
     }
 
-    if (!classId) {
-      setError("Please select a class.");
+    if (!capacity) {
+      setError("Capacity is required.");
       return;
     }
 
-    if (!parent.trim()) {
-      setError("Parent or guardian name is required.");
+    const numericCapacity = Number(capacity);
+
+    if (!Number.isInteger(numericCapacity) || numericCapacity <= 0) {
+      setError("Capacity must be a positive number.");
       return;
     }
 
     setSaving(true);
     setError("");
 
-    let uploadedPhotoUrl = "";
+    const finalClassName = name.trim();
 
-    if (photoFile) {
-      const extension = photoFile.name.split(".").pop()?.toLowerCase() || "jpg";
+    const selectedYear = academicYears.find(
+      (year) => year.id === academicYearId,
+    );
 
-      const filePath = `${schoolId}/${crypto.randomUUID()}.${extension}`;
+    const selectedSection = academicSections.find(
+      (item) =>
+        item.id === academicSectionId &&
+        item.academic_year_id === academicYearId &&
+        item.is_active,
+    );
 
-      const { error: uploadError } = await supabase.storage
-        .from("student-photos")
-        .upload(filePath, photoFile, {
-          cacheControl: "3600",
-          upsert: false,
-          contentType: photoFile.type,
-        });
+    if (!selectedSection) {
+      setError("Please select a valid section for this academic year.");
+      setSaving(false);
+      return;
+    }
 
-      if (uploadError) {
-        console.error("Failed to upload student photo:", uploadError);
+    const payload = {
+      name: finalClassName,
+      section: selectedSection.name,
+      academic_year_id: academicYearId,
+      academic_section_id: academicSectionId,
+      academic_year: selectedYear?.name ?? null,
+      capacity: numericCapacity,
+      school_id: schoolId,
+    };
 
-        setError(`Photo upload failed: ${uploadError.message}`);
+    if (editingClass) {
+      const { error: updateError } = await supabase
+        .from("classes")
+        .update(payload)
+        .eq("id", editingClass.id)
+        .eq("school_id", schoolId);
+
+      if (updateError) {
+        setError(updateError.message);
         setSaving(false);
         return;
       }
+    } else {
+      const { error: insertError } = await supabase
+        .from("classes")
+        .insert(payload);
 
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("student-photos").getPublicUrl(filePath);
-
-      uploadedPhotoUrl = publicUrl;
+      if (insertError) {
+        setError(insertError.message);
+        setSaving(false);
+        return;
+      }
     }
-
-    const { data, error: createError } = await supabase.rpc("create_student", {
-      p_school_id: schoolId,
-      p_first_name: firstName.trim(),
-      p_last_name: lastName.trim(),
-      p_gender: gender,
-      p_class_id: classId,
-      p_date_of_birth: dateOfBirth || null,
-      p_nationality: nationality.trim() || null,
-      p_photo_url: uploadedPhotoUrl || null,
-      p_parent_name: parent.trim(),
-      p_parent_phone: parentPhone.trim() || "",
-    });
-
-    if (createError) {
-      console.error("Failed to create student:", createError);
-
-      setError(createError.message);
-      setSaving(false);
-      return;
-    }
-
-    if (!data) {
-      setError("Student was not created.");
-      setSaving(false);
-      return;
-    }
-
-    await onCreated();
 
     setSaving(false);
+    onSaved();
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
-      <div className="flex max-h-[90vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl bg-white shadow-xl">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-          <div>
-            <h2 className="text-base font-semibold text-slate-900">
-              Add student
-            </h2>
+    <Modal title={editingClass ? "Edit class" : "Add class"} onClose={onClose}>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {error && <ErrorBox message={error} />}
 
-            <p className="mt-0.5 text-xs text-slate-500">
-              Create a new student record.
+        {/* Class name */}
+        <Input
+          label="Class name"
+          value={name}
+          onChange={setName}
+          placeholder="e.g. Little Stars"
+          required
+        />
+
+        {/* Section + Academic Year */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">
+              Section
+              <span className="ml-1 text-red-500">*</span>
+            </label>
+
+            <select
+              value={academicSectionId}
+              onChange={(event) => setAcademicSectionId(event.target.value)}
+              required
+              disabled={!academicYearId}
+              className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 disabled:bg-slate-50 disabled:text-slate-400"
+            >
+              <option value="">Select section</option>
+
+              {academicSections
+                .filter(
+                  (item) =>
+                    item.academic_year_id === academicYearId &&
+                    item.is_active,
+                )
+                .map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+            </select>
+
+            {academicYearId &&
+              academicSections.filter(
+                (item) =>
+                  item.academic_year_id === academicYearId &&
+                  item.is_active,
+              ).length === 0 && (
+                <p className="mt-1.5 text-xs text-amber-600">
+                  Create sections for this academic year in Academic Settings first.
+                </p>
+              )}
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-slate-700">
+              Academic year
+              <span className="ml-1 text-red-500">*</span>
+            </label>
+
+            <select
+              value={academicYearId}
+              onChange={(event) => setAcademicYearId(event.target.value)}
+              required
+              disabled={academicYears.length === 0}
+              className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 disabled:bg-slate-50 disabled:text-slate-400"
+            >
+              <option value="">Select academic year</option>
+
+              {academicYears
+                .filter((year) => year.is_active)
+                .map((year) => (
+                  <option key={year.id} value={year.id}>
+                    {year.name}
+                  </option>
+                ))}
+            </select>
+
+            {academicYears.length === 0 && (
+              <p className="mt-1.5 text-xs text-amber-600">
+                Create an academic year first.
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Capacity */}
+        <Input
+          label="Capacity"
+          value={capacity}
+          onChange={setCapacity}
+          placeholder="e.g. 20"
+          type="number"
+          min="1"
+          required
+        />
+
+        <ModalActions
+          onClose={onClose}
+          saving={saving}
+          label={editingClass ? "Save changes" : "Create class"}
+        />
+      </form>
+    </Modal>
+  );
+}
+/* -------------------------------------------------------------------------- */
+/* Subject modal                                                               */
+/* -------------------------------------------------------------------------- */
+
+function SubjectModal({
+  schoolId,
+  editingSubject,
+  onClose,
+  onSaved,
+}: {
+  schoolId: string;
+  editingSubject: Subject | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [name, setName] = useState(editingSubject?.name ?? "");
+
+  const [code, setCode] = useState(editingSubject?.code ?? "");
+
+  const [description, setDescription] = useState(
+    editingSubject?.description ?? "",
+  );
+
+  const [saving, setSaving] = useState(false);
+
+  const [error, setError] = useState("");
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!name.trim()) {
+      setError("Subject name is required.");
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+
+    const payload = {
+      name: name.trim(),
+      code: code.trim() || null,
+      description: description.trim() || null,
+      school_id: schoolId,
+    };
+
+    if (editingSubject) {
+      const { error: updateError } = await supabase
+        .from("subjects")
+        .update(payload)
+        .eq("id", editingSubject.id)
+        .eq("school_id", schoolId);
+
+      if (updateError) {
+        setError(updateError.message);
+        setSaving(false);
+        return;
+      }
+    } else {
+      const { error: insertError } = await supabase
+        .from("subjects")
+        .insert(payload);
+
+      if (insertError) {
+        setError(insertError.message);
+        setSaving(false);
+        return;
+      }
+    }
+
+    setSaving(false);
+    onSaved();
+  }
+
+  return (
+    <Modal
+      title={editingSubject ? "Edit subject" : "Add subject"}
+      onClose={onClose}
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {error && <ErrorBox message={error} />}
+
+        <Input
+          label="Subject name"
+          value={name}
+          onChange={setName}
+          placeholder="e.g. Mathematics"
+          required
+        />
+
+        <Input
+          label="Subject code"
+          value={code}
+          onChange={setCode}
+          placeholder="e.g. MATH"
+        />
+
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-slate-700">
+            Description
+          </label>
+
+          <textarea
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            rows={4}
+            placeholder="Optional description"
+            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+          />
+        </div>
+
+        <ModalActions
+          onClose={onClose}
+          saving={saving}
+          label={editingSubject ? "Save changes" : "Create subject"}
+        />
+      </form>
+    </Modal>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Assign subjects                                                             */
+/* -------------------------------------------------------------------------- */
+
+function ClassSubjectsModal({
+  schoolId,
+  schoolClass,
+  subjects,
+  classSubjects,
+  onClose,
+  onSaved,
+  canManage,
+}: {
+  schoolId: string;
+  schoolClass: SchoolClass;
+  subjects: Subject[];
+  classSubjects: ClassSubject[];
+  onClose: () => void;
+  onSaved: () => void;
+  canManage: boolean;
+}) {
+  const assignedIds = new Set(
+    classSubjects
+      .filter((item) => item.class_id === schoolClass.id)
+      .map((item) => item.subject_id),
+  );
+
+  const [selectedIds, setSelectedIds] = useState<string[]>(
+    Array.from(assignedIds),
+  );
+
+  const [saving, setSaving] = useState(false);
+
+  const [error, setError] = useState("");
+
+  function toggleSubject(subjectId: string) {
+    setSelectedIds((current) =>
+      current.includes(subjectId)
+        ? current.filter((id) => id !== subjectId)
+        : [...current, subjectId],
+    );
+  }
+
+  async function saveAssignments() {
+    if (!canManage) return;
+    setSaving(true);
+    setError("");
+
+    const { error: deleteError } = await supabase
+      .from("class_subjects")
+      .delete()
+      .eq("class_id", schoolClass.id)
+      .eq("school_id", schoolId);
+
+    if (deleteError) {
+      setError(deleteError.message);
+      setSaving(false);
+      return;
+    }
+
+    if (selectedIds.length > 0) {
+      const rows = selectedIds.map((subjectId) => ({
+        school_id: schoolId,
+        class_id: schoolClass.id,
+        subject_id: subjectId,
+      }));
+
+      const { error: insertError } = await supabase
+        .from("class_subjects")
+        .insert(rows);
+
+      if (insertError) {
+        setError(insertError.message);
+        setSaving(false);
+        return;
+      }
+    }
+
+    setSaving(false);
+    onSaved();
+  }
+
+  return (
+    <Modal
+      title={`Subjects for ${schoolClass.name}`}
+      onClose={onClose}
+      maxWidth="max-w-xl"
+    >
+      <div>
+        <p className="mb-4 text-sm text-slate-500">
+          Select the subjects taught in this class.
+        </p>
+
+        {error && (
+          <div className="mb-4">
+            <ErrorBox message={error} />
+          </div>
+        )}
+
+        {subjects.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-slate-200 p-8 text-center">
+            <BookOpen size={22} className="mx-auto text-slate-300" />
+
+            <p className="mt-2 text-sm font-medium text-slate-700">
+              No subjects available
+            </p>
+
+            <p className="mt-1 text-xs text-slate-500">
+              Create subjects first, then assign them to this class.
             </p>
           </div>
+        ) : (
+          <div className="max-h-[420px] space-y-2 overflow-y-auto">
+            {subjects
+              .filter((subject) => subject.is_active)
+              .map((subject) => {
+                const selected = selectedIds.includes(subject.id);
+
+              return (
+                <button
+                  key={subject.id}
+                  type="button"
+                  onClick={() => {
+                    if (canManage) toggleSubject(subject.id);
+                  }}
+                  disabled={!canManage}
+                  className={[
+                    "flex w-full items-center gap-3 rounded-xl border p-4 text-left transition",
+                    selected
+                      ? "border-indigo-300 bg-indigo-50"
+                      : "border-slate-200 hover:bg-slate-50",
+                    !subject.is_active ? "opacity-60" : "",
+                  ].join(" ")}
+                >
+                  <div
+                    className={[
+                      "flex h-5 w-5 shrink-0 items-center justify-center rounded-md border",
+                      selected
+                        ? "border-indigo-600 bg-indigo-600 text-white"
+                        : "border-slate-300 bg-white",
+                    ].join(" ")}
+                  >
+                    {selected && <Check size={13} />}
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium text-slate-900">
+                      {subject.name}
+                    </div>
+
+                    {subject.code && (
+                      <div className="mt-1 text-xs text-slate-500">
+                        {subject.code}
+                      </div>
+                    )}
+                  </div>
+
+                  {!subject.is_active && (
+                    <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-medium text-slate-500">
+                      Inactive
+                    </span>
+                  )}
+                </button>
+              );
+              })}
+          </div>
+        )}
+
+        {canManage ? (
+          <div className="mt-5 flex items-center justify-between border-t border-slate-200 pt-4">
+            <p className="text-xs text-slate-500">
+              {selectedIds.length}{" "}
+              {selectedIds.length === 1 ? "subject" : "subjects"} selected
+            </p>
+
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={onClose} disabled={saving}>
+                Cancel
+              </Button>
+
+              <Button onClick={saveAssignments} disabled={saving}>
+                {saving ? "Saving..." : "Save subjects"}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-5 border-t border-slate-200 pt-4">
+            <p className="text-xs text-slate-500">
+              Subject assignments are managed by school administrators.
+            </p>
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Reusable UI                                                                 */
+/* -------------------------------------------------------------------------- */
+
+function EmptyState({
+  icon: Icon,
+  title,
+  description,
+  action,
+  onAction,
+  showAction = true,
+}: {
+  icon: typeof Users;
+  title: string;
+  description: string;
+  action: string;
+  onAction: () => void;
+  showAction?: boolean;
+}) {
+  return (
+    <div className="p-12 text-center">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-400">
+        <Icon size={22} />
+      </div>
+
+      <h3 className="mt-4 text-sm font-semibold text-slate-800">{title}</h3>
+
+      <p className="mx-auto mt-1 max-w-sm text-sm text-slate-500">
+        {description}
+      </p>
+
+      {showAction && (
+        <Button className="mt-5" onClick={onAction}>
+          <Plus size={15} />
+          {action}
+        </Button>
+      )}
+    </div>
+  );
+}
+
+function Modal({
+  title,
+  children,
+  onClose,
+  maxWidth = "max-w-lg",
+}: {
+  title: string;
+  children: React.ReactNode;
+  onClose: () => void;
+  maxWidth?: string;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+      <div
+        className={["w-full rounded-2xl bg-white shadow-xl", maxWidth].join(
+          " ",
+        )}
+      >
+        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+          <h2 className="text-base font-semibold text-slate-900">{title}</h2>
 
           <button
             type="button"
             onClick={onClose}
-            disabled={saving}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
           >
             <X size={17} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
-          <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain p-6">
-            {error && (
-              <div className="rounded-lg border border-red-100 bg-red-50 px-4 py-3">
-                <p className="text-sm text-red-600">{error}</p>
-              </div>
-            )}
-
-            {/* Student */}
-            <div>
-              <h3 className="text-sm font-semibold text-slate-900">
-                Student information
-              </h3>
-
-              <div className="mt-3 grid gap-4 sm:grid-cols-2">
-                <Field
-                  label="First name"
-                  value={firstName}
-                  onChange={setFirstName}
-                  required
-                />
-
-                <Field
-                  label="Last name"
-                  value={lastName}
-                  onChange={setLastName}
-                  required
-                />
-
-                <Field
-                  label="Date of birth"
-                  value={dateOfBirth}
-                  onChange={setDateOfBirth}
-                  type="date"
-                />
-
-                <Field
-                  label="Nationality"
-                  value={nationality}
-                  onChange={setNationality}
-                  placeholder="e.g. Rwandan"
-                />
-
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-700">
-                    Gender
-                  </label>
-
-                  <select
-                    value={gender}
-                    onChange={(event) =>
-                      setGender(event.target.value as "Male" | "Female")
-                    }
-                    className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                  >
-                    <option value="Male">Male</option>
-
-                    <option value="Female">Female</option>
-                  </select>
-                </div>
-
-                {/* ACTIVE ACADEMIC YEAR */}
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-700">
-                    Academic Year
-                  </label>
-
-                  <div className="flex h-10 items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700">
-                    <span>
-                      {academicYear?.name ?? "No active academic year"}
-                    </span>
-
-                    {academicYear && (
-                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
-                        Active
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* SECTION */}
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-700">
-                    Section
-                  </label>
-
-                  <select
-                    value={sectionId}
-                    onChange={(event) => {
-                      setSectionId(event.target.value);
-                      setClassId("");
-
-                    }}
-                    required
-                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                  >
-                    <option value="">Select section</option>
-
-                    {sections.map((section) => (
-                      <option key={section.id} value={section.id}>
-                        {section.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* CLASS */}
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-700">
-                    Class
-                  </label>
-
-                  <select
-                    value={classId}
-                    onChange={(event) => {
-                      setClassId(event.target.value);
-
-                    }}
-                    required
-                    disabled={!sectionId}
-                    className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none disabled:bg-slate-50 disabled:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                  >
-                    <option value="">
-                      {sectionId ? "Select class" : "Select section first"}
-                    </option>
-
-                    {classesForSection.map((schoolClass) => (
-                      <option key={schoolClass.id} value={schoolClass.id}>
-                        {schoolClass.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="mb-1.5 block text-xs font-medium text-slate-700">
-                    Profile picture
-                  </label>
-
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                    <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full border border-dashed border-slate-300 bg-slate-50">
-                      {photoPreview ? (
-                        <img
-                          src={photoPreview}
-                          alt="Student preview"
-                          className="h-full w-full object-cover"
-                        />
-                      ) : (
-                        <UserRound size={28} className="text-slate-300" />
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50">
-                        <ImagePlus size={16} />
-                        {photoFile ? "Change photo" : "Upload photo"}
-                        <input
-                          type="file"
-                          accept="image/jpeg,image/png,image/webp"
-                          className="hidden"
-                          onChange={(event) => {
-                            const file = event.target.files?.[0] ?? null;
-
-                            if (!file) return;
-
-                            if (file.size > 5 * 1024 * 1024) {
-                              setError("Photo must be 5 MB or smaller.");
-                              return;
-                            }
-
-                            setError("");
-                            setPhotoFile(file);
-
-                            const previewUrl = URL.createObjectURL(file);
-                            setPhotoPreview(previewUrl);
-                          }}
-                        />
-                      </label>
-
-                      <p className="mt-1.5 text-[11px] text-slate-400">
-                        JPG, PNG or WebP • Maximum 5 MB
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Parent */}
-            <div className="border-t border-slate-100 pt-5">
-              <h3 className="text-sm font-semibold text-slate-900">
-                Parent / guardian
-              </h3>
-
-              <div className="mt-3 grid gap-4 sm:grid-cols-2">
-                <Field
-                  label="Parent / guardian name"
-                  value={parent}
-                  onChange={setParent}
-                  required
-                />
-
-                <Field
-                  label="Phone number"
-                  value={parentPhone}
-                  onChange={setParentPhone}
-                  placeholder="+250 7XX XXX XXX"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="flex shrink-0 justify-end gap-2 border-t border-slate-200 bg-white px-6 py-4">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={onClose}
-              disabled={saving}
-            >
-              Cancel
-            </Button>
-
-            <Button type="submit" disabled={saving}>
-              {saving ? "Creating..." : "Add student"}
-            </Button>
-          </div>
-        </form>
+        <div className="p-6">{children}</div>
       </div>
     </div>
   );
 }
 
-interface FieldProps {
+function Input({
+  label,
+  value,
+  onChange,
+  placeholder,
+  required = false,
+  type = "text",
+  min,
+}: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   required?: boolean;
   type?: string;
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  placeholder,
-  required,
-  type = "text",
-}: FieldProps) {
+  min?: string;
+}) {
   return (
     <div>
-      <label className="mb-1.5 block text-xs font-medium text-slate-700">
+      <label className="mb-1.5 block text-sm font-medium text-slate-700">
         {label}
+        {required && <span className="ml-1 text-red-500">*</span>}
       </label>
 
       <input
         type={type}
+        min={min}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         required={required}
-        className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+        className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
       />
     </div>
   );
 }
 
-interface StudentDetailsProps {
-  student: Student;
-  onClose: () => void;
-}
-
-function StudentDetails({ student, onClose }: StudentDetailsProps) {
+function ErrorBox({ message }: { message: string }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
-      <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl">
-        <div className="flex items-start justify-between border-b border-slate-200 p-6">
-          <div className="flex items-center gap-3">
-            {student.photoUrl ? (
-              <img
-                src={student.photoUrl}
-                alt={student.name}
-                className="h-12 w-12 rounded-full object-cover"
-              />
-            ) : (
-              <Avatar name={student.name} size="lg" />
-            )}
-
-            <div>
-              <h2 className="font-semibold text-slate-900">{student.name}</h2>
-
-              <p className="mt-1 text-sm text-slate-500">{student.studentId}</p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100"
-          >
-            <X size={17} />
-          </button>
-        </div>
-
-        <div className="grid grid-cols-2 gap-px bg-slate-200">
-          <InfoItem label="Section" value={student.sectionName} />
-
-          <InfoItem label="Class" value={student.className} />
-
-          <InfoItem label="Gender" value={student.gender} />
-
-          <InfoItem
-            label="Date of birth"
-            value={student.dateOfBirth ? formatDate(student.dateOfBirth) : "—"}
-          />
-
-          <InfoItem
-            label="Age"
-            value={
-              student.age === null
-                ? "—"
-                : `${student.age} ${student.age === 1 ? "year" : "years"}`
-            }
-          />
-
-          <InfoItem label="Nationality" value={student.nationality || "—"} />
-
-          <InfoItem label="Parent" value={student.parent} />
-
-          <InfoItem label="Phone" value={student.parentPhone} />
-
-          <InfoItem label="Status" value={student.status} />
-
-          <InfoItem label="Enrolled" value={student.enrolledDate} />
-        </div>
-
-        <div className="flex justify-end border-t border-slate-200 p-4">
-          <Button variant="secondary" onClick={onClose}>
-            Close
-          </Button>
-        </div>
-      </div>
+    <div className="rounded-lg border border-red-100 bg-red-50 px-3 py-2.5">
+      <p className="text-xs text-red-600">{message}</p>
     </div>
   );
 }
 
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(value));
-}
-
-function InfoItem({ label, value }: { label: string; value: string }) {
+function ModalActions({
+  onClose,
+  saving,
+  label,
+}: {
+  onClose: () => void;
+  saving: boolean;
+  label: string;
+}) {
   return (
-    <div className="bg-white p-4">
-      <div className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
-        {label}
-      </div>
+    <div className="flex justify-end gap-2 border-t border-slate-200 pt-5">
+      <Button
+        type="button"
+        variant="secondary"
+        onClick={onClose}
+        disabled={saving}
+      >
+        Cancel
+      </Button>
 
-      <div className="mt-1 text-sm font-medium text-slate-900">{value}</div>
+      <Button type="submit" disabled={saving}>
+        {saving ? "Saving..." : label}
+      </Button>
     </div>
   );
 }

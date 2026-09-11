@@ -898,78 +898,116 @@ export default function Payments() {
       )}
 
       {/* Summary */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Card className="border-slate-200 shadow-none">
-          <div className="flex items-center justify-between">
-            <div>
+      <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <Card className="min-w-0 border-slate-200 p-4 shadow-none sm:p-5">
+          <div className="flex min-w-0 items-center justify-between gap-3">
+            <div className="min-w-0">
               <p className="text-xs font-medium text-slate-500">
                 Payments
               </p>
 
-              <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
+              <p className="mt-1 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
                 {summary.payments}
+              </p>
+
+              <p className="mt-1 truncate text-xs text-slate-400">
+                Recorded payments
               </p>
             </div>
 
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50">
               <CreditCard className="h-5 w-5 text-indigo-600" />
             </div>
           </div>
         </Card>
 
-        <Card className="border-slate-200 shadow-none">
-          <div>
-            <p className="text-xs font-medium text-slate-500">
-              Total Collected
-            </p>
+        <Card className="min-w-0 border-slate-200 p-4 shadow-none sm:p-5">
+          <div className="flex min-w-0 items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-slate-500">
+                Total Collected
+              </p>
 
-            <p className="mt-1 text-2xl font-semibold tracking-tight text-emerald-600">
-              {formatMoney(
-                summary.totalCollected,
-              )}
+              <p className="mt-1 flex min-w-0 items-baseline gap-1 whitespace-nowrap text-xl font-semibold tracking-tight text-emerald-600 sm:text-2xl">
+                <span className="truncate">
+                  {formatMoney(
+                    summary.totalCollected,
+                  )}
+                </span>
 
-              <span className="ml-1 text-sm font-medium text-emerald-500">
-                RWF
-              </span>
-            </p>
+                <span className="shrink-0 text-xs font-medium text-emerald-500 sm:text-sm">
+                  RWF
+                </span>
+              </p>
+
+              <p className="mt-1 truncate text-xs text-slate-400">
+                Collected to date
+              </p>
+            </div>
+
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50">
+              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+            </div>
           </div>
         </Card>
 
-        <Card className="border-slate-200 shadow-none">
-          <div>
-            <p className="text-xs font-medium text-slate-500">
-              Outstanding
-            </p>
+        <Card className="min-w-0 border-slate-200 p-4 shadow-none sm:p-5">
+          <div className="flex min-w-0 items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-slate-500">
+                Outstanding
+              </p>
 
-            <p className="mt-1 text-2xl font-semibold tracking-tight text-red-600">
-              {formatMoney(
-                summary.totalOutstanding,
-              )}
+              <p className="mt-1 flex min-w-0 items-baseline gap-1 whitespace-nowrap text-xl font-semibold tracking-tight text-red-600 sm:text-2xl">
+                <span className="truncate">
+                  {formatMoney(
+                    summary.totalOutstanding,
+                  )}
+                </span>
 
-              <span className="ml-1 text-sm font-medium text-red-500">
-                RWF
-              </span>
-            </p>
+                <span className="shrink-0 text-xs font-medium text-red-500 sm:text-sm">
+                  RWF
+                </span>
+              </p>
+
+              <p className="mt-1 truncate text-xs text-slate-400">
+                Remaining balance
+              </p>
+            </div>
+
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50">
+              <FileText className="h-5 w-5 text-red-600" />
+            </div>
           </div>
         </Card>
 
-        <Card className="border-slate-200 shadow-none">
-          <div>
-            <p className="text-xs font-medium text-slate-500">
-              Paid Invoices
-            </p>
+        <Card className="min-w-0 border-slate-200 p-4 shadow-none sm:p-5">
+          <div className="flex min-w-0 items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-slate-500">
+                Paid Invoices
+              </p>
 
-            <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
-              {summary.paidInvoices}
-            </p>
+              <p className="mt-1 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+                {summary.paidInvoices}
+              </p>
+
+              <p className="mt-1 truncate text-xs text-slate-400">
+                Fully paid invoices
+              </p>
+            </div>
+
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100">
+              <FileText className="h-5 w-5 text-slate-600" />
+            </div>
           </div>
         </Card>
       </div>
 
       {/* Filters */}
-      <Card className="border-slate-200 shadow-none">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <div>
+      <Card className="min-w-0 border-slate-200 p-4 shadow-none sm:p-5">
+        <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="min-w-0">
             <label className="mb-1.5 block text-xs font-medium text-slate-600">
               Academic year
             </label>
@@ -985,7 +1023,7 @@ export default function Payments() {
 
                 setSelectedClassId("");
               }}
-              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+              className="h-10 w-full min-w-0 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
             >
               <option value="">
                 Select academic year
@@ -1007,7 +1045,7 @@ export default function Payments() {
             </select>
           </div>
 
-          <div>
+          <div className="min-w-0">
             <label className="mb-1.5 block text-xs font-medium text-slate-600">
               Term
             </label>
@@ -1020,7 +1058,7 @@ export default function Payments() {
                     .value as Term,
                 )
               }
-              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+              className="h-10 w-full min-w-0 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
             >
               <option value="Term 1">
                 Term 1
@@ -1036,7 +1074,7 @@ export default function Payments() {
             </select>
           </div>
 
-          <div>
+          <div className="min-w-0">
             <label className="mb-1.5 block text-xs font-medium text-slate-600">
               Class
             </label>
@@ -1053,7 +1091,7 @@ export default function Payments() {
               disabled={
                 !selectedAcademicYearId
               }
-              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+              className="h-10 w-full min-w-0 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
             >
               <option value="">
                 {selectedAcademicYearId
@@ -1078,12 +1116,12 @@ export default function Payments() {
             </select>
           </div>
 
-          <div>
+          <div className="min-w-0">
             <label className="mb-1.5 block text-xs font-medium text-slate-600">
               Search
             </label>
 
-            <div className="relative">
+            <div className="relative min-w-0">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
 
               <input
@@ -1095,7 +1133,7 @@ export default function Payments() {
                   )
                 }
                 placeholder="Student or invoice..."
-                className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-700 outline-none placeholder:text-slate-400 transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                className="h-10 w-full min-w-0 rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-700 outline-none placeholder:text-slate-400 transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
               />
             </div>
           </div>

@@ -13,6 +13,7 @@ import {
 
 import { supabase } from "../lib/supabase";
 import { useSchool } from "../context/SchoolContext";
+import { normalizeRole } from "../lib/permissions";
 
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
@@ -61,14 +62,17 @@ interface ClassSubject {
 type Tab = "classes" | "subjects";
 
 export default function ClassesSubjects() {
-  const { school } = useSchool();
+  const { school, membership } = useSchool();
   const navigate = useNavigate();
+  const role = normalizeRole(membership?.role);
+  const isTeacher = role === "Teacher";
   const [searchParams] = useSearchParams();
   const academicYearFromUrl = searchParams.get("academicYear");
 
   const [activeTab, setActiveTab] = useState<Tab>("classes");
 
   const [classes, setClasses] = useState<SchoolClass[]>([]);
+  const [teacherClassIds, setTeacherClassIds] = useState<string[]>([]);
 
   const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
 
@@ -107,6 +111,7 @@ export default function ClassesSubjects() {
   async function loadData() {
     if (!school) {
       setClasses([]);
+      setTeacherClassIds([]);
       setAcademicYears([]);
       setAcademicSections([]);
       setSubjects([]);
@@ -119,6 +124,164 @@ export default function ClassesSubjects() {
 
     setLoading(true);
     setError("");
+
+    /*
+     * Teachers must only receive the classes they are assigned to.
+     * We resolve the logged-in teacher first, then use the assignment
+     * records to scope the academic data loaded by this page.
+     */
+    let assignedClassIds: string[] = [];
+    let assignedYearIds: string[] = [];
+
+    if (isTeacher) {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError) {
+        setError(userError.message);
+        setClasses([]);
+        setTeacherClassIds([]);
+          setAcademicYears([]);
+        setAcademicSections([]);
+        setSubjects([]);
+        setClassSubjects([]);
+        setEnrollmentCounts({});
+        setSelectedAcademicYearId("");
+        setLoading(false);
+        return;
+      }
+
+      if (!user?.email) {
+        setError("Your teacher account could not be identified.");
+        setClasses([]);
+        setTeacherClassIds([]);
+          setLoading(false);
+        return;
+      }
+
+      const { data: teacherData, error: teacherError } = await supabase
+        .from("teachers")
+        .select("id")
+        .eq("school_id", school.id)
+        .ilike("email", user.email)
+        .maybeSingle();
+
+      if (teacherError) {
+        setError(teacherError.message);
+        setClasses([]);
+        setTeacherClassIds([]);
+          setLoading(false);
+        return;
+      }
+
+      if (!teacherData?.id) {
+        setError(
+          "No teacher record is linked to your school account. Please ask a school administrator to match your school email with your teacher profile.",
+        );
+        setClasses([]);
+        setTeacherClassIds([]);
+          setAcademicYears([]);
+        setAcademicSections([]);
+        setSubjects([]);
+        setClassSubjects([]);
+        setEnrollmentCounts({});
+        setSelectedAcademicYearId("");
+        setLoading(false);
+        return;
+      }
+
+      const { data: assignmentsData, error: assignmentError } =
+        await supabase
+          .from("teacher_assignments")
+          .select("class_id, academic_year_id")
+          .eq("school_id", school.id)
+          .eq("teacher_id", teacherData.id);
+
+      if (assignmentError) {
+        setError(assignmentError.message);
+        setClasses([]);
+        setTeacherClassIds([]);
+          setLoading(false);
+        return;
+      }
+
+      assignedClassIds = Array.from(
+        new Set(
+          (assignmentsData ?? [])
+            .map((item) => item.class_id)
+            .filter((id): id is string => Boolean(id)),
+        ),
+      );
+
+      assignedYearIds = Array.from(
+        new Set(
+          (assignmentsData ?? [])
+            .map((item) => item.academic_year_id)
+            .filter((id): id is string => Boolean(id)),
+        ),
+      );
+
+      setTeacherClassIds(assignedClassIds);
+    } else {
+      setTeacherClassIds([]);
+    }
+
+    /*
+     * Admins can see the full academic structure.
+     * Teachers only load their assigned classes and the class subjects
+     * belonging to those classes.
+     */
+    const classesQuery = supabase
+      .from("classes")
+      .select(
+        `
+        id,
+        name,
+        section,
+        academic_year_id,
+        academic_section_id,
+        capacity,
+        is_active
+      `,
+      )
+      .eq("school_id", school.id)
+      .order("name");
+
+    const classSubjectsQuery = supabase
+      .from("class_subjects")
+      .select(
+        `
+        id,
+        class_id,
+        subject_id
+      `,
+      )
+      .eq("school_id", school.id);
+
+    const enrollmentsQuery = supabase
+      .from("enrollments")
+      .select("class_id, academic_year_id, status")
+      .eq("school_id", school.id);
+
+    if (isTeacher) {
+      if (assignedClassIds.length === 0) {
+        setClasses([]);
+        setAcademicYears([]);
+        setAcademicSections([]);
+        setSubjects([]);
+        setClassSubjects([]);
+        setEnrollmentCounts({});
+        setSelectedAcademicYearId("");
+        setLoading(false);
+        return;
+      }
+
+      classesQuery.in("id", assignedClassIds);
+      classSubjectsQuery.in("class_id", assignedClassIds);
+      enrollmentsQuery.in("class_id", assignedClassIds);
+    }
 
     const [
       academicYearsResult,
@@ -157,21 +320,7 @@ export default function ClassesSubjects() {
         .eq("school_id", school.id)
         .order("display_order", { ascending: true }),
 
-      supabase
-        .from("classes")
-        .select(
-          `
-          id,
-          name,
-          section,
-          academic_year_id,
-          academic_section_id,
-          capacity,
-          is_active
-        `,
-        )
-        .eq("school_id", school.id)
-        .order("name"),
+      classesQuery,
 
       supabase
         .from("subjects")
@@ -187,21 +336,9 @@ export default function ClassesSubjects() {
         .eq("school_id", school.id)
         .order("name"),
 
-      supabase
-        .from("class_subjects")
-        .select(
-          `
-          id,
-          class_id,
-          subject_id
-        `,
-        )
-        .eq("school_id", school.id),
+      classSubjectsQuery,
 
-      supabase
-        .from("enrollments")
-        .select("class_id, academic_year_id, status")
-        .eq("school_id", school.id),
+      enrollmentsQuery,
     ]);
 
     if (academicYearsResult.error) {
@@ -240,16 +377,50 @@ export default function ClassesSubjects() {
       return;
     }
 
-    const loadedAcademicYears = academicYearsResult.data ?? [];
+    const loadedAcademicYears = (academicYearsResult.data ?? []).filter(
+      (year) => !isTeacher || assignedYearIds.includes(year.id),
+    );
+
+    const loadedClasses = (classesResult.data ?? []).filter(
+      (schoolClass) =>
+        !isTeacher || assignedClassIds.includes(schoolClass.id),
+    );
+
+    const loadedClassSubjects = (classSubjectsResult.data ?? []).filter(
+      (item) =>
+        !isTeacher || assignedClassIds.includes(item.class_id),
+    );
+
+    const loadedEnrollments = (enrollmentsResult.data ?? []).filter(
+      (enrollment) =>
+        !isTeacher || assignedClassIds.includes(enrollment.class_id),
+    );
+
+    const assignedSubjectIds = new Set(
+      loadedClassSubjects.map((item) => item.subject_id),
+    );
+
+    const loadedSubjects = (subjectsResult.data ?? []).filter(
+      (subject) => !isTeacher || assignedSubjectIds.has(subject.id),
+    );
+
+    const loadedSections = (academicSectionsResult.data ?? []).filter(
+      (section) =>
+        !isTeacher ||
+        loadedClasses.some(
+          (schoolClass) =>
+            schoolClass.academic_section_id === section.id,
+        ),
+    );
 
     setAcademicYears(loadedAcademicYears);
-    setAcademicSections(academicSectionsResult.data ?? []);
-    setClasses(classesResult.data ?? []);
-    setSubjects(subjectsResult.data ?? []);
-    setClassSubjects(classSubjectsResult.data ?? []);
+    setAcademicSections(loadedSections);
+    setClasses(loadedClasses);
+    setSubjects(loadedSubjects);
+    setClassSubjects(loadedClassSubjects);
 
     const counts: Record<string, number> = {};
-    (enrollmentsResult.data ?? []).forEach((enrollment) => {
+    loadedEnrollments.forEach((enrollment) => {
       if (
         enrollment.status !== "Active" ||
         !enrollment.class_id ||
@@ -258,7 +429,7 @@ export default function ClassesSubjects() {
         return;
       }
 
-      const schoolClass = (classesResult.data ?? []).find(
+      const schoolClass = loadedClasses.find(
         (item) => item.id === enrollment.class_id,
       );
 
@@ -292,8 +463,8 @@ export default function ClassesSubjects() {
   }
 
   useEffect(() => {
-    loadData();
-  }, [school, academicYearFromUrl]);
+    void loadData();
+  }, [school, academicYearFromUrl, isTeacher]);
 
   const filteredClasses = useMemo(() => {
     const query = search.toLowerCase().trim();
@@ -303,6 +474,12 @@ export default function ClassesSubjects() {
           (item) => item.academic_year_id === selectedAcademicYearId,
         )
       : classes;
+
+    if (isTeacher) {
+      yearClasses = yearClasses.filter((item) =>
+        teacherClassIds.includes(item.id),
+      );
+    }
 
     if (classStatusFilter === "active") {
       yearClasses = yearClasses.filter((item) => item.is_active);
@@ -331,6 +508,8 @@ export default function ClassesSubjects() {
     selectedAcademicYearId,
     academicYears,
     classStatusFilter,
+    isTeacher,
+    teacherClassIds,
   ]);
 
   const filteredSubjects = useMemo(() => {
@@ -347,36 +526,42 @@ export default function ClassesSubjects() {
   }, [subjects, search]);
 
   function openCreateClass() {
+    if (isTeacher) return;
     setEditingClass(null);
     setShowClassModal(true);
     setError("");
   }
 
   function openEditClass(schoolClass: SchoolClass) {
+    if (isTeacher) return;
     setEditingClass(schoolClass);
     setShowClassModal(true);
     setError("");
   }
 
   function openCreateSubject() {
+    if (isTeacher) return;
     setEditingSubject(null);
     setShowSubjectModal(true);
     setError("");
   }
 
   function openEditSubject(subject: Subject) {
+    if (isTeacher) return;
     setEditingSubject(subject);
     setShowSubjectModal(true);
     setError("");
   }
 
   function openClassSubjects(schoolClass: SchoolClass) {
+    if (isTeacher) return;
     setSelectedClass(schoolClass);
     setShowSubjectsModal(true);
     setError("");
   }
 
   async function toggleClassStatus(schoolClass: SchoolClass) {
+    if (isTeacher) return;
     setError("");
 
     const { error: updateError } = await supabase
@@ -405,6 +590,7 @@ export default function ClassesSubjects() {
   }
 
   async function toggleSubjectStatus(subject: Subject) {
+    if (isTeacher) return;
     setError("");
 
     const { error: updateError } = await supabase
@@ -445,16 +631,18 @@ export default function ClassesSubjects() {
             <div className="flex items-center gap-2">
               <BookOpen size={20} className="text-indigo-600" />
               <h1 className="text-xl font-semibold text-slate-900">
-                Classes & Subjects
+                {isTeacher ? "My Classes & Subjects" : "Classes & Subjects"}
               </h1>
             </div>
 
             <p className="mt-1 text-sm text-slate-500">
-              Manage classes and subjects for the selected academic year.
+              {isTeacher
+                ? "View classes and subjects relevant to your teaching responsibilities."
+                : "Manage classes and subjects for the selected academic year."}
             </p>
           </div>
 
-          {activeTab === "classes" && academicYears.length > 0 && (
+          {!isTeacher && activeTab === "classes" && academicYears.length > 0 && (
             <button
               type="button"
               onClick={openCreateClass}
@@ -466,7 +654,7 @@ export default function ClassesSubjects() {
             </button>
           )}
 
-          {activeTab === "subjects" && (
+          {!isTeacher && activeTab === "subjects" && (
             <button
               type="button"
               onClick={openCreateSubject}
@@ -478,6 +666,17 @@ export default function ClassesSubjects() {
           )}
         </div>
       </div>
+
+      {isTeacher && (
+        <div className="mb-5 rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-3">
+          <p className="text-sm font-medium text-indigo-900">Teaching view</p>
+          <p className="mt-1 text-xs leading-5 text-indigo-700">
+            You can only view classes and subjects assigned to you. Class,
+            section, subject, and curriculum management is handled by school
+            administrators.
+          </p>
+        </div>
+      )}
 
       {/* Current academic year */}
       {academicYears.length > 0 && (
@@ -553,13 +752,15 @@ export default function ClassesSubjects() {
                   ))}
                 </select>
 
-                <button
-                  type="button"
-                  onClick={() => navigate("/settings/academic")}
-                  className="h-10 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                {!isTeacher && (
+                  <button
+                    type="button"
+                    onClick={() => navigate("/settings/academic")}
+                    className="h-10 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 >
-                  Manage academic years
-                </button>
+                    Manage academic years
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -608,17 +809,19 @@ export default function ClassesSubjects() {
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={() =>
-                  navigate(
-                    `/settings/academic?academicYear=${selectedAcademicYearId}`,
-                  )
-                }
-                className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
-              >
-                Manage sections
-              </button>
+              {!isTeacher && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    navigate(
+                      `/settings/academic?academicYear=${selectedAcademicYearId}`,
+                    )
+                  }
+                  className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  Manage sections
+                </button>
+              )}
             </div>
 
             <div className="mt-4 flex flex-wrap gap-2">
@@ -753,6 +956,7 @@ export default function ClassesSubjects() {
             onToggle={toggleClassStatus}
             onSubjects={openClassSubjects}
             onCreate={openCreateClass}
+            canManage={!isTeacher}
           />
         ) : (
           <SubjectsTable
@@ -760,12 +964,13 @@ export default function ClassesSubjects() {
             onEdit={openEditSubject}
             onToggle={toggleSubjectStatus}
             onCreate={openCreateSubject}
+            canManage={!isTeacher}
           />
         )}
       </Card>
 
       {/* Class modal */}
-      {showClassModal && (
+      {!isTeacher && showClassModal && (
         <ClassModal
           schoolId={school?.id ?? ""}
           academicYears={academicYears}
@@ -781,7 +986,7 @@ export default function ClassesSubjects() {
       )}
 
       {/* Subject modal */}
-      {showSubjectModal && (
+      {!isTeacher && showSubjectModal && (
         <SubjectModal
           schoolId={school?.id ?? ""}
           editingSubject={editingSubject}
@@ -794,7 +999,7 @@ export default function ClassesSubjects() {
       )}
 
       {/* Assign subjects modal */}
-      {showSubjectsModal && selectedClass && (
+      {!isTeacher && showSubjectsModal && selectedClass && (
         <ClassSubjectsModal
           schoolId={school?.id ?? ""}
           schoolClass={selectedClass}
@@ -829,6 +1034,7 @@ function ClassesTable({
   onToggle,
   onSubjects,
   onCreate,
+  canManage,
 }: {
   classes: SchoolClass[];
   getSubjectCount: (classId: string) => number;
@@ -839,6 +1045,7 @@ function ClassesTable({
   onToggle: (schoolClass: SchoolClass) => void;
   onSubjects: (schoolClass: SchoolClass) => void;
   onCreate: () => void;
+  canManage: boolean;
 }) {
   if (classes.length === 0) {
     return (
@@ -846,8 +1053,9 @@ function ClassesTable({
         icon={Users}
         title="No classes yet"
         description="Create a class for this academic year to start organizing your students and curriculum."
-        action="Add class"
-        onAction={onCreate}
+        action={canManage ? "Add class" : undefined}
+        onAction={canManage ? onCreate : undefined}
+        showAction={canManage}
       />
     );
   }
@@ -925,30 +1133,49 @@ function ClassesTable({
               </td>
 
               <td className="px-5 py-4">
-                <button
-                  type="button"
-                  onClick={() => onSubjects(schoolClass)}
-                  className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50"
-                >
-                  {getSubjectCount(schoolClass.id)} assigned
-                  <ChevronRight size={13} />
-                </button>
+                {canManage ? (
+                  <button
+                    type="button"
+                    onClick={() => onSubjects(schoolClass)}
+                    className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50"
+                  >
+                    {getSubjectCount(schoolClass.id)} assigned
+                    <ChevronRight size={13} />
+                  </button>
+                ) : (
+                  <span className="text-sm text-slate-600">
+                    {getSubjectCount(schoolClass.id)} assigned
+                  </span>
+                )}
               </td>
 
               <td className="px-5 py-4">
                 <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => onToggle(schoolClass)}
-                    className={[
-                      "rounded-full px-2.5 py-1 text-[11px] font-medium",
-                      schoolClass.is_active
-                        ? "bg-emerald-100 text-emerald-700"
-                        : "bg-slate-100 text-slate-500",
-                    ].join(" ")}
-                  >
-                    {schoolClass.is_active ? "Active" : "Inactive"}
-                  </button>
+                  {canManage ? (
+                    <button
+                      type="button"
+                      onClick={() => onToggle(schoolClass)}
+                      className={[
+                        "rounded-full px-2.5 py-1 text-[11px] font-medium",
+                        schoolClass.is_active
+                          ? "bg-emerald-100 text-emerald-700"
+                          : "bg-slate-100 text-slate-500",
+                      ].join(" ")}
+                    >
+                      {schoolClass.is_active ? "Active" : "Inactive"}
+                    </button>
+                  ) : (
+                    <span
+                      className={[
+                        "rounded-full px-2.5 py-1 text-[11px] font-medium",
+                        schoolClass.is_active
+                          ? "bg-emerald-100 text-emerald-700"
+                          : "bg-slate-100 text-slate-500",
+                      ].join(" ")}
+                    >
+                      {schoolClass.is_active ? "Active" : "Inactive"}
+                    </span>
+                  )}
 
                   {schoolClass.capacity !== null &&
                     (enrollmentCounts[schoolClass.id] ?? 0) >=
@@ -961,13 +1188,17 @@ function ClassesTable({
               </td>
 
               <td className="px-5 py-4 text-right">
-                <button
-                  type="button"
-                  onClick={() => onEdit(schoolClass)}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-                >
-                  <Edit3 size={15} />
-                </button>
+                {canManage ? (
+                  <button
+                    type="button"
+                    onClick={() => onEdit(schoolClass)}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                  >
+                    <Edit3 size={15} />
+                  </button>
+                ) : (
+                  <span className="text-xs text-slate-400">View only</span>
+                )}
               </td>
             </tr>
           ))}
@@ -986,11 +1217,13 @@ function SubjectsTable({
   onEdit,
   onToggle,
   onCreate,
+  canManage,
 }: {
   subjects: Subject[];
   onEdit: (subject: Subject) => void;
   onToggle: (subject: Subject) => void;
   onCreate: () => void;
+  canManage: boolean;
 }) {
   if (subjects.length === 0) {
     return (
@@ -998,8 +1231,9 @@ function SubjectsTable({
         icon={BookOpen}
         title="No subjects yet"
         description="Create subjects that can be assigned to your classes."
-        action="Add subject"
-        onAction={onCreate}
+        action={canManage ? "Add subject" : undefined}
+        onAction={canManage ? onCreate : undefined}
+        showAction={canManage}
       />
     );
   }
@@ -1051,28 +1285,45 @@ function SubjectsTable({
               </td>
 
               <td className="px-5 py-4">
-                <button
-                  type="button"
-                  onClick={() => onToggle(subject)}
-                  className={[
-                    "rounded-full px-2.5 py-1 text-[11px] font-medium",
-                    subject.is_active
-                      ? "bg-emerald-100 text-emerald-700"
-                      : "bg-slate-100 text-slate-500",
-                  ].join(" ")}
-                >
-                  {subject.is_active ? "Active" : "Inactive"}
-                </button>
+                {canManage ? (
+                  <button
+                    type="button"
+                    onClick={() => onToggle(subject)}
+                    className={[
+                      "rounded-full px-2.5 py-1 text-[11px] font-medium",
+                      subject.is_active
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-slate-100 text-slate-500",
+                    ].join(" ")}
+                  >
+                    {subject.is_active ? "Active" : "Inactive"}
+                  </button>
+                ) : (
+                  <span
+                    className={[
+                      "rounded-full px-2.5 py-1 text-[11px] font-medium",
+                      subject.is_active
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-slate-100 text-slate-500",
+                    ].join(" ")}
+                  >
+                    {subject.is_active ? "Active" : "Inactive"}
+                  </span>
+                )}
               </td>
 
               <td className="px-5 py-4 text-right">
-                <button
-                  type="button"
-                  onClick={() => onEdit(subject)}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-                >
-                  <Edit3 size={15} />
-                </button>
+                {canManage ? (
+                  <button
+                    type="button"
+                    onClick={() => onEdit(subject)}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                  >
+                    <Edit3 size={15} />
+                  </button>
+                ) : (
+                  <span className="text-xs text-slate-400">View only</span>
+                )}
               </td>
             </tr>
           ))}
@@ -1636,12 +1887,14 @@ function EmptyState({
   description,
   action,
   onAction,
+  showAction = true,
 }: {
   icon: typeof Users;
   title: string;
   description: string;
-  action: string;
-  onAction: () => void;
+  action?: string;
+  onAction?: () => void;
+  showAction?: boolean;
 }) {
   return (
     <div className="p-12 text-center">
@@ -1655,10 +1908,12 @@ function EmptyState({
         {description}
       </p>
 
-      <Button className="mt-5" onClick={onAction}>
-        <Plus size={15} />
-        {action}
-      </Button>
+      {showAction && action && onAction && (
+        <Button className="mt-5" onClick={onAction}>
+          <Plus size={15} />
+          {action}
+        </Button>
+      )}
     </div>
   );
 }

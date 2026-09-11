@@ -740,16 +740,16 @@ export default function Teachers() {
   }
 
   return (
-    <div className="mx-auto max-w-[1400px]">
+    <div className="mx-auto w-full min-w-0 max-w-[1400px]">
 
       {/* =====================================================
           PAGE HEADER
       ===================================================== */}
 
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">
+          <h1 className="text-xl font-semibold text-slate-900 sm:text-2xl">
             Teachers
           </h1>
 
@@ -761,7 +761,7 @@ export default function Teachers() {
         <button
           type="button"
           onClick={openCreate}
-          className="inline-flex h-10 items-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700"
+          className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700 sm:w-auto"
         >
           <Plus size={16} />
           Add Teacher
@@ -773,7 +773,7 @@ export default function Teachers() {
           SEARCH
       ===================================================== */}
 
-      <div className="mt-6 flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+      <div className="mt-4 flex min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3 shadow-sm sm:mt-6 sm:px-4">
 
         <Search
           size={18}
@@ -804,19 +804,18 @@ export default function Teachers() {
       )}
 
       {/* =====================================================
-          TEACHERS TABLE
+          TEACHERS LIST
       ===================================================== */}
 
-      <div className="mt-5 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      {/* Desktop table */}
+      <div className="mt-4 hidden overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm md:block sm:mt-5">
 
         <div className="overflow-x-auto">
 
           <table className="w-full min-w-[900px]">
 
             <thead className="border-b border-slate-200 bg-slate-50">
-
               <tr>
-
                 {[
                   "Teacher",
                   "Teacher ID",
@@ -833,55 +832,29 @@ export default function Teachers() {
                     {heading}
                   </th>
                 ))}
-
               </tr>
-
             </thead>
 
             <tbody className="divide-y divide-slate-100">
-
-              {/* Loading */}
               {loading ? (
                 <tr>
-                  <td
-                    colSpan={7}
-                    className="px-5 py-12 text-center text-sm text-slate-400"
-                  >
+                  <td colSpan={7} className="px-5 py-12 text-center text-sm text-slate-400">
                     Loading teachers...
                   </td>
                 </tr>
-
               ) : filteredTeachers.length === 0 ? (
-
-                /* Empty state */
                 <tr>
-
-                  <td
-                    colSpan={7}
-                    className="px-5 py-12 text-center"
-                  >
-
+                  <td colSpan={7} className="px-5 py-12 text-center">
                     <div className="mx-auto flex max-w-sm flex-col items-center">
-
                       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
-                        <UserRound
-                          size={22}
-                          className="text-slate-400"
-                        />
+                        <UserRound size={22} className="text-slate-400" />
                       </div>
-
                       <p className="mt-3 text-sm font-medium text-slate-700">
-                        {search
-                          ? "No teachers found"
-                          : "No teachers yet"}
+                        {search ? "No teachers found" : "No teachers yet"}
                       </p>
-
                       <p className="mt-1 text-xs text-slate-400">
-                        {search
-                          ? "Try a different search."
-                          : "Add your first teacher to get started."}
+                        {search ? "Try a different search." : "Add your first teacher to get started."}
                       </p>
-
                       {!search && (
                         <button
                           type="button"
@@ -892,187 +865,174 @@ export default function Teachers() {
                           Add Teacher
                         </button>
                       )}
-
                     </div>
-
                   </td>
-
                 </tr>
-
               ) : (
-
-                /* Teacher rows */
-                filteredTeachers.map(
-                  (teacher) => (
-                    <tr
-                      key={teacher.id}
-                      className="hover:bg-slate-50"
-                    >
-
-                      {/* Teacher */}
-                      <td className="px-5 py-4">
-
-                        <div className="flex items-center gap-3">
-
-                          {teacher.photo_url ? (
-                            <img
-                              src={
-                                teacher.photo_url
-                              }
-                              alt=""
-                              className="h-9 w-9 rounded-full object-cover"
-                            />
-                          ) : (
-                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100">
-                              <UserRound
-                                size={17}
-                                className="text-slate-400"
-                              />
-                            </div>
-                          )}
-
-                          <div>
-
-                            <p className="text-sm font-medium text-slate-800">
-                              {getFullName(
-                                teacher,
-                              )}
-                            </p>
-
-                            <p className="text-xs text-slate-400">
-                              {teacher.email ||
-                                "No email"}
-                            </p>
-
+                filteredTeachers.map((teacher) => (
+                  <tr key={teacher.id} className="hover:bg-slate-50">
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-3">
+                        {teacher.photo_url ? (
+                          <img src={teacher.photo_url} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover" />
+                        ) : (
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100">
+                            <UserRound size={17} className="text-slate-400" />
                           </div>
-
+                        )}
+                        <div className="min-w-0">
+                          <p className="break-words text-sm font-medium text-slate-800">{getFullName(teacher)}</p>
+                          <p className="break-all text-xs text-slate-400">{teacher.email || "No email"}</p>
                         </div>
-
-                      </td>
-
-                      {/* Teacher ID */}
-                      <td className="px-5 py-4 text-sm text-slate-600">
-                        {teacher.teacher_id}
-                      </td>
-
-                      {/* Contact */}
-                      <td className="px-5 py-4">
-
-                        <div className="space-y-1 text-xs text-slate-500">
-
-                          {teacher.phone && (
-                            <div className="flex items-center gap-1.5">
-                              <Phone size={13} />
-                              {teacher.phone}
-                            </div>
-                          )}
-
-                          {teacher.email && (
-                            <div className="flex items-center gap-1.5">
-                              <Mail size={13} />
-                              {teacher.email}
-                            </div>
-                          )}
-
-                          {!teacher.phone &&
-                            !teacher.email &&
-                            "—"}
-
-                        </div>
-
-                      </td>
-
-                      {/* =================================================
-                          CLASSES COUNT
-                      ================================================= */}
-
-                      <td className="px-5 py-4 text-sm text-slate-600">
-                        {teacher.class_count > 0
-                          ? teacher.class_count
-                          : "—"}
-                      </td>
-
-                      {/* =================================================
-                          SUBJECTS COUNT
-                      ================================================= */}
-
-                      <td className="px-5 py-4 text-sm text-slate-600">
-                        {teacher.subject_count > 0
-                          ? teacher.subject_count
-                          : "—"}
-                      </td>
-
-                      {/* Status */}
-                      <td className="px-5 py-4">
-
+                      </div>
+                    </td>
+                    <td className="px-5 py-4 text-sm text-slate-600">{teacher.teacher_id}</td>
+                    <td className="px-5 py-4">
+                      <div className="space-y-1 text-xs text-slate-500">
+                        {teacher.phone && <div className="flex items-start gap-1.5 break-all"><Phone size={13} className="mt-0.5 shrink-0" />{teacher.phone}</div>}
+                        {teacher.email && <div className="flex items-start gap-1.5 break-all"><Mail size={13} className="mt-0.5 shrink-0" />{teacher.email}</div>}
+                        {!teacher.phone && !teacher.email && "—"}
+                      </div>
+                    </td>
+                    <td className="px-5 py-4 text-sm text-slate-600">{teacher.class_count > 0 ? teacher.class_count : "—"}</td>
+                    <td className="px-5 py-4 text-sm text-slate-600">{teacher.subject_count > 0 ? teacher.subject_count : "—"}</td>
+                    <td className="px-5 py-4">
+                      <button
+                        type="button"
+                        onClick={() => void toggleStatus(teacher)}
+                        className={[
+                          "rounded-full px-2.5 py-1 text-[11px] font-medium",
+                          teacher.status === "Active" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500",
+                        ].join(" ")}
+                      >
+                        {teacher.status}
+                      </button>
+                    </td>
+                    <td className="px-5 py-4">
+                      <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
                         <button
                           type="button"
-                          onClick={() =>
-                            void toggleStatus(
-                              teacher,
-                            )
-                          }
-                          className={[
-                            "rounded-full px-2.5 py-1 text-[11px] font-medium",
-
-                            teacher.status ===
-                            "Active"
-                              ? "bg-emerald-100 text-emerald-700"
-                              : "bg-slate-100 text-slate-500",
-                          ].join(" ")}
+                          onClick={() => navigate(`/teachers/${teacher.id}`)}
+                          className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
                         >
-                          {teacher.status}
+                          View
                         </button>
-
-                      </td>
-
-                      {/* Actions */}
-                      <td className="px-5 py-4">
-
-                        <div className="flex items-center gap-2">
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              navigate(
-                                `/teachers/${teacher.id}`,
-                              )
-                            }
-                            className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
-                          >
-                            View
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              openEdit(
-                                teacher,
-                              )
-                            }
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
-                          >
-                            <Edit3
-                              size={14}
-                            />
-                            Edit
-                          </button>
-
-                        </div>
-
-                      </td>
-
-                    </tr>
-                  ),
-                )
+                        <button
+                          type="button"
+                          onClick={() => openEdit(teacher)}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                        >
+                          <Edit3 size={14} />
+                          Edit
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
               )}
-
             </tbody>
 
           </table>
-
         </div>
+      </div>
 
+      {/* Mobile teacher cards */}
+      <div className="mt-4 space-y-3 md:hidden">
+        {loading ? (
+          <div className="rounded-xl border border-slate-200 bg-white px-4 py-10 text-center text-sm text-slate-400 shadow-sm">
+            Loading teachers...
+          </div>
+        ) : filteredTeachers.length === 0 ? (
+          <div className="rounded-xl border border-slate-200 bg-white px-4 py-10 text-center shadow-sm">
+            <div className="mx-auto flex max-w-sm flex-col items-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
+                <UserRound size={22} className="text-slate-400" />
+              </div>
+              <p className="mt-3 text-sm font-medium text-slate-700">{search ? "No teachers found" : "No teachers yet"}</p>
+              <p className="mt-1 text-xs text-slate-400">{search ? "Try a different search." : "Add your first teacher to get started."}</p>
+              {!search && (
+                <button
+                  type="button"
+                  onClick={openCreate}
+                  className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+                >
+                  <Plus size={15} />
+                  Add Teacher
+                </button>
+              )}
+            </div>
+          </div>
+        ) : (
+          filteredTeachers.map((teacher) => (
+            <article key={teacher.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="flex min-w-0 items-start gap-3">
+                {teacher.photo_url ? (
+                  <img src={teacher.photo_url} alt="" className="h-11 w-11 shrink-0 rounded-full object-cover" />
+                ) : (
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-100">
+                    <UserRound size={19} className="text-slate-400" />
+                  </div>
+                )}
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <h2 className="break-words text-sm font-semibold text-slate-800">{getFullName(teacher)}</h2>
+                      <p className="mt-0.5 break-all text-xs text-slate-400">{teacher.teacher_id}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void toggleStatus(teacher)}
+                      className={[
+                        "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium",
+                        teacher.status === "Active" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500",
+                      ].join(" ")}
+                    >
+                      {teacher.status}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-100 pt-4">
+                <div className="min-w-0">
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Classes</p>
+                  <p className="mt-1 text-sm text-slate-700">{teacher.class_count > 0 ? teacher.class_count : "—"}</p>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Subjects</p>
+                  <p className="mt-1 text-sm text-slate-700">{teacher.subject_count > 0 ? teacher.subject_count : "—"}</p>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Phone</p>
+                  <p className="mt-1 break-all text-sm text-slate-600">{teacher.phone || "—"}</p>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Email</p>
+                  <p className="mt-1 break-all text-sm text-slate-600">{teacher.email || "—"}</p>
+                </div>
+              </div>
+
+              <div className="mt-4 flex flex-col gap-2 border-t border-slate-100 pt-4 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={() => navigate(`/teachers/${teacher.id}`)}
+                  className="inline-flex h-10 w-full items-center justify-center rounded-lg border border-slate-200 px-3 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                >
+                  View
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openEdit(teacher)}
+                  className="inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                >
+                  <Edit3 size={14} />
+                  Edit
+                </button>
+              </div>
+            </article>
+          ))
+        )}
       </div>
 
       {/* =====================================================
@@ -1080,16 +1040,16 @@ export default function Teachers() {
       ===================================================== */}
 
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/40 p-0 sm:items-center sm:p-4">
 
-          <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+          <div className="max-h-[94vh] w-full max-w-3xl overflow-y-auto rounded-t-2xl bg-white shadow-2xl sm:max-h-[92vh] sm:rounded-2xl">
 
             {/* Modal header */}
-            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+            <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-4 sm:px-6">
 
               <div>
 
-                <h2 className="text-lg font-semibold text-slate-900">
+                <h2 className="text-base font-semibold text-slate-900 sm:text-lg">
                   {editingTeacher
                     ? "Edit Teacher"
                     : "Add Teacher"}
@@ -1115,7 +1075,7 @@ export default function Teachers() {
 
             <form
               onSubmit={saveTeacher}
-              className="space-y-6 p-6"
+              className="space-y-6 p-4 sm:p-6"
             >
 
               {/* Error */}
@@ -1253,7 +1213,7 @@ export default function Teachers() {
 
                       <div className="flex items-center gap-2">
 
-                        <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">
+                        <label className="inline-flex max-w-full cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">
 
                           <ImagePlus
                             size={16}
@@ -1422,14 +1382,14 @@ export default function Teachers() {
                   ACTIONS
               ===================================================== */}
 
-              <div className="flex justify-end gap-3 border-t border-slate-100 pt-5">
+              <div className="flex flex-col-reverse gap-2 border-t border-slate-100 pt-5 sm:flex-row sm:justify-end sm:gap-3">
 
                 <button
                   type="button"
                   onClick={() =>
                     setShowModal(false)
                   }
-                  className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                  className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 sm:w-auto"
                 >
                   Cancel
                 </button>
@@ -1437,7 +1397,7 @@ export default function Teachers() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
                 >
                   {saving
                     ? photoFile

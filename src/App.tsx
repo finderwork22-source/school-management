@@ -6,6 +6,7 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 // Public
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
+import AcceptInvitation from "./pages/AcceptInvitation";
 import SetupSchool from "./pages/SetupSchool";
 
 // Overview
@@ -13,11 +14,11 @@ import Dashboard from "./pages/Dashboard";
 
 // School
 import Admissions from "./pages/Admissions";
-import AdmissionDetails from "./pages/AdmissionDetails";
 import Students from "./pages/Students";
 import StudentProfile from "./pages/StudentProfile";
 import Parents from "./pages/Parents";
 import Teachers from "./pages/Teachers";
+import TeacherProfile from "./pages/TeacherProfile";
 import PickupDesk from "./pages/PickupDesk";
 import PickupHistory from "./pages/PickupHistory";
 
@@ -47,15 +48,26 @@ import Announcements from "./pages/Announcements";
 import SchoolProfile from "./pages/SchoolProfile";
 import AcademicSettings from "./pages/AcademicSettings";
 import UsersRoles from "./pages/UsersRoles";
+import MyProfile from "./pages/MyProfile";
 
 export default function App() {
   return (
     <Routes>
-      {/* Public routes */}
+      {/* =====================================================
+          PUBLIC ROUTES
+      ===================================================== */}
+
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<SignUp />} />
 
-      {/* Protected routes */}
+      {/* Invitation links must remain public so an invited user
+          can establish their password before signing in. */}
+      <Route path="/accept-invitation" element={<AcceptInvitation />} />
+
+      {/* =====================================================
+          AUTHENTICATED ROUTES
+      ===================================================== */}
+
       <Route element={<ProtectedRoute />}>
         <Route path="/setup-school" element={<SetupSchool />} />
 
@@ -63,14 +75,16 @@ export default function App() {
           {/* Overview */}
           <Route index element={<Dashboard />} />
 
+          {/* Personal profile */}
+          <Route path="profile" element={<MyProfile />} />
+
           {/* School */}
           <Route path="admissions" element={<Admissions />} />
-          <Route path="admissions/:id" element={<AdmissionDetails />} />
           <Route path="students" element={<Students />} />
           <Route path="students/:id" element={<StudentProfile />} />
           <Route path="parents" element={<Parents />} />
           <Route path="teachers" element={<Teachers />} />
-          <Route path="teachers/:id" element={<Teachers />} />
+          <Route path="teachers/:id" element={<TeacherProfile />} />
           <Route path="pickup-desk" element={<PickupDesk />} />
           <Route path="pickup-history" element={<PickupHistory />} />
 
@@ -124,10 +138,7 @@ export default function App() {
           />
 
           {/* Communication */}
-          <Route
-            path="announcements"
-            element={<Announcements />}
-          />
+          <Route path="announcements" element={<Announcements />} />
 
           {/* Backward-compatible URL */}
           <Route
@@ -150,10 +161,7 @@ export default function App() {
           />
 
           {/* Parent settings URL */}
-          <Route
-            path="settings"
-            element={<AcademicSettings />}
-          />
+          <Route path="settings" element={<AcademicSettings />} />
         </Route>
       </Route>
     </Routes>

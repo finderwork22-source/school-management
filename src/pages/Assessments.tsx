@@ -13,6 +13,7 @@ import {
 
 import { supabase } from "../lib/supabase";
 import { useSchool } from "../context/SchoolContext";
+import { normalizeRole } from "../lib/permissions";
 
 type AcademicYear = {
   id: string;
@@ -61,6 +62,13 @@ type Assessment = {
   created_at: string;
 };
 
+type TeacherAssignment = {
+  id: string;
+  academic_year_id: string;
+  class_id: string;
+  subject_id: string;
+};
+
 type FormState = {
   title: string;
   assessment_type: string;
@@ -90,8 +98,10 @@ const emptyForm: FormState = {
 };
 
 export default function Assessments() {
-  const { school } = useSchool();
+  const { school, membership } = useSchool();
   const navigate = useNavigate();
+  const role = normalizeRole(membership?.role);
+  const isTeacher = role === "Teacher";
 
   const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
   const [sections, setSections] = useState<AcademicSection[]>([]);
@@ -101,6 +111,8 @@ export default function Assessments() {
     { class_id: string; subject_id: string }[]
   >([]);
   const [assessments, setAssessments] = useState<Assessment[]>([]);
+  const [teacherAssignments, setTeacherAssignments] = useState<TeacherAssignment[]>([]);
+  const [teacherAssignmentsLoaded, setTeacherAssignmentsLoaded] = useState(!isTeacher);
 
   const [selectedAcademicYearId, setSelectedAcademicYearId] =
     useState("");
@@ -121,6 +133,91 @@ export default function Assessments() {
   const [saving, setSaving] = useState(false);
 
   const [error, setError] = useState("");
+
+  /*
+   * ----------------------------------------------------------
+   * LOAD TEACHER ASSIGNMENTS
+   * ----------------------------------------------------------
+   */
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadTeacherAssignments() {
+      if (!school?.id || !isTeacher) {
+        if (!cancelled) {
+          setTeacherAssignments([]);
+          setTeacherAssignmentsLoaded(true);
+        }
+        return;
+      }
+
+      setTeacherAssignmentsLoaded(false);
+      setError("");
+
+      try {
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
+
+        if (userError) throw userError;
+        if (!user?.email) {
+          throw new Error("Your account does not have an email address.");
+        }
+
+        const { data: teacherData, error: teacherError } = await supabase
+          .from("teachers")
+          .select("id")
+          .eq("school_id", school.id)
+          .ilike("email", user.email)
+          .maybeSingle();
+
+        if (teacherError) throw teacherError;
+
+        if (!teacherData) {
+          if (!cancelled) {
+            setTeacherAssignments([]);
+            setTeacherAssignmentsLoaded(true);
+            setError(
+              "Your account is not linked to a teacher profile yet. Please ask the school administrator to match your school email with your teacher record.",
+            );
+          }
+          return;
+        }
+
+        const { data, error: assignmentError } = await supabase
+          .from("teacher_assignments")
+          .select("id, academic_year_id, class_id, subject_id")
+          .eq("school_id", school.id)
+          .eq("teacher_id", teacherData.id);
+
+        if (assignmentError) throw assignmentError;
+
+        if (!cancelled) {
+          setTeacherAssignments((data ?? []) as TeacherAssignment[]);
+          setTeacherAssignmentsLoaded(true);
+        }
+      } catch (err) {
+        console.error("Failed to load teacher assignments:", err);
+        if (!cancelled) {
+          setTeacherAssignments([]);
+          setTeacherAssignmentsLoaded(true);
+          setError(
+            err instanceof Error
+              ? err.message
+              : "Unable to load your teaching assignments.",
+          );
+        }
+      }
+    }
+
+    loadTeacherAssignments();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [school?.id, isTeacher]);
 
   /*
    * ----------------------------------------------------------
@@ -170,6 +267,64 @@ export default function Assessments() {
 
     setLoading(false);
   }
+
+  const teacherAssignmentKeys = useMemo(
+    () =>
+      new Set(
+        teacherAssignments.map(
+          (assignment) =>
+            `${assignment.class_id}:${assignment.subject_id}`,
+        ),
+      ),
+    [teacherAssignments],
+  );
+
+  const teacherClassIds = useMemo(
+    () => new Set(teacherAssignments.map((assignment) => assignment.class_id)),
+    [teacherAssignments],
+  );
+
+  const teacherAcademicYearIds = useMemo(
+    () =>
+      new Set(
+        teacherAssignments.map((assignment) => assignment.academic_year_id),
+      ),
+    [teacherAssignments],
+  );
+
+  const visibleAcademicYears = useMemo(
+    () =>
+      isTeacher
+        ? academicYears.filter((year) => teacherAcademicYearIds.has(year.id))
+        : academicYears,
+    [academicYears, isTeacher, teacherAcademicYearIds],
+  );
+
+  useEffect(() => {
+    if (!isTeacher || !teacherAssignmentsLoaded) return;
+
+    if (
+      selectedAcademicYearId &&
+      visibleAcademicYears.some((year) => year.id === selectedAcademicYearId)
+    ) {
+      return;
+    }
+
+    const currentAssigned =
+      visibleAcademicYears.find((year) => year.is_current && year.is_active) ??
+      visibleAcademicYears.find((year) => year.is_active) ??
+      visibleAcademicYears[0];
+
+    setSelectedAcademicYearId(currentAssigned?.id ?? "");
+    setSelectedSectionId("");
+    setSelectedClassId("");
+    setSelectedSubjectId("");
+  }, [
+    isTeacher,
+    teacherAssignmentsLoaded,
+    selectedAcademicYearId,
+    visibleAcademicYears,
+  ]);
 
   /*
    * ----------------------------------------------------------
@@ -256,13 +411,38 @@ export default function Assessments() {
    */
 
   const filteredClasses = useMemo(() => {
-    if (!selectedSectionId) return classes;
+    let result = classes;
 
-    return classes.filter(
-      (classItem) =>
-        classItem.academic_section_id === selectedSectionId
+    if (isTeacher) {
+      result = result.filter((classItem) => teacherClassIds.has(classItem.id));
+    }
+
+    if (selectedSectionId) {
+      result = result.filter(
+        (classItem) =>
+          classItem.academic_section_id === selectedSectionId,
+      );
+    }
+
+    return result;
+  }, [
+    classes,
+    selectedSectionId,
+    isTeacher,
+    teacherClassIds,
+  ]);
+
+  const visibleSections = useMemo(() => {
+    if (!isTeacher) return sections;
+
+    const visibleSectionIds = new Set(
+      filteredClasses
+        .map((classItem) => classItem.academic_section_id)
+        .filter((value): value is string => Boolean(value)),
     );
-  }, [classes, selectedSectionId]);
+
+    return sections.filter((section) => visibleSectionIds.has(section.id));
+  }, [sections, filteredClasses, isTeacher]);
 
   /*
    * ----------------------------------------------------------
@@ -336,13 +516,28 @@ export default function Assessments() {
     const subjectIds = new Set(
       classSubjects
         .filter((item) => item.class_id === selectedClassId)
-        .map((item) => item.subject_id)
+        .map((item) => item.subject_id),
     );
 
-    return subjects.filter((subject) =>
-      subjectIds.has(subject.id)
-    );
-  }, [selectedClassId, classSubjects, subjects]);
+    if (isTeacher) {
+      teacherAssignments
+        .filter(
+          (assignment) =>
+            assignment.class_id === selectedClassId &&
+            assignment.academic_year_id === selectedAcademicYearId,
+        )
+        .forEach((assignment) => subjectIds.add(assignment.subject_id));
+    }
+
+    return subjects.filter((subject) => subjectIds.has(subject.id));
+  }, [
+    selectedClassId,
+    selectedAcademicYearId,
+    classSubjects,
+    subjects,
+    isTeacher,
+    teacherAssignments,
+  ]);
 
   /*
    * ----------------------------------------------------------
@@ -351,7 +546,11 @@ export default function Assessments() {
    */
 
   useEffect(() => {
-    if (!school?.id || !selectedAcademicYearId) {
+    if (
+      !school?.id ||
+      !selectedAcademicYearId ||
+      (isTeacher && !teacherAssignmentsLoaded)
+    ) {
       setAssessments([]);
       return;
     }
@@ -362,6 +561,8 @@ export default function Assessments() {
     selectedAcademicYearId,
     selectedClassId,
     selectedSubjectId,
+    isTeacher,
+    teacherAssignmentsLoaded,
   ]);
 
   async function loadAssessments() {
@@ -385,6 +586,23 @@ export default function Assessments() {
       query = query.eq("subject_id", selectedSubjectId);
     }
 
+    if (isTeacher) {
+      const assignedClassIdsForYear = teacherAssignments
+        .filter(
+          (assignment) =>
+            assignment.academic_year_id === selectedAcademicYearId,
+        )
+        .map((assignment) => assignment.class_id);
+
+      if (assignedClassIdsForYear.length === 0) {
+        setAssessments([]);
+        setLoadingAssessments(false);
+        return;
+      }
+
+      query = query.in("class_id", Array.from(new Set(assignedClassIdsForYear)));
+    }
+
     const { data, error } = await query;
 
     if (error) {
@@ -394,7 +612,17 @@ export default function Assessments() {
       return;
     }
 
-    setAssessments((data ?? []) as Assessment[]);
+    let loaded = (data ?? []) as Assessment[];
+
+    if (isTeacher) {
+      loaded = loaded.filter((assessment) =>
+        teacherAssignmentKeys.has(
+          `${assessment.class_id}:${assessment.subject_id}`,
+        ),
+      );
+    }
+
+    setAssessments(loaded);
     setLoadingAssessments(false);
   }
 
@@ -445,6 +673,17 @@ export default function Assessments() {
     });
   }, [assessments, search, classes, subjects]);
 
+  function isAssignedPair(classId: string, subjectId: string) {
+    if (!isTeacher) return true;
+
+    return teacherAssignments.some(
+      (assignment) =>
+        assignment.academic_year_id === selectedAcademicYearId &&
+        assignment.class_id === classId &&
+        assignment.subject_id === subjectId,
+    );
+  }
+
   /*
    * ----------------------------------------------------------
    * OPEN CREATE MODAL
@@ -452,6 +691,10 @@ export default function Assessments() {
    */
 
   function openCreateModal() {
+    if (isTeacher && (!teacherAssignmentsLoaded || filteredClasses.length === 0)) {
+      return;
+    }
+
     setEditingAssessment(null);
 
     setForm({
@@ -471,6 +714,10 @@ export default function Assessments() {
    */
 
   function openEditModal(assessment: Assessment) {
+    if (!isAssignedPair(assessment.class_id, assessment.subject_id)) {
+      return;
+    }
+
     setEditingAssessment(assessment);
 
     setForm({
@@ -499,6 +746,11 @@ export default function Assessments() {
 
     if (!school?.id) return;
 
+    if (isTeacher && !teacherAssignmentsLoaded) {
+      setError("Your teaching assignments are still loading. Please try again.");
+      return;
+    }
+
     setError("");
 
     if (!form.title.trim()) {
@@ -513,6 +765,11 @@ export default function Assessments() {
 
     if (!form.subject_id) {
       setError("Please select a subject.");
+      return;
+    }
+
+    if (!isAssignedPair(form.class_id, form.subject_id)) {
+      setError("You can only manage assessments for your assigned class and subject.");
       return;
     }
 
@@ -579,6 +836,17 @@ export default function Assessments() {
    */
 
   async function handleDeleteAssessment(id: string) {
+    const assessment = assessments.find((item) => item.id === id);
+
+    if (
+      isTeacher &&
+      (!assessment ||
+        !isAssignedPair(assessment.class_id, assessment.subject_id))
+    ) {
+      setError("You can only delete assessments for your assigned class and subject.");
+      return;
+    }
+
     const confirmed = window.confirm(
       "Are you sure you want to delete this assessment? Any marks recorded for it will also be deleted."
     );
@@ -672,7 +940,9 @@ export default function Assessments() {
               </h1>
 
               <p className="mt-0.5 text-sm text-slate-500">
-                Create and manage tests, exams and other assessments.
+                {isTeacher
+                  ? "Create and manage assessments for your assigned classes and subjects."
+                  : "Create and manage tests, exams and other assessments."}
               </p>
             </div>
           </div>
@@ -681,7 +951,8 @@ export default function Assessments() {
         <button
           type="button"
           onClick={openCreateModal}
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700"
+          disabled={isTeacher && (!teacherAssignmentsLoaded || filteredClasses.length === 0)}
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Plus size={17} />
           Create Assessment
@@ -692,6 +963,12 @@ export default function Assessments() {
       {error && (
         <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {error}
+        </div>
+      )}
+
+      {isTeacher && (
+        <div className="mb-5 rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-indigo-800">
+          You are viewing and managing assessments only for classes and subjects assigned to you.
         </div>
       )}
 
@@ -714,7 +991,7 @@ export default function Assessments() {
               }}
               className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
             >
-              {academicYears.map((year) => (
+              {visibleAcademicYears.map((year) => (
                 <option key={year.id} value={year.id}>
                   {year.name}
                 </option>
@@ -737,7 +1014,7 @@ export default function Assessments() {
             >
               <option value="">All Sections</option>
 
-              {sections.map((section) => (
+              {visibleSections.map((section) => (
                 <option key={section.id} value={section.id}>
                   {section.name}
                 </option>
@@ -870,8 +1147,9 @@ export default function Assessments() {
             </h3>
 
             <p className="mt-1 max-w-sm text-sm text-slate-500">
-              Create an assessment for a class and subject to start
-              recording student marks.
+              {isTeacher
+                ? "Create an assessment for one of your assigned classes and subjects to start recording student marks."
+                : "Create an assessment for a class and subject to start recording student marks."}
             </p>
 
             <button
@@ -985,30 +1263,36 @@ export default function Assessments() {
                         </button>
 
                         {/* Edit */}
-                        <button
-                          type="button"
-                          onClick={() =>
-                            openEditModal(assessment)
-                          }
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
-                          title="Edit assessment"
-                        >
-                          <Pencil size={16} />
-                        </button>
+                        {(!isTeacher ||
+                          isAssignedPair(
+                            assessment.class_id,
+                            assessment.subject_id,
+                          )) && (
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(assessment)}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+                            title="Edit assessment"
+                          >
+                            <Pencil size={16} />
+                          </button>
+                        )}
 
                         {/* Delete */}
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleDeleteAssessment(
-                              assessment.id
-                            )
-                          }
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-red-50 hover:text-red-600"
-                          title="Delete assessment"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        {(!isTeacher ||
+                          isAssignedPair(
+                            assessment.class_id,
+                            assessment.subject_id,
+                          )) && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteAssessment(assessment.id)}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-red-50 hover:text-red-600"
+                            title="Delete assessment"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -1092,7 +1376,7 @@ export default function Assessments() {
                     >
                       <option value="">Select class</option>
 
-                      {classes.map((classItem) => (
+                      {filteredClasses.map((classItem) => (
                         <option
                           key={classItem.id}
                           value={classItem.id}
@@ -1126,31 +1410,23 @@ export default function Assessments() {
                           : "Select class first"}
                       </option>
 
-                      {classSubjects
-                        .filter(
-                          (item) =>
-                            item.class_id === form.class_id
-                        )
-                        .map((item) => {
-                          const subject = subjects.find(
-                            (subjectItem) =>
-                              subjectItem.id === item.subject_id
-                          );
+                      {availableSubjects
+                        .filter((subject) => {
+                          if (!isTeacher) return true;
 
-                          if (!subject) return null;
-
-                          return (
-                            <option
-                              key={subject.id}
-                              value={subject.id}
-                            >
-                              {subject.name}
-                              {subject.code
-                                ? ` (${subject.code})`
-                                : ""}
-                            </option>
+                          return teacherAssignments.some(
+                            (assignment) =>
+                              assignment.academic_year_id === selectedAcademicYearId &&
+                              assignment.class_id === form.class_id &&
+                              assignment.subject_id === subject.id,
                           );
-                        })}
+                        })
+                        .map((subject) => (
+                          <option key={subject.id} value={subject.id}>
+                            {subject.name}
+                            {subject.code ? ` (${subject.code})` : ""}
+                          </option>
+                        ))}
                     </select>
                   </div>
                 </div>

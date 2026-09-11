@@ -1071,99 +1071,105 @@ export default function StudentBilling() {
       )}
 
       {/* SUMMARY */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Card className="border-slate-200 shadow-none">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4 xl:gap-4">
+        <Card className="min-w-0 overflow-hidden border-slate-200 bg-white p-0 shadow-none">
+          <div className="flex min-h-[122px] items-start justify-between gap-3 p-4 sm:min-h-[128px]">
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
                 Invoices
               </p>
 
-              <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
+              <p className="mt-2 text-2xl font-semibold leading-none tracking-tight text-slate-900">
                 {summary.invoices}
               </p>
 
-              <p className="mt-1 text-xs text-slate-400">
+              <p className="mt-3 text-xs leading-4 text-slate-400">
                 {selectedTerm} billing
               </p>
             </div>
 
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-50">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50">
               <FileText className="h-5 w-5 text-indigo-600" />
             </div>
           </div>
         </Card>
 
-        <Card className="border-slate-200 shadow-none">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+        <Card className="min-w-0 overflow-hidden border-slate-200 bg-white p-0 shadow-none">
+          <div className="flex min-h-[122px] items-start justify-between gap-3 p-4 sm:min-h-[128px]">
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
                 Total Billed
               </p>
 
-              <p className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
-                {formatMoney(summary.totalBilled)}
-                <span className="ml-1 text-sm font-medium text-slate-400">
+              <div className="mt-2 flex min-w-0 items-baseline gap-1">
+                <p className="min-w-0 break-words text-xl font-semibold leading-none tracking-tight text-slate-900 sm:text-2xl">
+                  {formatMoney(summary.totalBilled)}
+                </p>
+                <span className="shrink-0 text-xs font-semibold text-slate-400">
                   RWF
                 </span>
-              </p>
+              </div>
 
-              <p className="mt-1 text-xs text-slate-400">
+              <p className="mt-3 text-xs leading-4 text-slate-400">
                 Amount invoiced
               </p>
             </div>
 
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100">
               <Wallet className="h-5 w-5 text-slate-600" />
             </div>
           </div>
         </Card>
 
-        <Card className="border-slate-200 shadow-none">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+        <Card className="min-w-0 overflow-hidden border-slate-200 bg-white p-0 shadow-none">
+          <div className="flex min-h-[122px] items-start justify-between gap-3 p-4 sm:min-h-[128px]">
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
                 Total Paid
               </p>
 
-              <p className="mt-1 text-2xl font-semibold tracking-tight text-emerald-600">
-                {formatMoney(summary.totalPaid)}
-                <span className="ml-1 text-sm font-medium text-emerald-500">
+              <div className="mt-2 flex min-w-0 items-baseline gap-1">
+                <p className="min-w-0 break-words text-xl font-semibold leading-none tracking-tight text-emerald-600 sm:text-2xl">
+                  {formatMoney(summary.totalPaid)}
+                </p>
+                <span className="shrink-0 text-xs font-semibold text-emerald-500">
                   RWF
                 </span>
-              </p>
+              </div>
 
-              <p className="mt-1 text-xs text-slate-400">
+              <p className="mt-3 text-xs leading-4 text-slate-400">
                 Collected to date
               </p>
             </div>
 
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50">
               <CheckCircle2 className="h-5 w-5 text-emerald-600" />
             </div>
           </div>
         </Card>
 
-        <Card className="border-slate-200 shadow-none">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+        <Card className="min-w-0 overflow-hidden border-slate-200 bg-white p-0 shadow-none">
+          <div className="flex min-h-[122px] items-start justify-between gap-3 p-4 sm:min-h-[128px]">
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
                 Outstanding
               </p>
 
-              <p className="mt-1 text-2xl font-semibold tracking-tight text-red-600">
-                {formatMoney(summary.totalBalance)}
-                <span className="ml-1 text-sm font-medium text-red-500">
+              <div className="mt-2 flex min-w-0 items-baseline gap-1">
+                <p className="min-w-0 break-words text-xl font-semibold leading-none tracking-tight text-red-600 sm:text-2xl">
+                  {formatMoney(summary.totalBalance)}
+                </p>
+                <span className="shrink-0 text-xs font-semibold text-red-500">
                   RWF
                 </span>
-              </p>
+              </div>
 
-              <p className="mt-1 text-xs text-slate-400">
+              <p className="mt-3 text-xs leading-4 text-slate-400">
                 Remaining balance
               </p>
             </div>
 
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-50">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50">
               <FileText className="h-5 w-5 text-red-600" />
             </div>
           </div>
@@ -1172,7 +1178,7 @@ export default function StudentBilling() {
 
       {/* FILTERS */}
       <Card className="border-slate-200 shadow-none">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <div className="grid min-w-0 grid-cols-1 gap-3 p-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
           <div>
             <label className="mb-1.5 block text-xs font-medium text-slate-600">
               Academic year
@@ -1198,7 +1204,7 @@ export default function StudentBilling() {
                   null,
                 );
               }}
-              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+              className="h-10 w-full min-w-0 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
             >
               <option value="">
                 Select academic year
@@ -1237,7 +1243,7 @@ export default function StudentBilling() {
                   null,
                 );
               }}
-              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+              className="h-10 w-full min-w-0 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
             >
               <option value="Term 1">
                 Term 1
@@ -1274,7 +1280,7 @@ export default function StudentBilling() {
               disabled={
                 !selectedAcademicYearId
               }
-              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+              className="h-10 w-full min-w-0 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
             >
               <option value="">
                 {selectedAcademicYearId
@@ -1315,7 +1321,7 @@ export default function StudentBilling() {
                   )
                 }
                 placeholder="Search student or invoice..."
-                className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-700 outline-none placeholder:text-slate-400 transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                className="h-10 w-full min-w-0 rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-700 outline-none placeholder:text-slate-400 transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
               />
             </div>
           </div>
@@ -1332,7 +1338,7 @@ export default function StudentBilling() {
                   event.target.value as Invoice["status"] | "All",
                 )
               }
-              className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+              className="h-10 w-full min-w-0 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
             >
               <option value="All">All statuses</option>
               <option value="Unpaid">Unpaid</option>

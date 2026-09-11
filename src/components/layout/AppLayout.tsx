@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { normalizeRole, canAccessPath } from "../../lib/permissions";
 import { useAuth } from "../../context/AuthContext";
@@ -306,7 +306,9 @@ function Sidebar({
                           }
                         >
                           <Icon size={18} strokeWidth={1.8} />
-                          <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                          <span className="min-w-0 flex-1 truncate">
+                            {item.label}
+                          </span>
                           <ChevronDown
                             size={14}
                             strokeWidth={1.8}
@@ -334,7 +336,9 @@ function Sidebar({
                                 }
                               >
                                 <ChildIcon size={15} strokeWidth={1.8} />
-                                <span className="min-w-0 truncate">{child.label}</span>
+                                <span className="min-w-0 truncate">
+                                  {child.label}
+                                </span>
                               </NavLink>
                             );
                           })}
@@ -408,13 +412,60 @@ function Sidebar({
   );
 }
 
-function Header({
-  onOpenNavigation,
-}: {
-  onOpenNavigation: () => void;
-}) {
+type SchoolNotification = {
+  id: string;
+  title: string;
+  description: string;
+  createdAt: string;
+};
+
+function formatNotificationTime(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const diffMinutes = Math.max(
+    0,
+    Math.floor((Date.now() - date.getTime()) / 60000),
+  );
+
+  if (diffMinutes < 1) return "Just now";
+  if (diffMinutes < 60) {
+    return `${diffMinutes} min${diffMinutes === 1 ? "" : "s"} ago`;
+  }
+
+  const diffHours = Math.floor(diffMinutes / 60);
+
+  if (diffHours < 24) {
+    return `${diffHours} hr${diffHours === 1 ? "" : "s"} ago`;
+  }
+
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffDays < 7) {
+    return `${diffDays} day${diffDays === 1 ? "" : "s"} ago`;
+  }
+
+  return date.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function Header({ onOpenNavigation }: { onOpenNavigation: () => void }) {
   const { school, membership } = useSchool();
   const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const [notifications, setNotifications] = useState<SchoolNotification[]>([]);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [notificationsError, setNotificationsError] = useState("");
+
+  const notificationsRef = useRef<HTMLDivElement | null>(null);
 
   const firstName = user?.user_metadata?.first_name ?? "";
   const lastName = user?.user_metadata?.last_name ?? "";
@@ -424,8 +475,83 @@ function Header({
   const initials =
     `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase() || "SA";
 
+  useEffect(() => {
+    if (!school?.id) {
+      setNotifications([]);
+      return;
+    }
+
+    const schoolId = school.id;
+    let cancelled = false;
+
+    async function loadNotifications() {
+      setNotificationsLoading(true);
+      setNotificationsError("");
+
+      const { data, error } = await supabase
+        .from("announcements")
+        .select("id, title, created_at")
+        .eq("school_id", schoolId)
+        .order("created_at", { ascending: false })
+        .limit(6);
+
+      if (cancelled) return;
+
+      if (error) {
+        console.error("Failed to load notifications:", error);
+        setNotifications([]);
+        setNotificationsError("Unable to load school notifications.");
+      } else {
+        setNotifications(
+          (data ?? []).map((item) => ({
+            id: item.id,
+            title: item.title || "School announcement",
+            description: "New school announcement",
+            createdAt: item.created_at,
+          })),
+        );
+      }
+
+      setNotificationsLoading(false);
+    }
+
+    void loadNotifications();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [school?.id]);
+
+  useEffect(() => {
+    if (!notificationsOpen) return;
+
+    function handleOutsideClick(event: MouseEvent) {
+      if (
+        notificationsRef.current &&
+        !notificationsRef.current.contains(event.target as Node)
+      ) {
+        setNotificationsOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleOutsideClick);
+
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, [notificationsOpen]);
+
+  function openNotifications() {
+    setNotificationsOpen((current) => !current);
+  }
+
+  function openAnnouncement() {
+    setNotificationsOpen(false);
+    navigate("/announcements");
+  }
+
   return (
-    <header className="flex min-h-16 shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-white px-3 sm:min-h-20 sm:px-5 lg:px-8">
+    <header className="relative z-40 flex min-h-16 shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-white px-3 sm:min-h-20 sm:px-5 lg:px-8">
       <div className="flex min-w-0 items-center gap-2.5">
         <button
           type="button"
@@ -439,27 +565,128 @@ function Header({
         <div className="min-w-0">
           <div className="text-xs text-slate-500 sm:text-sm">School</div>
 
-          <button
-            type="button"
-            className="mt-0.5 flex max-w-[52vw] items-center gap-1 text-sm font-semibold text-slate-900 sm:max-w-[60vw]"
-          >
-            <span className="truncate">{school?.name ?? "School"}</span>
-            <ChevronDown size={15} className="shrink-0" />
-          </button>
+          <div className="mt-0.5 max-w-[52vw] truncate text-sm font-semibold text-slate-900 sm:max-w-[60vw]">
+            {school?.name ?? "School"}
+          </div>
         </div>
       </div>
 
       <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
+        <div ref={notificationsRef} className="relative">
+          <button
+            type="button"
+            aria-label="Notifications"
+            aria-expanded={notificationsOpen}
+            aria-haspopup="true"
+            onClick={openNotifications}
+            className={[
+              "relative flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition",
+              notificationsOpen
+                ? "bg-indigo-50 text-indigo-700"
+                : "hover:bg-slate-100",
+            ].join(" ")}
+          >
+            {notifications.length > 0 && (
+              <span
+                aria-hidden="true"
+                className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-indigo-600 ring-2 ring-white"
+              />
+            )}
+            <Bell size={18} strokeWidth={1.8} />
+          </button>
+
+          {notificationsOpen && (
+            <div className="absolute right-0 top-12 z-50 w-[min(92vw,22rem)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+              <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+                <div>
+                  <h2 className="text-sm font-semibold text-slate-900">
+                    Notifications
+                  </h2>
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    Recent school announcements
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setNotificationsOpen(false)}
+                  aria-label="Close notifications"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="max-h-[min(65vh,24rem)] overflow-y-auto">
+                {notificationsLoading ? (
+                  <div className="px-4 py-8 text-center text-sm text-slate-500">
+                    Loading notifications...
+                  </div>
+                ) : notificationsError ? (
+                  <div className="px-4 py-6 text-center text-sm text-red-600">
+                    {notificationsError}
+                  </div>
+                ) : notifications.length === 0 ? (
+                  <div className="px-4 py-8 text-center">
+                    <Bell
+                      size={22}
+                      className="mx-auto text-slate-300"
+                      strokeWidth={1.6}
+                    />
+                    <p className="mt-3 text-sm font-medium text-slate-700">
+                      No notifications
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      New school announcements will appear here.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-slate-100">
+                    {notifications.map((notification) => (
+                      <button
+                        key={notification.id}
+                        type="button"
+                        onClick={openAnnouncement}
+                        className="flex w-full gap-3 px-4 py-3.5 text-left transition hover:bg-slate-50"
+                      >
+                        <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-indigo-600" />
+
+                        <span className="min-w-0">
+                          <span className="block break-words text-sm font-medium text-slate-900">
+                            {notification.title}
+                          </span>
+                          <span className="mt-0.5 block text-xs text-slate-500">
+                            {notification.description}
+                          </span>
+                          <span className="mt-1 block text-[11px] text-slate-400">
+                            {formatNotificationTime(notification.createdAt)}
+                          </span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="border-t border-slate-200 p-2">
+                <button
+                  type="button"
+                  onClick={openAnnouncement}
+                  className="flex w-full items-center justify-center rounded-lg px-3 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-50"
+                >
+                  View all announcements
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
         <button
           type="button"
-          aria-label="Notifications"
-          className="relative flex h-10 w-10 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100"
+          onClick={() => navigate("/profile")}
+          aria-label="Open my profile"
+          className="flex items-center gap-2 rounded-lg px-1.5 py-1 transition hover:bg-slate-50 sm:gap-3"
         >
-          <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-indigo-600" />
-          <Bell size={18} strokeWidth={1.8} />
-        </button>
-
-        <button type="button" className="flex items-center gap-2 sm:gap-3">
           <div className="hidden text-right md:block">
             <div className="max-w-[180px] truncate text-sm font-semibold text-slate-900">
               {fullName}
@@ -486,7 +713,9 @@ function AccessDenied() {
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-600">
           <ShieldCheck size={22} />
         </div>
-        <h1 className="mt-4 text-xl font-semibold text-slate-900">Access denied</h1>
+        <h1 className="mt-4 text-xl font-semibold text-slate-900">
+          Access denied
+        </h1>
         <p className="mt-2 text-sm leading-6 text-slate-500">
           You do not have permission to access this section of SchoolOS.
         </p>

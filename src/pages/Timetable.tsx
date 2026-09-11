@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import PrintableTimetable from "../components/timetable/PrintableTimetable";
+import { normalizeRole } from "../lib/permissions";
 
 interface AcademicYear {
   id: string;
@@ -140,6 +141,17 @@ export default function Timetable() {
   const [schoolId, setSchoolId] =
     useState<string>("");
 
+  const [role, setRole] = useState<ReturnType<typeof normalizeRole>>(
+    "Teacher",
+  );
+
+
+  const [teacherAssignedClassIds, setTeacherAssignedClassIds] =
+    useState<string[]>([]);
+
+  const [teacherAssignedAcademicYearIds, setTeacherAssignedAcademicYearIds] =
+    useState<string[]>([]);
+
   const [
     academicYears,
     setAcademicYears,
@@ -222,18 +234,13 @@ export default function Timetable() {
         error: membershipError,
       } = await supabase
         .from("school_members")
-        .select("school_id")
-        .eq(
-          "user_id",
-          user.id,
-        )
+        .select("school_id, role")
+        .eq("user_id", user.id)
         .limit(1)
         .maybeSingle();
 
       if (membershipError) {
-        setError(
-          membershipError.message,
-        );
+        setError(membershipError.message);
         setLoading(false);
         return;
       }
@@ -246,51 +253,109 @@ export default function Timetable() {
         return;
       }
 
-      const currentSchoolId =
-        membership.school_id;
+      const currentSchoolId = membership.school_id;
+      const currentRole = normalizeRole(membership.role);
+      const currentIsTeacher = currentRole === "Teacher";
 
-      setSchoolId(
-        currentSchoolId,
-      );
+      setSchoolId(currentSchoolId);
+      setRole(currentRole);
 
-      const [
-        yearsResult,
-        classesResult,
-      ] = await Promise.all([
+      let assignedClassIds: string[] = [];
+      let assignedAcademicYearIds: string[] = [];
+
+      if (currentIsTeacher) {
+        if (!user.email) {
+          setError(
+            "Your account does not have an email address, so your teaching assignments could not be loaded.",
+          );
+          setTeacherAssignedClassIds([]);
+          setTeacherAssignedAcademicYearIds([]);
+          setLoading(false);
+          return;
+        }
+
+        const {
+          data: teacher,
+          error: teacherError,
+        } = await supabase
+          .from("teachers")
+          .select("id")
+          .eq("school_id", currentSchoolId)
+          .ilike("email", user.email)
+          .maybeSingle();
+
+        if (teacherError) {
+          setError(teacherError.message);
+          setLoading(false);
+          return;
+        }
+
+        if (!teacher?.id) {
+            setTeacherAssignedClassIds([]);
+          setTeacherAssignedAcademicYearIds([]);
+          setError(
+            "Your teacher profile could not be matched to this account. Please ask a school administrator to verify your school email.",
+          );
+          setLoading(false);
+          return;
+        }
+
+        const {
+          data: teacherAssignments,
+          error: teacherAssignmentsError,
+        } = await supabase
+          .from("teacher_assignments")
+          .select("class_id, academic_year_id")
+          .eq("school_id", currentSchoolId)
+          .eq("teacher_id", teacher.id);
+
+        if (teacherAssignmentsError) {
+          setError(teacherAssignmentsError.message);
+          setLoading(false);
+          return;
+        }
+
+        assignedClassIds = Array.from(
+          new Set(
+            (teacherAssignments ?? [])
+              .map((item) => item.class_id)
+              .filter(Boolean),
+          ),
+        );
+
+        assignedAcademicYearIds = Array.from(
+          new Set(
+            (teacherAssignments ?? [])
+              .map((item) => item.academic_year_id)
+              .filter(Boolean),
+          ),
+        );
+
+        setTeacherAssignedClassIds(assignedClassIds);
+        setTeacherAssignedAcademicYearIds(assignedAcademicYearIds);
+      } else {
+        setTeacherAssignedClassIds([]);
+        setTeacherAssignedAcademicYearIds([]);
+      }
+
+      const [yearsResult, classesResult] = await Promise.all([
         supabase
           .from("academic_years")
-          .select(
-            "id, name, is_active",
-          )
-          .eq(
-            "school_id",
-            currentSchoolId,
-          )
-          .order("name", {
-            ascending: false,
-          }),
+          .select("id, name, is_active")
+          .eq("school_id", currentSchoolId)
+          .order("name", { ascending: false }),
 
         supabase
           .from("classes")
-          .select(
-            "id, name, academic_year_id, is_active",
-          )
-          .eq(
-            "school_id",
-            currentSchoolId,
-          )
-          .eq(
-            "is_active",
-            true,
-          )
+          .select("id, name, academic_year_id, is_active")
+          .eq("school_id", currentSchoolId)
+          .eq("is_active", true)
           .order("name"),
       ]);
 
       if (yearsResult.error) {
         setError(
-          getSupabaseErrorMessage(
-            yearsResult.error,
-          ),
+          getSupabaseErrorMessage(yearsResult.error),
         );
         setLoading(false);
         return;
@@ -298,54 +363,51 @@ export default function Timetable() {
 
       if (classesResult.error) {
         setError(
-          getSupabaseErrorMessage(
-            classesResult.error,
-          ),
+          getSupabaseErrorMessage(classesResult.error),
         );
         setLoading(false);
         return;
       }
 
-      const years =
-        (yearsResult.data ??
-          []) as AcademicYear[];
+      const allYears = (yearsResult.data ?? []) as AcademicYear[];
+      const allClasses = (classesResult.data ?? []) as SchoolClass[];
 
-      const loadedClasses =
-        (classesResult.data ??
-          []) as SchoolClass[];
+      const loadedYears = currentIsTeacher
+        ? allYears.filter((year) =>
+            assignedAcademicYearIds.includes(year.id),
+          )
+        : allYears;
 
-      setAcademicYears(
-        years,
-      );
+      const loadedClasses = currentIsTeacher
+        ? allClasses.filter((schoolClass) =>
+            assignedClassIds.includes(schoolClass.id),
+          )
+        : allClasses;
 
-      setClasses(
-        loadedClasses,
-      );
+      setAcademicYears(loadedYears);
+      setClasses(loadedClasses);
 
       const activeYear =
-        years.find(
-          (year) =>
-            year.is_active,
+        loadedYears.find((year) => year.is_active) ??
+        loadedYears.find((year) =>
+          loadedClasses.some(
+            (schoolClass) => schoolClass.academic_year_id === year.id,
+          ),
         ) ??
-        years[0];
+        loadedYears[0];
 
       if (activeYear) {
-        setSelectedAcademicYearId(
-          activeYear.id,
+        setSelectedAcademicYearId(activeYear.id);
+
+        const firstClass = loadedClasses.find(
+          (schoolClass) =>
+            schoolClass.academic_year_id === activeYear.id,
         );
 
-        const firstClass =
-          loadedClasses.find(
-            (schoolClass) =>
-              schoolClass.academic_year_id ===
-              activeYear.id,
-          );
-
-        if (firstClass) {
-          setSelectedClassId(
-            firstClass.id,
-          );
-        }
+        setSelectedClassId(firstClass?.id ?? "");
+      } else {
+        setSelectedAcademicYearId("");
+        setSelectedClassId("");
       }
 
       setLoading(false);
@@ -602,6 +664,8 @@ export default function Timetable() {
     );
   }
 
+  const isTeacher = role === "Teacher";
+
   /*
    * =========================================================
    * AVAILABLE CLASSES
@@ -615,11 +679,15 @@ export default function Timetable() {
           (schoolClass) =>
             schoolClass.academic_year_id ===
               selectedAcademicYearId &&
-            schoolClass.is_active,
+            schoolClass.is_active &&
+            (!isTeacher ||
+              teacherAssignedClassIds.includes(schoolClass.id)),
         ),
       [
         classes,
         selectedAcademicYearId,
+        isTeacher,
+        teacherAssignedClassIds,
       ],
     );
 
@@ -739,6 +807,8 @@ export default function Timetable() {
    */
 
   function openCreate() {
+    if (isTeacher) return;
+
     setEditingEntry(null);
     setForm(
       emptyForm(),
@@ -756,6 +826,8 @@ export default function Timetable() {
   function openEdit(
     entry: TimetableEntry,
   ) {
+    if (isTeacher) return;
+
     setEditingEntry(
       entry,
     );
@@ -846,6 +918,11 @@ export default function Timetable() {
     event: React.FormEvent<HTMLFormElement>,
   ) {
     event.preventDefault();
+
+    if (isTeacher) {
+      setError("Teachers can view the timetable but cannot create or edit lessons.");
+      return;
+    }
 
     setError("");
 
@@ -991,7 +1068,7 @@ export default function Timetable() {
   async function deleteEntry(
     entry: TimetableEntry,
   ) {
-    if (!schoolId) {
+    if (isTeacher || !schoolId) {
       return;
     }
 
@@ -1135,7 +1212,9 @@ export default function Timetable() {
           </h1>
 
           <p className="mt-1 text-sm text-slate-500">
-            Manage the weekly timetable for each class.
+            {isTeacher
+              ? "View the timetable assigned to your teaching responsibilities."
+              : "Manage the weekly timetable for each class."}
           </p>
         </div>
 
@@ -1158,22 +1237,17 @@ export default function Timetable() {
             Print Timetable
           </button>
 
-          <button
-            type="button"
-            onClick={
-              openCreate
-            }
-            disabled={
-              !selectedClassId
-            }
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <Plus
-              size={16}
-            />
-
-            Add Lesson
-          </button>
+          {!isTeacher && (
+            <button
+              type="button"
+              onClick={openCreate}
+              disabled={!selectedClassId}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Plus size={16} />
+              Add Lesson
+            </button>
+          )}
 
         </div>
 
@@ -1193,17 +1267,23 @@ export default function Timetable() {
           onChange={
             handleAcademicYearChange
           }
-          options={academicYears.map(
-            (year) => ({
-              value: year.id,
-              label:
-                `${year.name}${
-                  year.is_active
-                    ? " • Active"
-                    : ""
-                }`,
-            }),
-          )}
+          options={academicYears
+            .filter(
+              (year) =>
+                !isTeacher ||
+                teacherAssignedAcademicYearIds.includes(year.id),
+            )
+            .map(
+              (year) => ({
+                value: year.id,
+                label:
+                  `${year.name}${
+                    year.is_active
+                      ? " • Active"
+                      : ""
+                  }`,
+              }),
+            )}
         />
 
         <SelectField
@@ -1228,6 +1308,15 @@ export default function Timetable() {
         />
 
       </div>
+
+      {isTeacher && (
+        <div className="mt-4 rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-3">
+          <p className="text-sm font-medium text-indigo-900">Teaching view</p>
+          <p className="mt-1 text-xs text-indigo-700">
+            The timetable is prepared by the Head of Academics. You can view the lessons assigned to your classes, but you cannot create, edit, or delete timetable entries.
+          </p>
+        </div>
+      )}
 
       {/* ===================================================
           ERROR
@@ -1350,7 +1439,8 @@ export default function Timetable() {
 
                                 </div>
 
-                                <div className="flex gap-1 opacity-0 transition group-hover:opacity-100">
+                                {!isTeacher && (
+                                  <div className="flex gap-1 opacity-0 transition group-hover:opacity-100">
 
                                   <button
                                     type="button"
@@ -1386,7 +1476,8 @@ export default function Timetable() {
                                     />
                                   </button>
 
-                                </div>
+                                  </div>
+                                )}
 
                               </div>
 
@@ -1412,7 +1503,7 @@ export default function Timetable() {
           ADD / EDIT MODAL
       =================================================== */}
 
-      {showModal && (
+      {!isTeacher && showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
 
           <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white shadow-2xl">

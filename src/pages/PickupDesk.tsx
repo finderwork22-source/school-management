@@ -512,21 +512,21 @@ export default function PickupDesk() {
   }
 
   return (
-    <div className="mx-auto max-w-[1400px]">
+    <div className="mx-auto w-full min-w-0 max-w-[1400px]">
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center gap-2">
+      <div className="mb-4 sm:mb-6">
+        <div className="flex min-w-0 items-center gap-2">
           <ShieldCheck
             size={20}
             className="text-indigo-600"
           />
 
-          <h1 className="text-xl font-semibold text-slate-900">
+          <h1 className="min-w-0 truncate text-lg font-semibold text-slate-900 sm:text-xl">
             Pickup Desk
           </h1>
         </div>
 
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500 sm:text-sm">
           Verify authorized persons before releasing
           students.
         </p>
@@ -534,13 +534,13 @@ export default function PickupDesk() {
 
       {/* Success message */}
       {success && (
-        <div className="mb-5 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+        <div className="mb-4 flex min-w-0 items-start gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-3 sm:mb-5 sm:items-center sm:gap-3 sm:px-4">
           <CheckCircle2
             size={18}
             className="shrink-0 text-emerald-600"
           />
 
-          <p className="text-sm font-medium text-emerald-700">
+          <p className="min-w-0 break-words text-sm font-medium text-emerald-700">
             {success}
           </p>
         </div>
@@ -548,7 +548,7 @@ export default function PickupDesk() {
 
       {/* Error message */}
       {error && (
-        <div className="mb-5 rounded-xl border border-red-100 bg-red-50 px-4 py-3">
+        <div className="mb-4 rounded-xl border border-red-100 bg-red-50 px-3 py-3 sm:mb-5 sm:px-4">
           <p className="text-sm text-red-600">
             {error}
           </p>
@@ -556,7 +556,7 @@ export default function PickupDesk() {
       )}
 
       {/* Statistics */}
-      <div className="mb-5 grid gap-4 sm:grid-cols-3">
+      <div className="mb-4 grid grid-cols-2 gap-2.5 sm:mb-5 sm:grid-cols-3 sm:gap-4">
         <StatCard
           label="Students"
           value={students.length}
@@ -579,15 +579,15 @@ export default function PickupDesk() {
       </div>
 
       {/* Main area */}
-      <div className="grid gap-5 xl:grid-cols-[1fr_1.2fr]">
+      <div className="grid min-w-0 gap-4 lg:grid-cols-2 lg:gap-5 xl:grid-cols-[1fr_1.2fr]">
         {/* Student selection */}
-        <Card className="overflow-hidden">
-          <div className="border-b border-slate-200 p-5">
+        <Card className="min-w-0 overflow-hidden">
+          <div className="border-b border-slate-200 p-3.5 sm:p-5">
             <h2 className="text-sm font-semibold text-slate-900">
               Select student
             </h2>
 
-            <div className="relative mt-4">
+            <div className="relative mt-3.5 sm:mt-4">
               <Search
                 size={17}
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
@@ -601,19 +601,19 @@ export default function PickupDesk() {
                   )
                 }
                 placeholder="Search student or ID..."
-                className="h-10 w-full rounded-lg border border-slate-200 pl-10 pr-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                className="h-11 w-full rounded-lg border border-slate-200 pl-10 pr-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
               />
             </div>
           </div>
 
-          <div className="max-h-[520px] overflow-y-auto">
+          <div className="max-h-[52vh] overflow-y-auto overscroll-contain sm:max-h-[520px]">
             {loading ? (
-              <div className="p-8 text-center text-sm text-slate-500">
+              <div className="p-6 text-center text-sm text-slate-500 sm:p-8">
                 Loading students...
               </div>
             ) : filteredStudents.length ===
               0 ? (
-              <div className="p-8 text-center">
+              <div className="p-6 text-center sm:p-8">
                 <UserRound
                   size={22}
                   className="mx-auto text-slate-300"
@@ -646,7 +646,7 @@ export default function PickupDesk() {
                           )
                         }
                         className={[
-                          "flex w-full items-center gap-3 px-5 py-4 text-left transition",
+                          "flex w-full items-center gap-2.5 px-3.5 py-3.5 text-left transition sm:gap-3 sm:px-5 sm:py-4",
                           alreadyReleased
                             ? "bg-emerald-50/50"
                             : selected
@@ -659,11 +659,11 @@ export default function PickupDesk() {
                         />
 
                         <div className="min-w-0 flex-1">
-                          <div className="text-sm font-medium text-slate-900">
+                          <div className="min-w-0 break-words text-sm font-medium text-slate-900">
                             {student.name}
                           </div>
 
-                          <div className="mt-1 text-xs text-slate-500">
+                          <div className="mt-1 break-words text-xs leading-4 text-slate-500">
                             {student.studentId}{" "}
                             •{" "}
                             {student.className}
@@ -671,7 +671,7 @@ export default function PickupDesk() {
                         </div>
 
                         {alreadyReleased && (
-                          <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-medium text-emerald-700">
+                          <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-medium text-emerald-700 sm:px-2.5 sm:text-[11px]">
                             Released
                           </span>
                         )}
@@ -693,9 +693,9 @@ export default function PickupDesk() {
         </Card>
 
         {/* Release panel */}
-        <Card className="p-6">
+        <Card className="min-w-0 p-3.5 sm:p-6">
           {!selectedStudent ? (
-            <div className="flex min-h-[400px] flex-col items-center justify-center text-center">
+            <div className="flex min-h-[280px] flex-col items-center justify-center px-2 text-center sm:min-h-[400px]">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
                 <ShieldCheck size={22} />
               </div>
@@ -711,9 +711,9 @@ export default function PickupDesk() {
             </div>
           ) : (
             <>
-              <div className="flex items-center justify-between">
+              <div className="flex min-w-0 items-start justify-between gap-2.5 sm:items-center sm:gap-3">
                 <div>
-                  <h2 className="text-base font-semibold text-slate-900">
+                  <h2 className="min-w-0 break-words text-base font-semibold leading-5 text-slate-900">
                     {selectedStudent.name}
                   </h2>
 
@@ -729,7 +729,7 @@ export default function PickupDesk() {
                   onClick={
                     clearSelectedStudent
                   }
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
                 >
                   <X size={17} />
                 </button>
@@ -738,8 +738,8 @@ export default function PickupDesk() {
               {todayPickupIds.includes(
                 selectedStudent.id,
               ) ? (
-                <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-5">
-                  <div className="flex items-center gap-3">
+                <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3.5 sm:mt-6 sm:p-5">
+                  <div className="flex items-start gap-3">
                     <CheckCircle2
                       size={22}
                       className="text-emerald-600"
@@ -759,8 +759,8 @@ export default function PickupDesk() {
                 </div>
               ) : (
                 <>
-                  <div className="mt-6">
-                    <div className="flex items-center justify-between">
+                  <div className="mt-5 sm:mt-6">
+                    <div className="flex min-w-0 items-start justify-between gap-2.5 sm:items-center sm:gap-3">
                       <h3 className="text-sm font-semibold text-slate-900">
                         Authorized pickup persons
                       </h3>
@@ -794,7 +794,7 @@ export default function PickupDesk() {
                         </p>
                       </div>
                     ) : (
-                      <div className="mt-4 space-y-2">
+                      <div className="mt-3.5 min-w-0 space-y-2 sm:mt-4">
                         {pickupPersons.map(
                           (person) => {
                             const selected =
@@ -811,7 +811,7 @@ export default function PickupDesk() {
                                   )
                                 }
                                 className={[
-                                  "flex w-full items-center gap-3 rounded-xl border p-4 text-left transition",
+                                  "flex w-full min-w-0 items-center gap-2.5 rounded-xl border p-3.5 text-left transition sm:gap-3 sm:p-4",
                                   selected
                                     ? "border-indigo-300 bg-indigo-50"
                                     : "border-slate-200 hover:border-slate-300 hover:bg-slate-50",
@@ -824,17 +824,17 @@ export default function PickupDesk() {
                                 />
 
                                 <div className="min-w-0 flex-1">
-                                  <div className="text-sm font-medium text-slate-900">
+                                  <div className="min-w-0 break-words text-sm font-medium text-slate-900">
                                     {person.name}
                                   </div>
 
-                                  <div className="mt-1 text-xs text-slate-500">
+                                  <div className="mt-1 break-words text-xs leading-4 text-slate-500">
                                     {
                                       person.relationship
                                     }
                                   </div>
 
-                                  <div className="mt-1 flex items-center gap-1 text-xs text-slate-500">
+                                  <div className="mt-1 flex min-w-0 items-center gap-1 text-xs text-slate-500">
                                     <Phone
                                       size={11}
                                     />
@@ -860,19 +860,19 @@ export default function PickupDesk() {
                   </div>
 
                   {selectedPerson && (
-                    <div className="mt-6 border-t border-slate-200 pt-5">
-                      <div className="rounded-xl bg-indigo-50 p-4">
+                    <div className="mt-4 border-t border-slate-200 pt-4 sm:mt-6 sm:pt-5">
+                      <div className="rounded-xl bg-indigo-50 p-3.5 sm:p-4">
                         <div className="text-[11px] font-semibold uppercase tracking-wide text-indigo-500">
                           Selected pickup person
                         </div>
 
-                        <div className="mt-1 text-sm font-semibold text-slate-900">
+                        <div className="mt-1 break-words text-sm font-semibold text-slate-900">
                           {
                             selectedPerson.name
                           }
                         </div>
 
-                        <div className="mt-1 text-xs text-slate-600">
+                        <div className="mt-1 break-words text-xs text-slate-600">
                           {
                             selectedPerson.relationship
                           }{" "}
@@ -896,7 +896,7 @@ export default function PickupDesk() {
                         }
                         rows={3}
                         placeholder="Optional pickup notes..."
-                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                        className="min-h-[88px] w-full resize-y rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                       />
 
                       <Button
@@ -918,9 +918,9 @@ export default function PickupDesk() {
       </div>
 
       {/* Recent history */}
-      <Card className="mt-5 overflow-hidden">
-        <div className="border-b border-slate-200 px-5 py-4">
-          <div className="flex items-center gap-2">
+      <Card className="mt-4 min-w-0 overflow-hidden sm:mt-5">
+        <div className="border-b border-slate-200 px-3.5 py-3.5 sm:px-5 sm:py-4">
+          <div className="flex min-w-0 items-center gap-2">
             <Clock
               size={17}
               className="text-indigo-600"
@@ -939,7 +939,7 @@ export default function PickupDesk() {
         </div>
 
         {pickupHistory.length === 0 ? (
-          <div className="p-8 text-center">
+          <div className="p-6 text-center sm:p-8">
             <p className="text-sm text-slate-500">
               No pickup records yet.
             </p>
@@ -950,14 +950,14 @@ export default function PickupDesk() {
               (record) => (
                 <div
                   key={record.id}
-                  className="flex flex-col gap-2 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex min-w-0 flex-col gap-2 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5"
                 >
                   <div>
-                    <div className="text-sm font-medium text-slate-900">
+                    <div className="min-w-0 break-words text-sm font-medium text-slate-900">
                       {record.studentName}
                     </div>
 
-                    <div className="mt-1 text-xs text-slate-500">
+                    <div className="mt-1 break-words text-xs leading-4 text-slate-500">
                       Released to{" "}
                       <span className="font-medium text-slate-700">
                         {
@@ -971,7 +971,7 @@ export default function PickupDesk() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 text-xs text-slate-500">
+                  <div className="flex min-w-0 items-start gap-2 text-xs leading-4 text-slate-500 sm:items-center">
                     <Clock size={13} />
 
                     {formatDateTime(
@@ -989,10 +989,10 @@ export default function PickupDesk() {
       {showConfirm &&
         selectedStudent &&
         selectedPerson && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
-            <div className="w-full max-w-md rounded-2xl bg-white shadow-xl">
-              <div className="border-b border-slate-200 px-6 py-5">
-                <h2 className="text-base font-semibold text-slate-900">
+          <div className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-slate-900/40 p-0 sm:items-center sm:p-4">
+            <div className="max-h-[94vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-white shadow-xl sm:max-h-[90vh] sm:rounded-2xl">
+              <div className="border-b border-slate-200 px-4 py-4 sm:px-6 sm:py-5">
+                <h2 className="min-w-0 break-words text-base font-semibold leading-5 text-slate-900">
                   Confirm child release
                 </h2>
 
@@ -1002,19 +1002,19 @@ export default function PickupDesk() {
                 </p>
               </div>
 
-              <div className="space-y-4 p-6">
+              <div className="space-y-3.5 p-3.5 sm:space-y-4 sm:p-6">
                 <div className="rounded-xl bg-slate-50 p-4">
                   <div className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
                     Student
                   </div>
 
-                  <div className="mt-1 text-sm font-semibold text-slate-900">
+                  <div className="mt-1 break-words text-sm font-semibold text-slate-900">
                     {
                       selectedStudent.name
                     }
                   </div>
 
-                  <div className="mt-1 text-xs text-slate-500">
+                  <div className="mt-1 break-words text-xs leading-4 text-slate-500">
                     {
                       selectedStudent.studentId
                     }{" "}
@@ -1030,19 +1030,19 @@ export default function PickupDesk() {
                     Authorized person
                   </div>
 
-                  <div className="mt-1 text-sm font-semibold text-slate-900">
+                  <div className="mt-1 break-words text-sm font-semibold text-slate-900">
                     {
                       selectedPerson.name
                     }
                   </div>
 
-                  <div className="mt-1 text-xs text-slate-600">
+                  <div className="mt-1 break-words text-xs text-slate-600">
                     {
                       selectedPerson.relationship
                     }
                   </div>
 
-                  <div className="mt-1 text-xs text-slate-600">
+                  <div className="mt-1 break-words text-xs text-slate-600">
                     {
                       selectedPerson.phone
                     }
@@ -1059,9 +1059,10 @@ export default function PickupDesk() {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 border-t border-slate-200 px-6 py-4">
+              <div className="flex flex-col-reverse gap-2 border-t border-slate-200 px-3.5 py-3.5 sm:flex-row sm:justify-end sm:px-6 sm:py-4">
                 <Button
                   variant="secondary"
+                  className="w-full sm:w-auto"
                   onClick={() =>
                     setShowConfirm(false)
                   }
@@ -1071,6 +1072,7 @@ export default function PickupDesk() {
                 </Button>
 
                 <Button
+                  className="w-full sm:w-auto"
                   onClick={confirmRelease}
                   disabled={releasing}
                 >
@@ -1096,19 +1098,19 @@ function StatCard({
   icon: typeof Users;
 }) {
   return (
-    <Card className="p-5">
-      <div className="flex items-center justify-between">
+    <Card className="min-w-0 p-3.5 sm:p-5">
+      <div className="flex min-w-0 items-start justify-between gap-2.5 sm:items-center sm:gap-3">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+          <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400 sm:text-xs">
             {label}
           </p>
 
-          <p className="mt-2 text-2xl font-semibold text-slate-900">
+          <p className="mt-1.5 text-xl font-semibold text-slate-900 sm:mt-2 sm:text-2xl">
             {value}
           </p>
         </div>
 
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 sm:h-10 sm:w-10">
           <Icon size={19} />
         </div>
       </div>
