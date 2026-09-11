@@ -768,26 +768,39 @@ export default function ClassesSubjects() {
       )}
 
       {academicYears.length === 0 && (
-        <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mb-5 rounded-xl border border-slate-200 bg-slate-50 px-5 py-4">
+          {isTeacher ? (
             <div>
-              <p className="text-sm font-semibold text-amber-900">
-                Set up an academic year first
+              <p className="text-sm font-semibold text-slate-800">
+                No academic year available yet
               </p>
-              <p className="mt-1 text-sm text-amber-700">
-                Create an academic year before adding classes or assigning
-                curriculum.
+              <p className="mt-1 text-sm leading-6 text-slate-500">
+                Please wait until the Head of Academics adds an academic year
+                for your school. Your classes and subjects will appear here
+                once they are assigned to you.
               </p>
             </div>
+          ) : (
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-amber-900">
+                  Set up an academic year first
+                </p>
+                <p className="mt-1 text-sm text-amber-700">
+                  Create an academic year before adding classes or assigning
+                  curriculum.
+                </p>
+              </div>
 
-            <button
-              type="button"
-              onClick={() => navigate("/settings/academic")}
-              className="inline-flex h-9 items-center justify-center rounded-lg bg-amber-600 px-3 text-sm font-medium text-white hover:bg-amber-700"
-            >
-              Create academic year
-            </button>
-          </div>
+              <button
+                type="button"
+                onClick={() => navigate("/settings/academic")}
+                className="inline-flex h-9 items-center justify-center rounded-lg bg-amber-600 px-3 text-sm font-medium text-white hover:bg-amber-700"
+              >
+                Create academic year
+              </button>
+            </div>
+          )}
         </div>
       )}
 
