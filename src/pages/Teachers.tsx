@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Copy,
   Edit3,
   ImagePlus,
-  KeyRound,
   Mail,
   Phone,
   Plus,
@@ -13,7 +11,6 @@ import {
   X,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
-import { resetTeacherPassword } from "../lib/adminPasswordReset";
 
 interface Teacher {
   id: string;
@@ -146,16 +143,6 @@ export default function Teachers() {
   const [saving, setSaving] =
     useState(false);
 
-  const [resettingTeacherId, setResettingTeacherId] =
-    useState<string | null>(null);
-
-  const [resetResult, setResetResult] = useState<{
-    teacherName: string;
-    password: string;
-  } | null>(null);
-
-  const [passwordCopied, setPasswordCopied] =
-    useState(false);
 
   /*
    * Load the school associated with the
@@ -715,72 +702,6 @@ export default function Teachers() {
   /*
    * Toggle teacher status.
    */
-  async function handleResetPassword(
-    teacher: Teacher,
-  ) {
-    if (!schoolId) {
-      setError("School information is not available.");
-      return;
-    }
-
-    if (!teacher.email?.trim()) {
-      setError(
-        "This teacher does not have an email address, so a login password cannot be reset from here.",
-      );
-      return;
-    }
-
-    const confirmed = window.confirm(
-      `Reset the password for ${getFullName(teacher)}? A new temporary password will be generated.`,
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    setResettingTeacherId(teacher.id);
-    setPasswordCopied(false);
-    setError("");
-
-    const { data, error: resetError } =
-      await resetTeacherPassword(
-        schoolId,
-        teacher.id,
-      );
-
-    setResettingTeacherId(null);
-
-    if (resetError || !data) {
-      setError(
-        resetError?.message ??
-          "Unable to reset this teacher's password.",
-      );
-      return;
-    }
-
-    setResetResult({
-      teacherName: getFullName(teacher),
-      password: data.temporaryPassword,
-    });
-  }
-
-  async function copyTemporaryPassword() {
-    if (!resetResult?.password) {
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(
-        resetResult.password,
-      );
-      setPasswordCopied(true);
-    } catch {
-      setError(
-        "The temporary password could not be copied automatically.",
-      );
-    }
-  }
-
   async function toggleStatus(
     teacher: Teacher,
   ) {
@@ -1005,22 +926,6 @@ export default function Teachers() {
                           <Edit3 size={14} />
                           Edit
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => void handleResetPassword(teacher)}
-                          disabled={resettingTeacherId === teacher.id || !teacher.email}
-                          title={
-                            teacher.email
-                              ? "Generate a new temporary password"
-                              : "Add an email address before resetting the password"
-                          }
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          <KeyRound size={14} />
-                          {resettingTeacherId === teacher.id
-                            ? "Resetting..."
-                            : "Reset password"}
-                        </button>
                       </div>
                     </td>
                   </tr>
@@ -1124,22 +1029,6 @@ export default function Teachers() {
                 >
                   <Edit3 size={14} />
                   Edit
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void handleResetPassword(teacher)}
-                  disabled={resettingTeacherId === teacher.id || !teacher.email}
-                  title={
-                    teacher.email
-                      ? "Generate a new temporary password"
-                      : "Add an email address before resetting the password"
-                  }
-                  className="inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <KeyRound size={15} />
-                  {resettingTeacherId === teacher.id
-                    ? "Resetting..."
-                    : "Reset password"}
                 </button>
               </div>
             </article>
@@ -1526,71 +1415,6 @@ export default function Teachers() {
 
           </div>
 
-        </div>
-      )}
-
-      {resetResult && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/50 p-4">
-          <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl">
-            <div className="border-b border-slate-100 px-5 py-4 sm:px-6">
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
-                  <KeyRound size={18} />
-                </div>
-                <div>
-                  <h2 className="text-base font-semibold text-slate-900">
-                    Temporary password generated
-                  </h2>
-                  <p className="mt-1 text-sm text-slate-500">
-                    {resetResult.teacherName} can use this password to sign in.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-4 p-5 sm:p-6">
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                  Temporary password
-                </p>
-
-                <div className="mt-2 rounded-lg border border-slate-200 bg-white px-3 py-3 font-mono text-sm font-semibold tracking-wide text-slate-900">
-                  {resetResult.password}
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-                <p className="text-sm font-medium text-amber-900">
-                  Give this password to the teacher securely.
-                </p>
-                <p className="mt-1 text-xs leading-5 text-amber-800">
-                  Ask the teacher to change it after signing in. This password is shown here only after the reset.
-                </p>
-              </div>
-
-              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setResetResult(null);
-                    setPasswordCopied(false);
-                  }}
-                  className="w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 sm:w-auto"
-                >
-                  Done
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => void copyTemporaryPassword()}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 sm:w-auto"
-                >
-                  <Copy size={15} />
-                  {passwordCopied ? "Copied" : "Copy password"}
-                </button>
-              </div>
-            </div>
-          </div>
         </div>
       )}
 
