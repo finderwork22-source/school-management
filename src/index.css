@@ -1,5 +1,59 @@
 @import "tailwindcss";
 
+/* ============================================================
+   WISER DESIGN SYSTEM
+============================================================ */
+
+@theme {
+  /* ----------------------------------------------------------
+     Wiser Brand
+  ---------------------------------------------------------- */
+
+  --color-wiser-50: #f5f3ff;
+  --color-wiser-100: #ede9fe;
+  --color-wiser-200: #ddd6fe;
+  --color-wiser-300: #c4b5fd;
+  --color-wiser-400: #a78bfa;
+  --color-wiser-500: #7c3aed;
+  --color-wiser-600: #5b21b6;
+  --color-wiser-700: #4c1590;
+  --color-wiser-800: #431080;
+  --color-wiser-900: #3b0f70;
+
+  /* ----------------------------------------------------------
+     Wiser Neutrals
+  ---------------------------------------------------------- */
+
+  --color-wiser-background: #f8fafc;
+  --color-wiser-surface: #ffffff;
+
+  --color-wiser-text: #0f172a;
+  --color-wiser-text-secondary: #475569;
+  --color-wiser-text-muted: #64748b;
+
+  --color-wiser-border: #e2e8f0;
+
+  /* ----------------------------------------------------------
+     Semantic Colours
+  ---------------------------------------------------------- */
+
+  --color-wiser-success: #16a34a;
+  --color-wiser-success-light: #f0fdf4;
+
+  --color-wiser-warning: #d97706;
+  --color-wiser-warning-light: #fffbeb;
+
+  --color-wiser-danger: #dc2626;
+  --color-wiser-danger-light: #fef2f2;
+
+  --color-wiser-info: #2563eb;
+  --color-wiser-info-light: #eff6ff;
+}
+
+/* ============================================================
+   GLOBAL APPLICATION STYLES
+============================================================ */
+
 :root {
   font-family:
     Inter,
@@ -10,7 +64,7 @@
     "Segoe UI",
     sans-serif;
 
-  color: #111827;
+  color: #0f172a;
   background: #f8fafc;
 
   font-synthesis: none;
@@ -68,7 +122,6 @@ a {
 ::-webkit-scrollbar-thumb:hover {
   background: #9ca3af;
 }
-
 /* ============================================================
    HIGH GATE TIMETABLE
 ============================================================ */

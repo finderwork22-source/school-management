@@ -11,6 +11,7 @@ export const ROLE_ACCESS: Record<UserRole, string[]> = {
   CEO: ["*"],
   Principal: ["*"],
   "Head of Academics": [
+    "/",
     "/profile",
     "/students",
     "/students/:id",
@@ -27,7 +28,6 @@ export const ROLE_ACCESS: Record<UserRole, string[]> = {
   Secretary: [
     "/",
     "/profile",
-    "/admissions",
     "/students",
     "/students/:id",
     "/parents",
@@ -84,7 +84,10 @@ function matchesPath(pattern: string, path: string) {
   return false;
 }
 
-export function canAccessPath(roleValue: string | null | undefined, path: string) {
+export function canAccessPath(
+  roleValue: string | null | undefined,
+  path: string,
+) {
   const role = normalizeRole(roleValue);
   return ROLE_ACCESS[role].some((pattern) => matchesPath(pattern, path));
 }

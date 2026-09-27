@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  FunctionsFetchError,
+  FunctionsHttpError,
+  FunctionsRelayError,
+} from "@supabase/supabase-js";
+import {
   Check,
   ChevronDown,
   MoreHorizontal,
@@ -773,7 +778,34 @@ function InviteUserModal({
     );
 
     if (functionError) {
-      setError(functionError.message || "Unable to send the invitation.");
+      let message = functionError.message || "Unable to send the invitation.";
+
+      if (functionError instanceof FunctionsHttpError) {
+        try {
+          const responseBody = await functionError.context.json();
+          const serverMessage =
+            typeof responseBody?.error === "string"
+              ? responseBody.error
+              : typeof responseBody?.message === "string"
+                ? responseBody.message
+                : "";
+
+          if (serverMessage) {
+            message = `Invitation failed (${functionError.context.status}): ${serverMessage}`;
+          } else {
+            message = `Invitation failed (${functionError.context.status}). Check the Supabase Edge Function logs for details.`;
+          }
+        } catch {
+          message = `Invitation failed (${functionError.context.status}). Check the Supabase Edge Function logs for details.`;
+        }
+      } else if (functionError instanceof FunctionsRelayError) {
+        message = `Supabase relay error: ${functionError.message}`;
+      } else if (functionError instanceof FunctionsFetchError) {
+        message = `Could not reach the invitation service: ${functionError.message}`;
+      }
+
+      console.error("Invite user function error:", functionError);
+      setError(message);
       setSaving(false);
       return;
     }
