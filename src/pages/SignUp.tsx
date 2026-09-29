@@ -3,6 +3,7 @@ import type { FormEvent } from "react";
 import { Eye, EyeOff, LockKeyhole, Mail, User } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
+import WiserLogo from "../assets/wiser-logo-cropped.png";
 import { signUp } from "../lib/auth";
 
 export default function SignUp() {
@@ -55,40 +56,60 @@ export default function SignUp() {
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
-      <div className="hidden flex-1 items-center justify-center bg-indigo-600 p-12 lg:flex">
-        <div className="max-w-md text-white">
-          <div className="text-2xl font-bold">
-            School<span className="text-indigo-200">OS</span>
+    <div className="min-h-screen bg-wiser-background lg:grid lg:grid-cols-[minmax(0,1fr)_520px]">
+      {/* Brand panel */}
+      <section className="hidden min-h-screen bg-wiser-900 px-10 py-10 text-white lg:flex lg:items-center lg:justify-center xl:px-16">
+        <div className="w-full max-w-xl">
+          <div className="inline-flex h-16 w-60 items-center overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-white/20">
+            <img
+              src={WiserLogo}
+              alt="WISE"
+              className="h-auto w-[180px]"
+            />
           </div>
 
-          <h1 className="mt-10 text-4xl font-semibold leading-tight">
-            Start managing your school smarter.
-          </h1>
+          <div className="mt-14 max-w-lg">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-wiser-200">
+              School management
+            </p>
 
-          <p className="mt-5 text-base leading-7 text-indigo-100">
-            Create your school workspace and bring students,
-            teachers, academics and administration together.
-          </p>
-        </div>
-      </div>
-
-      <div className="flex w-full items-center justify-center p-6 lg:w-[520px]">
-        <div className="w-full max-w-sm">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
-              Create your account
+            <h1 className="mt-5 text-4xl font-semibold leading-tight tracking-tight xl:text-5xl">
+              Start managing your school smarter.
             </h1>
 
-            <p className="mt-2 text-sm text-slate-500">
+            <p className="mt-6 max-w-lg text-base leading-7 text-wiser-100">
+              Create your WISE school workspace and bring students, teachers,
+              academics and administration together in one place.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Form panel */}
+      <main className="flex min-h-screen w-full items-center justify-center px-5 py-8 sm:px-8 lg:px-10">
+        <div className="w-full max-w-sm">
+          {/* Mobile logo */}
+          <div className="mb-8 lg:hidden">
+            <div className="h-14 w-52 overflow-hidden rounded-xl bg-white ring-1 ring-wiser-border">
+              <img
+                src={WiserLogo}
+                alt="WISE"
+                className="h-auto w-[170px]"
+              />
+            </div>
+          </div>
+
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight text-wiser-text">
+              Create your WISE account
+            </h1>
+
+            <p className="mt-2 text-sm text-wiser-text-secondary">
               Set up your administrator account to get started.
             </p>
           </div>
 
-          <form
-            onSubmit={handleSubmit}
-            className="mt-8 space-y-5"
-          >
+          <form onSubmit={handleSubmit} className="mt-8 space-y-5">
             {error && (
               <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                 {error}
@@ -114,64 +135,67 @@ export default function SignUp() {
             </div>
 
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">
+              <label
+                htmlFor="signup-email"
+                className="mb-1.5 block text-sm font-medium text-wiser-text"
+              >
                 Email
               </label>
 
               <div className="relative">
                 <Mail
                   size={17}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  aria-hidden="true"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-wiser-text-muted"
                 />
 
                 <input
+                  id="signup-email"
                   type="email"
                   value={email}
-                  onChange={(event) =>
-                    setEmail(event.target.value)
-                  }
+                  onChange={(event) => setEmail(event.target.value)}
                   placeholder="you@school.com"
+                  autoComplete="email"
                   required
-                  className="h-11 w-full rounded-lg border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  className="h-11 w-full rounded-lg border border-wiser-border bg-white pl-10 pr-4 text-sm text-wiser-text outline-none transition placeholder:text-slate-400 focus:border-wiser-500 focus:ring-2 focus:ring-wiser-100"
                 />
               </div>
             </div>
 
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">
+              <label
+                htmlFor="signup-password"
+                className="mb-1.5 block text-sm font-medium text-wiser-text"
+              >
                 Password
               </label>
 
               <div className="relative">
                 <LockKeyhole
                   size={17}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  aria-hidden="true"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-wiser-text-muted"
                 />
 
                 <input
+                  id="signup-password"
                   type={showPassword ? "text" : "password"}
                   value={password}
-                  onChange={(event) =>
-                    setPassword(event.target.value)
-                  }
+                  onChange={(event) => setPassword(event.target.value)}
                   placeholder="At least 6 characters"
+                  autoComplete="new-password"
                   minLength={6}
                   required
-                  className="h-11 w-full rounded-lg border border-slate-200 bg-white pl-10 pr-11 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+                  className="h-11 w-full rounded-lg border border-wiser-border bg-white pl-10 pr-11 text-sm text-wiser-text outline-none transition placeholder:text-slate-400 focus:border-wiser-500 focus:ring-2 focus:ring-wiser-100"
                 />
 
                 <button
                   type="button"
-                  onClick={() =>
-                    setShowPassword((value) => !value)
-                  }
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+                  onClick={() => setShowPassword((value) => !value)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  className="absolute right-2.5 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-wiser-text-muted transition hover:bg-wiser-50 hover:text-wiser-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wiser-500 focus-visible:ring-offset-1"
                 >
-                  {showPassword ? (
-                    <EyeOff size={17} />
-                  ) : (
-                    <Eye size={17} />
-                  )}
+                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
                 </button>
               </div>
             </div>
@@ -179,23 +203,23 @@ export default function SignUp() {
             <button
               type="submit"
               disabled={loading}
-              className="flex h-11 w-full items-center justify-center rounded-lg bg-indigo-600 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex h-11 w-full items-center justify-center rounded-lg bg-wiser-600 text-sm font-semibold text-white transition hover:bg-wiser-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wiser-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? "Creating account..." : "Create account"}
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-slate-500">
+          <p className="pt-1 mt-6 text-center text-sm text-wiser-text-secondary">
             Already have an account?{" "}
             <Link
               to="/login"
-              className="font-medium text-indigo-600 hover:text-indigo-700"
+              className="font-medium text-wiser-600 transition hover:text-wiser-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wiser-500 focus-visible:ring-offset-2"
             >
               Sign in
             </Link>
           </p>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
@@ -215,22 +239,24 @@ function Field({
 }) {
   return (
     <div>
-      <label className="mb-1.5 block text-sm font-medium text-slate-700">
+      <label className="mb-1.5 block text-sm font-medium text-wiser-text">
         {label}
       </label>
 
       <div className="relative">
         <User
           size={16}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+          aria-hidden="true"
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-wiser-text-muted"
         />
 
         <input
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
+          autoComplete={label === "First name" ? "given-name" : "family-name"}
           required={required}
-          className="h-11 w-full rounded-lg border border-slate-200 bg-white pl-10 pr-3 text-sm outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+          className="h-11 w-full rounded-lg border border-wiser-border bg-white pl-10 pr-3 text-sm text-wiser-text outline-none transition placeholder:text-slate-400 focus:border-wiser-500 focus:ring-2 focus:ring-wiser-100"
         />
       </div>
     </div>
