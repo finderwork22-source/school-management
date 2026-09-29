@@ -55,6 +55,13 @@ type NavigationSection = {
 const navigation: NavigationSection[] = [
   {
     label: "Overview",
+    allowedRoles: [
+      "Owner",
+      "Principal",
+      "Head of Academics",
+      "Secretary",
+      "Teacher",
+    ],
     items: [
       {
         label: "Dashboard",
@@ -216,6 +223,13 @@ const navigation: NavigationSection[] = [
 
   {
     label: "Communication",
+    allowedRoles: [
+      "Owner",
+      "Principal",
+      "Head of Academics",
+      "Secretary",
+      "Teacher",
+    ],
     items: [
       {
         label: "Announcements",
@@ -275,7 +289,6 @@ function Sidebar({
               className="block h-auto w-[85px]"
             />
           </div>
-          <div className="-mt-1 text-[11px] leading-4 text-wiser-text-muted">School Management</div>
         </div>
 
         <button
@@ -290,8 +303,6 @@ function Sidebar({
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-5">
         {navigation.map((section) => {
-          // Parent-specific navigation must only be shown to Parent users.
-          // Route-level access is still enforced separately by canAccessPath.
           if (
             section.allowedRoles &&
             !section.allowedRoles.includes(role)
@@ -512,8 +523,55 @@ function Header({ onOpenNavigation }: { onOpenNavigation: () => void }) {
 
   const notificationsRef = useRef<HTMLDivElement | null>(null);
 
-  const firstName = user?.user_metadata?.first_name ?? "";
-  const lastName = user?.user_metadata?.last_name ?? "";
+  const metadataFirstName = user?.user_metadata?.first_name ?? "";
+  const metadataLastName = user?.user_metadata?.last_name ?? "";
+
+  const [parentFirstName, setParentFirstName] = useState("");
+  const [parentLastName, setParentLastName] = useState("");
+
+  useEffect(() => {
+    if (role !== "Parent") {
+      setParentFirstName("");
+      setParentLastName("");
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadParentIdentity() {
+      const { data, error } = await supabase.rpc("get_my_parent_membership");
+
+      if (cancelled) return;
+
+      if (error) {
+        console.error("Failed to load parent identity:", error);
+        return;
+      }
+
+      const identity = data as {
+        first_name?: string | null;
+        last_name?: string | null;
+      } | null;
+
+      setParentFirstName(identity?.first_name?.trim() ?? "");
+      setParentLastName(identity?.last_name?.trim() ?? "");
+    }
+
+    void loadParentIdentity();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [role]);
+
+  const firstName =
+    role === "Parent"
+      ? parentFirstName || metadataFirstName
+      : metadataFirstName;
+  const lastName =
+    role === "Parent"
+      ? parentLastName || metadataLastName
+      : metadataLastName;
 
   const fullName = `${firstName} ${lastName}`.trim() || "School Admin";
 

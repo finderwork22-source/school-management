@@ -43,13 +43,17 @@ export async function signUp({
   lastName: string;
 }) {
   return supabase.auth.signUp({
-    email: email.trim(),
+    email,
     password,
     options: {
       data: {
-        first_name: firstName.trim(),
-        last_name: lastName.trim(),
+        first_name: firstName,
+        last_name: lastName,
       },
+
+      // New school accounts should continue directly
+      // to the school onboarding page after email confirmation.
+      emailRedirectTo: `${window.location.origin}/setup-school`,
     },
   });
 }

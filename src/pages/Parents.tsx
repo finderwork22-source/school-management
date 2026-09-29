@@ -12,6 +12,8 @@ import {
   Loader2,
   Send,
   CheckCircle2,
+  Edit3,
+  Save,
 } from "lucide-react";
 
 import { useSchool } from "../context/SchoolContext";
@@ -21,6 +23,7 @@ import {
   getParents,
   getStudentsForParent,
   createParent,
+  updateParent,
   type Parent,
   type CreateParentChild,
 } from "../lib/parents";
@@ -43,6 +46,8 @@ export default function Parents() {
   const [selectedParent, setSelectedParent] = useState<Parent | null>(null);
 
   const [showAddParent, setShowAddParent] = useState(false);
+
+  const [editingParent, setEditingParent] = useState<Parent | null>(null);
 
   const [invitingParentId, setInvitingParentId] = useState<string | null>(null);
 
@@ -392,6 +397,28 @@ export default function Parents() {
         <ParentDetails
           parent={selectedParent}
           onClose={() => setSelectedParent(null)}
+          onEdit={() => setEditingParent(selectedParent)}
+        />
+      )}
+
+      {editingParent && school && (
+        <EditParentModal
+          parent={editingParent}
+          schoolId={school.id}
+          onClose={() => setEditingParent(null)}
+          onSaved={(updatedParent) => {
+            setParents((current) =>
+              current.map((parent) =>
+                parent.id === updatedParent.id
+                  ? updatedParent
+                  : parent,
+              ),
+            );
+            setSelectedParent(updatedParent);
+            setEditingParent(null);
+            setInviteMessage("");
+            setError("");
+          }}
         />
       )}
     </div>
@@ -911,12 +938,195 @@ function Field({
   );
 }
 
+function EditParentModal({
+  parent,
+  schoolId,
+  onClose,
+  onSaved,
+}: {
+  parent: Parent;
+  schoolId: string;
+  onClose: () => void;
+  onSaved: (parent: Parent) => void;
+}) {
+  const [firstName, setFirstName] = useState(parent.name.split(" ")[0] ?? "");
+  const [lastName, setLastName] = useState(
+    parent.name.split(" ").slice(1).join(" "),
+  );
+  const [phone, setPhone] = useState(parent.phone ?? "");
+  const [email, setEmail] = useState(parent.email ?? "");
+  const [address, setAddress] = useState(parent.address ?? "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  const hasAccount = Boolean(parent.user_id);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!firstName.trim()) {
+      setError("First name is required.");
+      return;
+    }
+
+    if (!phone.trim()) {
+      setError("Phone number is required.");
+      return;
+    }
+
+    if (hasAccount && email.trim().toLowerCase() !== (parent.email ?? "").trim().toLowerCase()) {
+      setError(
+        "This parent already has an active WISE account. The email cannot be changed here because it must remain synchronized with the login account.",
+      );
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+
+    const result = await updateParent({
+      schoolId,
+      parentId: parent.id,
+      firstName,
+      lastName,
+      phone,
+      email,
+      address,
+    });
+
+    if (result.error || !result.data) {
+      setError(result.error?.message ?? "Could not update the parent.");
+      setSaving(false);
+      return;
+    }
+
+    onSaved(result.data);
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+      <form
+        onSubmit={handleSubmit}
+        className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white shadow-xl"
+      >
+        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-900">Edit parent</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Update the parent or guardian's contact information.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {error && (
+          <div className="mx-6 mt-5 rounded-lg border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+            {error}
+          </div>
+        )}
+
+        <div className="space-y-6 p-6">
+          <section>
+            <h3 className="text-sm font-semibold text-slate-900">
+              Contact information
+            </h3>
+
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <Field
+                label="First name"
+                value={firstName}
+                onChange={setFirstName}
+                required
+              />
+
+              <Field
+                label="Last name"
+                value={lastName}
+                onChange={setLastName}
+              />
+
+              <Field
+                label="Phone"
+                value={phone}
+                onChange={setPhone}
+                required
+                type="tel"
+              />
+
+              <Field
+                label="Email address"
+                value={email}
+                onChange={setEmail}
+                placeholder="parent@example.com"
+                type="email"
+              />
+
+              <div className="sm:col-span-2">
+                <Field
+                  label="Address"
+                  value={address}
+                  onChange={setAddress}
+                  placeholder="e.g. Kigali, Rwanda"
+                />
+              </div>
+            </div>
+
+            {hasAccount ? (
+              <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-xs leading-5 text-emerald-700">
+                This parent already has a WISE account. Their email is kept
+                locked here so the parent record stays synchronized with the
+                login account.
+              </div>
+            ) : (
+              <div className="mt-4 rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-xs leading-5 text-indigo-700">
+                Add the parent's email address here, save it, then use
+                <strong> Invite Parent</strong> from the parents list to send
+                the WISE invitation.
+              </div>
+            )}
+          </section>
+        </div>
+
+        <div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            className="h-10 rounded-lg px-4 text-sm font-medium text-slate-600 hover:bg-white disabled:opacity-50"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="submit"
+            disabled={saving}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-5 text-sm font-medium text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+            {saving ? "Saving..." : "Save changes"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
 function ParentDetails({
   parent,
   onClose,
+  onEdit,
 }: {
   parent: Parent;
   onClose: () => void;
+  onEdit: () => void;
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
@@ -935,39 +1145,47 @@ function ParentDetails({
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="text-sm font-medium text-slate-500 hover:text-slate-900"
-          >
-            Close
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onEdit}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-sm font-medium text-slate-600 hover:bg-slate-50"
+            >
+              <Edit3 size={14} />
+              Edit
+            </button>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-sm font-medium text-slate-500 hover:text-slate-900"
+            >
+              Close
+            </button>
+          </div>
         </div>
 
         <div className="p-6">
           <div className="grid gap-3 sm:grid-cols-2">
-            {parent.phone && (
-              <div className="rounded-xl border border-slate-200 p-4">
-                <div className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
-                  Phone
-                </div>
-
-                <div className="mt-1 text-sm font-medium text-slate-900">
-                  {parent.phone}
-                </div>
+            <div className="rounded-xl border border-slate-200 p-4">
+              <div className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
+                Phone
               </div>
-            )}
 
-            {parent.email && (
-              <div className="rounded-xl border border-slate-200 p-4">
-                <div className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
-                  Email
-                </div>
-
-                <div className="mt-1 text-sm font-medium text-slate-900">
-                  {parent.email}
-                </div>
+              <div className="mt-1 text-sm font-medium text-slate-900">
+                {parent.phone || "Not provided"}
               </div>
-            )}
+            </div>
+
+            <div className="rounded-xl border border-slate-200 p-4">
+              <div className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
+                Email
+              </div>
+
+              <div className="mt-1 break-words text-sm font-medium text-slate-900">
+                {parent.email || "Not provided"}
+              </div>
+            </div>
           </div>
 
           <div className="mt-6">

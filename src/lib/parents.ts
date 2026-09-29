@@ -9,8 +9,8 @@ export interface ParentChild {
 
 export interface Parent {
   id: string;
-  name: string;
   user_id: string | null;
+  name: string;
   phone: string | null;
   email: string | null;
   address: string | null;
@@ -44,9 +44,9 @@ export async function getParents(
     .from("parents")
     .select(`
       id,
+      user_id,
       first_name,
       last_name,
-      user_id,
       phone,
       email,
       address,
@@ -125,8 +125,8 @@ export async function getParents(
 
       return {
         id: parent.id,
-        name: `${parent.first_name} ${parent.last_name}`,
         user_id: parent.user_id ?? null,
+        name: `${parent.first_name} ${parent.last_name}`,
         phone: parent.phone ?? null,
         email: parent.email ?? null,
         address: parent.address ?? null,
@@ -138,6 +138,59 @@ export async function getParents(
 
   return {
     data: parents,
+    error: null,
+  };
+}
+
+export async function updateParent(
+  input: {
+    schoolId: string;
+    parentId: string;
+    firstName: string;
+    lastName: string;
+    phone: string;
+    email: string;
+    address: string;
+  },
+): Promise<{
+  data: Parent | null;
+  error: Error | null;
+}> {
+  const cleanedEmail = input.email.trim().toLowerCase();
+
+  const { error: updateError } = await supabase
+    .from("parents")
+    .update({
+      first_name: input.firstName.trim(),
+      last_name: input.lastName.trim(),
+      phone: input.phone.trim() || null,
+      email: cleanedEmail || null,
+      address: input.address.trim() || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", input.parentId)
+    .eq("school_id", input.schoolId);
+
+  if (updateError) {
+    return {
+      data: null,
+      error: updateError,
+    };
+  }
+
+  const { data: parents, error: fetchError } = await getParents(
+    input.schoolId,
+  );
+
+  if (fetchError) {
+    return {
+      data: null,
+      error: fetchError,
+    };
+  }
+
+  return {
+    data: parents.find((parent) => parent.id === input.parentId) ?? null,
     error: null,
   };
 }

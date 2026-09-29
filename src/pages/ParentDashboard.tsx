@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
+import { useAuth } from "../context/AuthContext";
+
 import Card from "../components/ui/Card";
 import PageHeader from "../components/ui/PageHeader";
 import { supabase } from "../lib/supabase";
@@ -21,18 +23,9 @@ interface Child {
   className: string;
 }
 
-interface PickupAuthorisation {
-  id: string;
-  studentId: string;
-  studentName: string;
-  studentCode: string;
-  className: string;
-  authorisedName: string;
-  authorisedPhone: string;
-  relationship: string;
-  validFrom: string | null;
-  validUntil: string | null;
-  isActive: boolean;
+interface ParentIdentityRpcRow {
+  first_name?: string | null;
+  last_name?: string | null;
 }
 
 interface ParentChildRpcRow {
@@ -57,6 +50,28 @@ interface ParentPickupRpcRow {
   is_active: boolean;
 }
 
+function getGreeting() {
+  const hour = new Date().getHours();
+
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+}
+
+interface PickupAuthorisation {
+  id: string;
+  studentId: string;
+  studentName: string;
+  studentCode: string;
+  className: string;
+  authorisedName: string;
+  authorisedPhone: string;
+  relationship: string;
+  validFrom: string | null;
+  validUntil: string | null;
+  isActive: boolean;
+}
+
 function formatDate(value: string | null) {
   if (!value) return "No end date";
 
@@ -69,20 +84,35 @@ function formatDate(value: string | null) {
 
 export default function ParentDashboard() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [children, setChildren] = useState<Child[]>([]);
   const [authorisations, setAuthorisations] = useState<PickupAuthorisation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [parentName, setParentName] = useState("");
 
   async function loadDashboard() {
     setLoading(true);
     setError("");
 
-    const [childrenResult, authorisationsResult] = await Promise.all([
-      supabase.rpc("get_parent_children"),
-      supabase.rpc("get_parent_pickup_authorisations"),
-    ]);
+    const [identityResult, childrenResult, authorisationsResult] =
+      await Promise.all([
+        supabase.rpc("get_my_parent_membership"),
+        supabase.rpc("get_parent_children"),
+        supabase.rpc("get_parent_pickup_authorisations"),
+      ]);
+
+    const identity = identityResult.data as ParentIdentityRpcRow | null;
+    const fallbackName =
+      typeof user?.user_metadata?.first_name === "string"
+        ? user.user_metadata.first_name.trim()
+        : "";
+    setParentName(identity?.first_name?.trim() || fallbackName || "there");
+
+    if (identityResult.error) {
+      console.error("Failed to load parent identity:", identityResult.error);
+    }
 
     if (childrenResult.error) {
       console.error("Failed to load parent children:", childrenResult.error);
@@ -135,7 +165,7 @@ export default function ParentDashboard() {
     <div className="mx-auto max-w-[1400px]">
       <PageHeader
         eyebrow="Parent Portal"
-        title="Parent Dashboard"
+        title={`${getGreeting()}, ${parentName || "there"}`}
         description="Stay connected with your children and manage their school pickup authorisations."
       />
 
@@ -148,8 +178,8 @@ export default function ParentDashboard() {
       {loading ? (
         <div className="grid gap-4 lg:grid-cols-3">
           {[1, 2, 3].map((item) => (
-            <Card key={item} className="h-32 animate-pulse bg-slate-100">
-              <div aria-hidden="true" />
+            <Card key={item} className="h-32 bg-slate-100">
+              <div className="h-full w-full animate-pulse" />
             </Card>
           ))}
         </div>

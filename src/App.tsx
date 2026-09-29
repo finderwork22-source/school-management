@@ -2,6 +2,8 @@ import { Route, Routes } from "react-router-dom";
 
 import AppLayout from "./components/layout/AppLayout";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import PlatformAdminRoute from "./components/auth/PlatformAdminRoute";
+import AdminLayout from "./components/admin/AdminLayout";
 
 // Public
 import Login from "./pages/Login";
@@ -33,7 +35,6 @@ import Assessments from "./pages/Assessments";
 import AssessmentMarks from "./pages/AssessmentMarks";
 import AssessmentResults from "./pages/AssessmentResults";
 import StudentResults from "./pages/StudentResults";
-import ParentPickupAuthorisations from "./pages/ParentPickupAuthorisations";
 
 // Finance
 import FeeStructure from "./pages/FeeStructure";
@@ -51,6 +52,11 @@ import AcademicSettings from "./pages/AcademicSettings";
 import UsersRoles from "./pages/UsersRoles";
 import MyProfile from "./pages/MyProfile";
 
+// WISE Admin
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminPlaceholder from "./pages/admin/AdminPlaceholder";
+import AdminApplications from "./pages/admin/AdminApplications";
+
 export default function App() {
   return (
     <Routes>
@@ -66,7 +72,71 @@ export default function App() {
       <Route path="/accept-invitation" element={<AcceptInvitation />} />
 
       {/* =====================================================
-          AUTHENTICATED ROUTES
+          WISE ADMIN — PLATFORM LEVEL
+          This is intentionally separate from school AppLayout.
+      ===================================================== */}
+      <Route
+        path="/admin"
+        element={
+          <PlatformAdminRoute>
+            <AdminLayout />
+          </PlatformAdminRoute>
+        }
+      >
+        <Route index element={<AdminDashboard />} />
+        <Route
+          path="schools"
+          element={
+            <AdminPlaceholder
+              title="Schools"
+              description="Manage the schools registered on WISE, including platform status, subscriptions and school-level platform information."
+            />
+          }
+        />
+        <Route
+          path="applications"
+          element={<AdminApplications />}
+        />
+        <Route
+          path="billing"
+          element={
+            <AdminPlaceholder
+              title="Billing"
+              description="Manage WISE subscriptions, invoices, payments and payment allocations owed by schools to the WISE platform."
+            />
+          }
+        />
+        <Route
+          path="analytics"
+          element={
+            <AdminPlaceholder
+              title="Analytics"
+              description="Provide platform-level usage, growth, subscription and school activity reporting."
+            />
+          }
+        />
+        <Route
+          path="audit"
+          element={
+            <AdminPlaceholder
+              title="Audit logs"
+              description="Review security-sensitive WISE platform actions recorded in the platform audit log."
+            />
+          }
+        />
+        <Route
+          path="settings"
+          element={
+            <AdminPlaceholder
+              title="Platform settings"
+              description="Configure WISE company information, platform defaults, subscription settings and other platform-level controls."
+            />
+          }
+        />
+      </Route>
+
+      {/* =====================================================
+          SCHOOL AUTHENTICATED ROUTES
       ===================================================== */}
 
       <Route element={<ProtectedRoute />}>
@@ -88,10 +158,6 @@ export default function App() {
           <Route path="teachers/:id" element={<TeacherProfile />} />
           <Route path="pickup-desk" element={<PickupDesk />} />
           <Route path="pickup-history" element={<PickupHistory />} />
-          <Route
-            path="pickup-authorisations"
-            element={<ParentPickupAuthorisations />}
-          />
 
           {/* Academics */}
           <Route path="academic-years" element={<AcademicYears />} />
@@ -100,14 +166,8 @@ export default function App() {
 
           {/* Attendance */}
           <Route path="attendance" element={<Attendance />} />
-          <Route
-            path="attendance/history"
-            element={<AttendanceHistory />}
-          />
-          <Route
-            path="attendance/reports"
-            element={<AttendanceReports />}
-          />
+          <Route path="attendance/history" element={<AttendanceHistory />} />
+          <Route path="attendance/reports" element={<AttendanceReports />} />
 
           {/* Assessments */}
           <Route path="assessments" element={<Assessments />} />
@@ -125,47 +185,19 @@ export default function App() {
 
           {/* Finance */}
           <Route path="finance" element={<FeeStructure />} />
-          <Route
-            path="finance/billing"
-            element={<StudentBilling />}
-          />
-          <Route
-            path="finance/payments"
-            element={<Payments />}
-          />
-          <Route
-            path="finance/receipts"
-            element={<Receipts />}
-          />
-          <Route
-            path="finance/reports"
-            element={<FinanceReports />}
-          />
+          <Route path="finance/billing" element={<StudentBilling />} />
+          <Route path="finance/payments" element={<Payments />} />
+          <Route path="finance/receipts" element={<Receipts />} />
+          <Route path="finance/reports" element={<FinanceReports />} />
 
           {/* Communication */}
           <Route path="announcements" element={<Announcements />} />
-
-          {/* Backward-compatible URL */}
-          <Route
-            path="communications"
-            element={<Announcements />}
-          />
+          <Route path="communications" element={<Announcements />} />
 
           {/* Settings */}
-          <Route
-            path="settings/school-profile"
-            element={<SchoolProfile />}
-          />
-          <Route
-            path="settings/academic"
-            element={<AcademicSettings />}
-          />
-          <Route
-            path="settings/users"
-            element={<UsersRoles />}
-          />
-
-          {/* Parent settings URL */}
+          <Route path="settings/school-profile" element={<SchoolProfile />} />
+          <Route path="settings/academic" element={<AcademicSettings />} />
+          <Route path="settings/users" element={<UsersRoles />} />
           <Route path="settings" element={<AcademicSettings />} />
         </Route>
       </Route>

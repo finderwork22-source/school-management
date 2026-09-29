@@ -29,6 +29,7 @@ import { normalizeRole } from "../lib/permissions";
 import TeacherDashboard from "./TeacherDashboard";
 import PrincipalDashboard from "./PrincipalDashboard";
 import SecretaryDashboard from "./SecretaryDashboard";
+import ParentDashboard from "./ParentDashboard";
 
 interface DashboardStats {
   students: number;
@@ -2784,6 +2785,10 @@ function ActionButton({
 export default function Dashboard() {
   const { membership } = useSchool();
   const role = normalizeRole(membership?.role);
+
+  if (role === "Parent") {
+    return <ParentDashboard />;
+  }
 
   if (role === "Teacher") {
     return <TeacherDashboard />;
