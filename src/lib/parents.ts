@@ -10,6 +10,7 @@ export interface ParentChild {
 export interface Parent {
   id: string;
   name: string;
+  user_id: string | null;
   phone: string | null;
   email: string | null;
   address: string | null;
@@ -45,6 +46,7 @@ export async function getParents(
       id,
       first_name,
       last_name,
+      user_id,
       phone,
       email,
       address,
@@ -124,6 +126,7 @@ export async function getParents(
       return {
         id: parent.id,
         name: `${parent.first_name} ${parent.last_name}`,
+        user_id: parent.user_id ?? null,
         phone: parent.phone ?? null,
         email: parent.email ?? null,
         address: parent.address ?? null,

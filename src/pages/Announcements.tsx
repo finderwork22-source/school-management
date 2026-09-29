@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Archive,
   Bell,
@@ -18,6 +19,7 @@ import {
 
 import { useSchool } from "../context/SchoolContext";
 import { getClasses, type SchoolClass } from "../lib/classes";
+import { normalizeRole } from "../lib/permissions";
 import { supabase } from "../lib/supabase";
 
 interface AcademicYear {
@@ -204,7 +206,15 @@ function getContentPreview(content: string) {
 }
 
 export default function Announcements() {
-  const { school } = useSchool();
+  const { school, membership } = useSchool();
+  const [searchParams] = useSearchParams();
+
+  const role = normalizeRole(membership?.role);
+  const canManageAnnouncements = [
+    "Owner",
+    "Principal",
+    "Head of Academics",
+  ].includes(role);
 
   const [announcements, setAnnouncements] = useState<
     Announcement[]
@@ -256,7 +266,7 @@ export default function Announcements() {
 
   useEffect(() => {
     loadData();
-  }, [school?.id]);
+  }, [school?.id, role]);
 
   async function loadData() {
     if (!school) {
@@ -270,37 +280,41 @@ export default function Announcements() {
 
       const schoolId = school.id;
 
+      let announcementsQuery = supabase
+        .from("announcements")
+        .select(
+          `
+            id,
+            school_id,
+            title,
+            content,
+            status,
+            priority,
+            audience_type,
+            academic_year_id,
+            academic_section_id,
+            class_id,
+            publish_date,
+            expiry_date,
+            created_by,
+            created_at,
+            updated_at
+          `,
+        )
+        .eq("school_id", schoolId)
+        .order("created_at", { ascending: false });
+
+      if (!canManageAnnouncements) {
+        announcementsQuery = announcementsQuery.eq("status", "Published");
+      }
+
       const [
         announcementsResponse,
         yearsResponse,
         sectionsResponse,
         classesResponse,
       ] = await Promise.all([
-        supabase
-          .from("announcements")
-          .select(
-            `
-              id,
-              school_id,
-              title,
-              content,
-              status,
-              priority,
-              audience_type,
-              academic_year_id,
-              academic_section_id,
-              class_id,
-              publish_date,
-              expiry_date,
-              created_by,
-              created_at,
-              updated_at
-            `,
-          )
-          .eq("school_id", schoolId)
-          .order("created_at", {
-            ascending: false,
-          }),
+        announcementsQuery,
 
         supabase
           .from("academic_years")
@@ -341,10 +355,42 @@ export default function Announcements() {
         throw classesResponse.error;
       }
 
-      setAnnouncements(
-        (announcementsResponse.data ??
-          []) as Announcement[],
-      );
+      let loadedAnnouncements = (
+        announcementsResponse.data ?? []
+      ) as Announcement[];
+
+      if (!canManageAnnouncements) {
+        const now = new Date();
+
+        loadedAnnouncements = loadedAnnouncements.filter((announcement) => {
+          if (!["All School", "Teachers", "Staff"].includes(announcement.audience_type)) {
+            return false;
+          }
+
+          if (announcement.publish_date && new Date(announcement.publish_date) > now) {
+            return false;
+          }
+
+          if (announcement.expiry_date && new Date(announcement.expiry_date) < now) {
+            return false;
+          }
+
+          return true;
+        });
+      }
+
+      setAnnouncements(loadedAnnouncements);
+
+      const requestedAnnouncementId = searchParams.get("id");
+      if (requestedAnnouncementId) {
+        const requestedAnnouncement = loadedAnnouncements.find(
+          (announcement) => announcement.id === requestedAnnouncementId,
+        );
+
+        if (requestedAnnouncement) {
+          setViewingAnnouncement(requestedAnnouncement);
+        }
+      }
 
       const years =
         (yearsResponse.data ??
@@ -877,23 +923,28 @@ export default function Announcements() {
           </div>
 
           <h1 className="mt-1 text-2xl font-bold text-gray-900">
-            Announcements
+            {canManageAnnouncements
+              ? "Announcements"
+              : "School Announcements"}
           </h1>
 
           <p className="mt-1 text-sm text-gray-500">
-            Share important information with the school
-            community.
+            {canManageAnnouncements
+              ? "Share important information with the school community."
+              : "Read announcements shared with you by the school."}
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={openCreateModal}
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-gray-800"
-        >
-          <Plus className="h-4 w-4" />
-          New Announcement
-        </button>
+        {canManageAnnouncements && (
+          <button
+            type="button"
+            onClick={openCreateModal}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-gray-800"
+          >
+            <Plus className="h-4 w-4" />
+            New Announcement
+          </button>
+        )}
       </div>
 
       {error && (
@@ -910,66 +961,72 @@ export default function Announcements() {
         </div>
       )}
 
+      {canManageAnnouncements && (
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        <div className="rounded-xl border border-gray-200 bg-white p-5">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-500">
-              Total
-            </span>
-
-            <Megaphone className="h-5 w-5 text-gray-400" />
+          <div className="rounded-xl border border-gray-200 bg-white p-5">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-500">
+                Total
+              </span>
+  
+              <Megaphone className="h-5 w-5 text-gray-400" />
+            </div>
+  
+            <div className="mt-2 text-2xl font-bold text-gray-900">
+              {summary.total}
+            </div>
           </div>
-
-          <div className="mt-2 text-2xl font-bold text-gray-900">
-            {summary.total}
+  
+          <div className="rounded-xl border border-gray-200 bg-white p-5">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-500">
+                Published
+              </span>
+  
+              <Bell className="h-5 w-5 text-gray-400" />
+            </div>
+  
+            <div className="mt-2 text-2xl font-bold text-gray-900">
+              {summary.published}
+            </div>
+          </div>
+  
+          <div className="rounded-xl border border-gray-200 bg-white p-5">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-500">
+                Drafts
+              </span>
+  
+              <FileText className="h-5 w-5 text-gray-400" />
+            </div>
+  
+            <div className="mt-2 text-2xl font-bold text-gray-900">
+              {summary.drafts}
+            </div>
+          </div>
+  
+          <div className="rounded-xl border border-gray-200 bg-white p-5">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-500">
+                Urgent
+              </span>
+  
+              <Bell className="h-5 w-5 text-gray-400" />
+            </div>
+  
+            <div className="mt-2 text-2xl font-bold text-gray-900">
+              {summary.urgent}
+            </div>
           </div>
         </div>
-
-        <div className="rounded-xl border border-gray-200 bg-white p-5">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-500">
-              Published
-            </span>
-
-            <Bell className="h-5 w-5 text-gray-400" />
-          </div>
-
-          <div className="mt-2 text-2xl font-bold text-gray-900">
-            {summary.published}
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-gray-200 bg-white p-5">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-500">
-              Drafts
-            </span>
-
-            <FileText className="h-5 w-5 text-gray-400" />
-          </div>
-
-          <div className="mt-2 text-2xl font-bold text-gray-900">
-            {summary.drafts}
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-gray-200 bg-white p-5">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-500">
-              Urgent
-            </span>
-
-            <Bell className="h-5 w-5 text-gray-400" />
-          </div>
-
-          <div className="mt-2 text-2xl font-bold text-gray-900">
-            {summary.urgent}
-          </div>
-        </div>
-      </div>
+      )}
 
       <div className="rounded-xl border border-gray-200 bg-white p-4">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+        <div className={
+          canManageAnnouncements
+            ? "grid grid-cols-1 gap-3 md:grid-cols-4"
+            : "grid grid-cols-1 gap-3"
+        }>
           <div className="relative md:col-span-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
 
@@ -983,105 +1040,109 @@ export default function Announcements() {
             />
           </div>
 
-          <select
-            value={statusFilter}
-            onChange={(event) =>
-              setStatusFilter(
-                event.target.value as
-                  | "All"
-                  | Announcement["status"],
-              )
-            }
-            className="h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm outline-none focus:border-gray-500"
-          >
-            <option value="All">
-              All Statuses
-            </option>
-
-            <option value="Published">
-              Published
-            </option>
-
-            <option value="Draft">
-              Draft
-            </option>
-
-            <option value="Archived">
-              Archived
-            </option>
-          </select>
-
-          <select
-            value={priorityFilter}
-            onChange={(event) =>
-              setPriorityFilter(
-                event.target.value as
-                  | "All"
-                  | Priority,
-              )
-            }
-            className="h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm outline-none focus:border-gray-500"
-          >
-            <option value="All">
-              All Priorities
-            </option>
-
-            <option value="Normal">
-              Normal
-            </option>
-
-            <option value="Important">
-              Important
-            </option>
-
-            <option value="Urgent">
-              Urgent
-            </option>
-          </select>
-
-          <select
-            value={audienceFilter}
-            onChange={(event) =>
-              setAudienceFilter(
-                event.target.value as
-                  | "All"
-                  | AudienceType,
-              )
-            }
-            className="h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm outline-none focus:border-gray-500"
-          >
-            <option value="All">
-              All Audiences
-            </option>
-
-            <option value="All School">
-              All School
-            </option>
-
-            <option value="Parents">
-              Parents
-            </option>
-
-            <option value="Students">
-              Students
-            </option>
-
-            <option value="Teachers">
-              Teachers
-            </option>
-
-            <option value="Staff">
-              Staff
-            </option>
-
-            <option value="Section">
-              Section
-            </option>
-
-            <option value="Class">
-              Class
-            </option>
-          </select>
+{canManageAnnouncements && (
+            <div className="contents">
+            <select
+              value={statusFilter}
+              onChange={(event) =>
+                setStatusFilter(
+                  event.target.value as
+                    | "All"
+                    | Announcement["status"],
+                )
+              }
+              className="h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm outline-none focus:border-gray-500"
+            >
+              <option value="All">
+                All Statuses
+              </option>
+  
+              <option value="Published">
+                Published
+              </option>
+  
+              <option value="Draft">
+                Draft
+              </option>
+  
+              <option value="Archived">
+                Archived
+              </option>
+            </select>
+  
+            <select
+              value={priorityFilter}
+              onChange={(event) =>
+                setPriorityFilter(
+                  event.target.value as
+                    | "All"
+                    | Priority,
+                )
+              }
+              className="h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm outline-none focus:border-gray-500"
+            >
+              <option value="All">
+                All Priorities
+              </option>
+  
+              <option value="Normal">
+                Normal
+              </option>
+  
+              <option value="Important">
+                Important
+              </option>
+  
+              <option value="Urgent">
+                Urgent
+              </option>
+            </select>
+  
+            <select
+              value={audienceFilter}
+              onChange={(event) =>
+                setAudienceFilter(
+                  event.target.value as
+                    | "All"
+                    | AudienceType,
+                )
+              }
+              className="h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm outline-none focus:border-gray-500"
+            >
+              <option value="All">
+                All Audiences
+              </option>
+  
+              <option value="All School">
+                All School
+              </option>
+  
+              <option value="Parents">
+                Parents
+              </option>
+  
+              <option value="Students">
+                Students
+              </option>
+  
+              <option value="Teachers">
+                Teachers
+              </option>
+  
+              <option value="Staff">
+                Staff
+              </option>
+  
+              <option value="Section">
+                Section
+              </option>
+  
+              <option value="Class">
+                Class
+              </option>
+            </select>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1110,18 +1171,21 @@ export default function Announcements() {
             </h3>
 
             <p className="mt-1 max-w-md text-sm text-gray-500">
-              Create an announcement to share important
-              information with your school community.
+              {canManageAnnouncements
+                ? "Create an announcement to share important information with your school community."
+                : "There are no announcements available for you right now."}
             </p>
 
-            <button
-              type="button"
-              onClick={openCreateModal}
-              className="mt-5 inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
-            >
-              <Plus className="h-4 w-4" />
-              New Announcement
-            </button>
+            {canManageAnnouncements && (
+              <button
+                type="button"
+                onClick={openCreateModal}
+                className="mt-5 inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
+              >
+                <Plus className="h-4 w-4" />
+                New Announcement
+              </button>
+            )}
           </div>
         ) : (
           <div className="divide-y divide-gray-100">
@@ -1208,6 +1272,8 @@ export default function Announcements() {
                         <Eye className="h-4 w-4" />
                       </button>
 
+                      {canManageAnnouncements && (
+                        <div className="flex items-center gap-2">
                       <button
                         type="button"
                         onClick={() =>
@@ -1267,6 +1333,8 @@ export default function Announcements() {
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1808,22 +1876,24 @@ export default function Announcements() {
             </div>
 
             <div className="flex items-center justify-end gap-3 border-t border-gray-200 px-6 py-4">
-              <button
-                type="button"
-                onClick={() => {
-                  setViewingAnnouncement(
-                    null,
-                  );
+              {canManageAnnouncements && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setViewingAnnouncement(
+                      null,
+                    );
 
-                  openEditModal(
-                    viewingAnnouncement,
-                  );
-                }}
-                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                <Edit3 className="h-4 w-4" />
-                Edit
-              </button>
+                    openEditModal(
+                      viewingAnnouncement,
+                    );
+                  }}
+                  className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  <Edit3 className="h-4 w-4" />
+                  Edit
+                </button>
+              )}
 
               <button
                 type="button"

@@ -10,9 +10,12 @@ import {
   Plus,
   Trash2,
   Loader2,
+  Send,
+  CheckCircle2,
 } from "lucide-react";
 
 import { useSchool } from "../context/SchoolContext";
+import { supabase } from "../lib/supabase";
 import { getClasses, type SchoolClass } from "../lib/classes";
 import {
   getParents,
@@ -40,6 +43,101 @@ export default function Parents() {
   const [selectedParent, setSelectedParent] = useState<Parent | null>(null);
 
   const [showAddParent, setShowAddParent] = useState(false);
+
+  const [invitingParentId, setInvitingParentId] = useState<string | null>(null);
+
+  const [inviteMessage, setInviteMessage] = useState("");
+
+  async function handleInviteParent(parent: Parent) {
+    setError("");
+    setInviteMessage("");
+
+    if (!parent.email?.trim()) {
+      setError(
+        `${parent.name} does not have an email address. Add an email address before sending the invitation.`,
+      );
+      return;
+    }
+
+    if (parent.user_id) {
+      setError(`${parent.name} already has an active account.`);
+      return;
+    }
+
+    if (!school) {
+      setError("No school is currently selected.");
+      return;
+    }
+
+    setInvitingParentId(parent.id);
+
+    try {
+      const { data, error: functionError } =
+        await supabase.functions.invoke("invite-parent", {
+          body: {
+            parentId: parent.id,
+          },
+        });
+
+      if (functionError) {
+        console.error(
+          "Parent invitation function error:",
+          functionError,
+        );
+
+        throw new Error(
+          functionError.message ||
+            "We could not send the parent invitation.",
+        );
+      }
+
+      if (!data?.success) {
+        throw new Error(
+          data?.error ||
+            "We could not send the parent invitation.",
+        );
+      }
+
+      setInviteMessage(
+        `Invitation sent successfully to ${parent.email}.`,
+      );
+
+      const {
+        data: refreshedParents,
+        error: refreshError,
+      } = await getParents(school.id);
+
+      if (refreshError) {
+        console.error(
+          "Failed to refresh parents after invitation:",
+          refreshError,
+        );
+      } else {
+        setParents(refreshedParents);
+
+        const refreshedParent = refreshedParents.find(
+          (item) => item.id === parent.id,
+        );
+
+        if (refreshedParent) {
+          setSelectedParent(refreshedParent);
+        }
+      }
+    } catch (caughtError) {
+      console.error(
+        "Failed to invite parent:",
+        caughtError,
+      );
+
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "We could not send the parent invitation.",
+      );
+    } finally {
+      setInvitingParentId(null);
+    }
+  }
 
   useEffect(() => {
     async function loadParents() {
@@ -146,6 +244,15 @@ export default function Parents() {
           </div>
         )}
 
+        {inviteMessage && (
+          <div className="border-b border-emerald-100 bg-emerald-50 px-5 py-3">
+            <div className="flex items-center gap-2 text-sm text-emerald-700">
+              <CheckCircle2 size={16} />
+              <span>{inviteMessage}</span>
+            </div>
+          </div>
+        )}
+
         {/* Loading */}
         {loading ? (
           <div className="flex min-h-[300px] items-center justify-center">
@@ -154,10 +261,18 @@ export default function Parents() {
         ) : (
           <div className="divide-y divide-slate-100">
             {filteredParents.map((parent) => (
-              <button
+              <div
                 key={parent.id}
+                role="button"
+                tabIndex={0}
                 onClick={() => setSelectedParent(parent)}
-                className="group flex w-full items-center gap-4 px-5 py-4 text-left transition hover:bg-slate-50"
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    setSelectedParent(parent);
+                  }
+                }}
+                className="group flex w-full cursor-pointer items-center gap-4 px-5 py-4 text-left transition hover:bg-slate-50"
               >
                 <Avatar name={parent.name} />
 
@@ -183,20 +298,55 @@ export default function Parents() {
                   </div>
                 </div>
 
-                <div className="hidden items-center gap-2 sm:flex">
-                  <Users size={15} className="text-slate-400" />
+                <div className="hidden items-center gap-4 sm:flex">
+                  <div className="flex items-center gap-2">
+                    <Users size={15} className="text-slate-400" />
 
-                  <span className="text-sm text-slate-600">
-                    {parent.childrenCount}{" "}
-                    {parent.childrenCount === 1 ? "child" : "children"}
-                  </span>
+                    <span className="text-sm text-slate-600">
+                      {parent.childrenCount}{" "}
+                      {parent.childrenCount === 1 ? "child" : "children"}
+                    </span>
+                  </div>
+
+                  {parent.user_id ? (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
+                      <CheckCircle2 size={13} />
+                      Active
+                    </span>
+                  ) : parent.email ? (
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void handleInviteParent(parent);
+                      }}
+                      disabled={invitingParentId === parent.id}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {invitingParentId === parent.id ? (
+                        <>
+                          <Loader2 size={13} className="animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        <>
+                          <Send size={13} />
+                          Invite Parent
+                        </>
+                      )}
+                    </button>
+                  ) : (
+                    <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
+                      No email
+                    </span>
+                  )}
                 </div>
 
                 <ChevronRight
                   size={17}
                   className="text-slate-300 transition group-hover:text-indigo-500"
                 />
-              </button>
+              </div>
             ))}
 
             {filteredParents.length === 0 && (

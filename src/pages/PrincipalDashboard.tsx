@@ -255,12 +255,14 @@ function getAdmissionName(item: {
   middle_name?: string | null;
   last_name?: string | null;
 }) {
-  return [item.first_name, item.middle_name, item.last_name]
-    .filter(
-      (value): value is string =>
-        typeof value === "string" && value.trim().length > 0,
-    )
-    .join(" ") || "Unnamed applicant";
+  return (
+    [item.first_name, item.middle_name, item.last_name]
+      .filter(
+        (value): value is string =>
+          typeof value === "string" && value.trim().length > 0,
+      )
+      .join(" ") || "Unnamed applicant"
+  );
 }
 
 function buildAttendanceTrend(
@@ -278,8 +280,8 @@ function buildAttendanceTrend(
     date.setDate(date.getDate() - offset);
 
     const key = getDateKey(date);
-    const dayRecords = records.filter((record) =>
-      record.attendance_date?.slice(0, 10) === key,
+    const dayRecords = records.filter(
+      (record) => record.attendance_date?.slice(0, 10) === key,
     );
     const uniqueStudents = new Set(
       dayRecords
@@ -320,12 +322,19 @@ function TrendChart({ points }: { points: AttendanceTrendPoint[] }) {
   const pointCoordinates = points.map((point, index) => ({
     x:
       paddingX +
-      (points.length > 1 ? (index / (points.length - 1)) * innerWidth : innerWidth / 2),
-    y: paddingTop + (1 - Math.min(100, Math.max(0, point.rate)) / maxRate) * innerHeight,
+      (points.length > 1
+        ? (index / (points.length - 1)) * innerWidth
+        : innerWidth / 2),
+    y:
+      paddingTop +
+      (1 - Math.min(100, Math.max(0, point.rate)) / maxRate) * innerHeight,
   }));
 
   const linePath = pointCoordinates
-    .map((point, index) => `${index === 0 ? "M" : "L"}${point.x.toFixed(1)},${point.y.toFixed(1)}`)
+    .map(
+      (point, index) =>
+        `${index === 0 ? "M" : "L"}${point.x.toFixed(1)},${point.y.toFixed(1)}`,
+    )
     .join(" ");
 
   return (
@@ -428,7 +437,9 @@ function SectionMessage({
         <div className="flex items-start gap-3">
           <AlertCircle size={18} className="mt-0.5 shrink-0 text-red-600" />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-red-800">Unable to load this section</p>
+            <p className="text-sm font-semibold text-red-800">
+              Unable to load this section
+            </p>
             <p className="mt-1 break-words text-sm text-red-700">
               {error || "Something went wrong while loading the data."}
             </p>
@@ -487,8 +498,12 @@ function StatusBars({
             return (
               <div key={item.label}>
                 <div className="flex items-center justify-between gap-3 text-sm">
-                  <span className="min-w-0 truncate text-slate-600">{item.label}</span>
-                  <span className="shrink-0 font-semibold text-slate-900">{item.value}</span>
+                  <span className="min-w-0 truncate text-slate-600">
+                    {item.label}
+                  </span>
+                  <span className="shrink-0 font-semibold text-slate-900">
+                    {item.value}
+                  </span>
                 </div>
                 <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-100">
                   <div
@@ -578,9 +593,15 @@ export default function PrincipalDashboard() {
   const [firstName, setFirstName] = useState("Principal");
   const [academicYearName, setAcademicYearName] = useState("");
   const [stats, setStats] = useState<PrincipalStats>(initialStats);
-  const [attendanceTrend, setAttendanceTrend] = useState<AttendanceTrendPoint[]>([]);
-  const [assessmentStatusCounts, setAssessmentStatusCounts] = useState<StatusCount[]>([]);
-  const [admissionStatusCounts, setAdmissionStatusCounts] = useState<StatusCount[]>([]);
+  const [attendanceTrend, setAttendanceTrend] = useState<
+    AttendanceTrendPoint[]
+  >([]);
+  const [assessmentStatusCounts, setAssessmentStatusCounts] = useState<
+    StatusCount[]
+  >([]);
+  const [admissionStatusCounts, setAdmissionStatusCounts] = useState<
+    StatusCount[]
+  >([]);
   const [assessments, setAssessments] = useState<AssessmentItem[]>([]);
   const [admissions, setAdmissions] = useState<AdmissionItem[]>([]);
   const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([]);
@@ -591,12 +612,10 @@ export default function PrincipalDashboard() {
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
 
   const [baseLoading, setBaseLoading] = useState(true);
-  const [sectionStatus, setSectionStatus] = useState<Record<SectionKey, SectionStatus>>(
-    initialSectionStatus,
-  );
-  const [sectionErrors, setSectionErrors] = useState<Record<SectionKey, string>>(
-    initialSectionErrors,
-  );
+  const [sectionStatus, setSectionStatus] =
+    useState<Record<SectionKey, SectionStatus>>(initialSectionStatus);
+  const [sectionErrors, setSectionErrors] =
+    useState<Record<SectionKey, string>>(initialSectionErrors);
 
   const setSection = (
     key: SectionKey,
@@ -759,9 +778,7 @@ export default function PrincipalDashboard() {
           setStats((current) => ({
             ...current,
             attendanceRate:
-              attendanceRecorded > 0
-                ? (present / attendanceRecorded) * 100
-                : 0,
+              attendanceRecorded > 0 ? (present / attendanceRecorded) * 100 : 0,
             present,
             absent,
             late,
@@ -795,10 +812,7 @@ export default function PrincipalDashboard() {
             assignedTeachers: 0,
             coveredClasses: 0,
           }));
-          setSection(
-            "coverage",
-            "empty",
-          );
+          setSection("coverage", "empty");
           return;
         }
 
@@ -986,7 +1000,9 @@ export default function PrincipalDashboard() {
               .eq("school_id", school.id),
             supabase
               .from("admission_applications")
-              .select("id, first_name, middle_name, last_name, status, created_at")
+              .select(
+                "id, first_name, middle_name, last_name, status, created_at",
+              )
               .eq("school_id", school.id)
               .in("status", ["Pending", "Under Review"])
               .order("created_at", { ascending: false })
@@ -998,7 +1014,8 @@ export default function PrincipalDashboard() {
 
           const admissionSummaryData = summaryResult.data ?? [];
           const pendingAdmissions = admissionSummaryData.filter(
-            (item) => item.status === "Pending" || item.status === "Under Review",
+            (item) =>
+              item.status === "Pending" || item.status === "Under Review",
           ).length;
 
           setStats((current) => ({ ...current, pendingAdmissions }));
@@ -1066,20 +1083,24 @@ export default function PrincipalDashboard() {
 
       const supplementalTask = (async () => {
         try {
-          const [announcementsResult, recentStudentsResult] = await Promise.all([
-            supabase
-              .from("announcements")
-              .select("id, title, created_at")
-              .eq("school_id", school.id)
-              .order("created_at", { ascending: false })
-              .limit(5),
-            supabase
-              .from("students")
-              .select("id, name, student_id, created_at")
-              .eq("school_id", school.id)
-              .order("created_at", { ascending: false })
-              .limit(4),
-          ]);
+          const [announcementsResult, recentStudentsResult] = await Promise.all(
+            [
+              supabase
+                .from("announcements")
+                .select("id, title, created_at")
+                .eq("school_id", school.id)
+                .order("created_at", { ascending: false })
+                .limit(5),
+              supabase
+                .from("students")
+                .select(
+                  "id, student_id, first_name, middle_name, last_name, created_at",
+                )
+                .eq("school_id", school.id)
+                .order("created_at", { ascending: false })
+                .limit(4),
+            ],
+          );
 
           if (announcementsResult.error) throw announcementsResult.error;
           if (recentStudentsResult.error) throw recentStudentsResult.error;
@@ -1098,7 +1119,12 @@ export default function PrincipalDashboard() {
             nextActivities.push({
               id: `student-${student.id}`,
               title: "New student record",
-              description: student.name || student.student_id || "Student added",
+              description:
+                [student.first_name, student.middle_name, student.last_name]
+                  .filter(Boolean)
+                  .join(" ") ||
+                student.student_id ||
+                "Student added",
               createdAt: student.created_at,
               time: formatRelativeTime(student.created_at),
             });
@@ -1128,7 +1154,7 @@ export default function PrincipalDashboard() {
           );
         } finally {
           setSupplementalLoading(false);
-            }
+        }
       })();
 
       await Promise.all([
@@ -1148,9 +1174,21 @@ export default function PrincipalDashboard() {
           ? err.message
           : "Unable to load principal dashboard data.",
       );
-      setSection("attendance", "error", "Dashboard context could not be loaded.");
-      setSection("assessments", "error", "Dashboard context could not be loaded.");
-      setSection("admissions", "error", "Dashboard context could not be loaded.");
+      setSection(
+        "attendance",
+        "error",
+        "Dashboard context could not be loaded.",
+      );
+      setSection(
+        "assessments",
+        "error",
+        "Dashboard context could not be loaded.",
+      );
+      setSection(
+        "admissions",
+        "error",
+        "Dashboard context could not be loaded.",
+      );
       setSection("coverage", "error", "Dashboard context could not be loaded.");
     }
   }
@@ -1227,7 +1265,10 @@ export default function PrincipalDashboard() {
       });
     }
 
-    if (sectionStatus.coverage === "ready" && stats.classes > stats.coveredClasses) {
+    if (
+      sectionStatus.coverage === "ready" &&
+      stats.classes > stats.coveredClasses
+    ) {
       const uncoveredClasses = stats.classes - stats.coveredClasses;
 
       items.push({
@@ -1257,12 +1298,53 @@ export default function PrincipalDashboard() {
   ]);
 
   const statCards = [
-    { label: "Students", value: baseLoading ? "—" : String(stats.enrolledStudents || stats.students), icon: Users },
-    { label: "Teachers", value: baseLoading ? "—" : String(stats.teachers), icon: GraduationCap },
-    { label: "Classes", value: baseLoading ? "—" : String(stats.classes), icon: School },
-    { label: "Attendance today", value: sectionStatus.attendance === "loading" ? "—" : sectionStatus.attendance === "error" ? "!" : formatPercent(stats.attendanceRate), icon: UserCheck },
-    { label: "Assessments", value: sectionStatus.assessments === "loading" ? "—" : sectionStatus.assessments === "error" ? "!" : String(stats.assessments), icon: ClipboardCheck },
-    { label: "Pending admissions", value: sectionStatus.admissions === "loading" ? "—" : sectionStatus.admissions === "error" ? "!" : String(stats.pendingAdmissions), icon: UserPlus },
+    {
+      label: "Students",
+      value: baseLoading
+        ? "—"
+        : String(stats.enrolledStudents || stats.students),
+      icon: Users,
+    },
+    {
+      label: "Teachers",
+      value: baseLoading ? "—" : String(stats.teachers),
+      icon: GraduationCap,
+    },
+    {
+      label: "Classes",
+      value: baseLoading ? "—" : String(stats.classes),
+      icon: School,
+    },
+    {
+      label: "Attendance today",
+      value:
+        sectionStatus.attendance === "loading"
+          ? "—"
+          : sectionStatus.attendance === "error"
+            ? "!"
+            : formatPercent(stats.attendanceRate),
+      icon: UserCheck,
+    },
+    {
+      label: "Assessments",
+      value:
+        sectionStatus.assessments === "loading"
+          ? "—"
+          : sectionStatus.assessments === "error"
+            ? "!"
+            : String(stats.assessments),
+      icon: ClipboardCheck,
+    },
+    {
+      label: "Pending admissions",
+      value:
+        sectionStatus.admissions === "loading"
+          ? "—"
+          : sectionStatus.admissions === "error"
+            ? "!"
+            : String(stats.pendingAdmissions),
+      icon: UserPlus,
+    },
   ];
 
   return (
@@ -1284,7 +1366,10 @@ export default function PrincipalDashboard() {
               onClick={() => void refreshDashboard()}
               disabled={refreshing}
             >
-              <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
+              <RefreshCw
+                size={16}
+                className={refreshing ? "animate-spin" : ""}
+              />
               {refreshing ? "Refreshing..." : "Refresh"}
             </Button>
             <Button type="button" onClick={() => navigate("/students")}>
@@ -1319,7 +1404,8 @@ export default function PrincipalDashboard() {
               </p>
             </div>
             <span className="text-xs font-medium text-slate-500">
-              {attentionItems.length} item{attentionItems.length === 1 ? "" : "s"}
+              {attentionItems.length} item
+              {attentionItems.length === 1 ? "" : "s"}
             </span>
           </div>
 
@@ -1376,7 +1462,8 @@ export default function PrincipalDashboard() {
                   No pending dashboard actions
                 </h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  There are no attendance, assessment, admission or coverage items currently surfaced by this dashboard.
+                  There are no attendance, assessment, admission or coverage
+                  items currently surfaced by this dashboard.
                 </p>
               </div>
             </div>
@@ -1387,8 +1474,12 @@ export default function PrincipalDashboard() {
         <Card className="min-w-0 p-4 sm:p-6 xl:col-span-2">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
-              <h2 className="text-sm font-semibold text-slate-900">Attendance trend</h2>
-              <p className="mt-1 text-sm text-slate-500">Daily attendance rate across the last seven days.</p>
+              <h2 className="text-sm font-semibold text-slate-900">
+                Attendance trend
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Daily attendance rate across the last seven days.
+              </p>
             </div>
             <button
               type="button"
@@ -1415,17 +1506,61 @@ export default function PrincipalDashboard() {
           </div>
 
           <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <MiniMetric label="Present" value={sectionStatus.attendance === "loading" ? "—" : sectionStatus.attendance === "error" ? "!" : String(stats.present)} />
-            <MiniMetric label="Absent" value={sectionStatus.attendance === "loading" ? "—" : sectionStatus.attendance === "error" ? "!" : String(stats.absent)} />
-            <MiniMetric label="Late" value={sectionStatus.attendance === "loading" ? "—" : sectionStatus.attendance === "error" ? "!" : String(stats.late)} />
-            <MiniMetric label="Excused" value={sectionStatus.attendance === "loading" ? "—" : sectionStatus.attendance === "error" ? "!" : String(stats.excused)} />
+            <MiniMetric
+              label="Present"
+              value={
+                sectionStatus.attendance === "loading"
+                  ? "—"
+                  : sectionStatus.attendance === "error"
+                    ? "!"
+                    : String(stats.present)
+              }
+            />
+            <MiniMetric
+              label="Absent"
+              value={
+                sectionStatus.attendance === "loading"
+                  ? "—"
+                  : sectionStatus.attendance === "error"
+                    ? "!"
+                    : String(stats.absent)
+              }
+            />
+            <MiniMetric
+              label="Late"
+              value={
+                sectionStatus.attendance === "loading"
+                  ? "—"
+                  : sectionStatus.attendance === "error"
+                    ? "!"
+                    : String(stats.late)
+              }
+            />
+            <MiniMetric
+              label="Excused"
+              value={
+                sectionStatus.attendance === "loading"
+                  ? "—"
+                  : sectionStatus.attendance === "error"
+                    ? "!"
+                    : String(stats.excused)
+              }
+            />
           </div>
 
           <div className="mt-5">
             <CoverageRow
               label="Attendance coverage"
-              value={sectionStatus.attendance === "loading" ? "—" : sectionStatus.attendance === "error" ? "Unavailable" : `${stats.attendanceRecorded} of ${stats.enrolledStudents || stats.students}`}
-              percent={sectionStatus.attendance === "ready" ? attendanceCoverage : 0}
+              value={
+                sectionStatus.attendance === "loading"
+                  ? "—"
+                  : sectionStatus.attendance === "error"
+                    ? "Unavailable"
+                    : `${stats.attendanceRecorded} of ${stats.enrolledStudents || stats.students}`
+              }
+              percent={
+                sectionStatus.attendance === "ready" ? attendanceCoverage : 0
+              }
             />
             <p className="mt-2 text-xs text-slate-400">
               {sectionStatus.attendance === "error"
@@ -1440,8 +1575,13 @@ export default function PrincipalDashboard() {
         <Card className="min-w-0 p-4 sm:p-6">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <h2 className="text-sm font-semibold text-slate-900">Staff & class coverage</h2>
-              <p className="mt-1 text-sm text-slate-500">Current academic-year teaching coverage from teacher assignments.</p>
+              <h2 className="text-sm font-semibold text-slate-900">
+                Staff & class coverage
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Current academic-year teaching coverage from teacher
+                assignments.
+              </p>
             </div>
             <UserRoundCheck size={20} className="shrink-0 text-wiser-600" />
           </div>
@@ -1472,15 +1612,31 @@ export default function PrincipalDashboard() {
           </div>
 
           <div className="mt-6 grid grid-cols-2 gap-3">
-            <MiniMetric label="Subjects" value={baseLoading ? "—" : String(stats.subjects)} />
-            <MiniMetric label="Active teachers" value={baseLoading ? "—" : String(stats.teachers)} />
+            <MiniMetric
+              label="Subjects"
+              value={baseLoading ? "—" : String(stats.subjects)}
+            />
+            <MiniMetric
+              label="Active teachers"
+              value={baseLoading ? "—" : String(stats.teachers)}
+            />
           </div>
 
           <div className="mt-6 flex flex-wrap gap-2">
-            <Button size="sm" variant="secondary" type="button" onClick={() => navigate("/teachers")}>
+            <Button
+              size="sm"
+              variant="secondary"
+              type="button"
+              onClick={() => navigate("/teachers")}
+            >
               Manage teachers
             </Button>
-            <Button size="sm" variant="secondary" type="button" onClick={() => navigate("/academics")}>
+            <Button
+              size="sm"
+              variant="secondary"
+              type="button"
+              onClick={() => navigate("/academics")}
+            >
               Academics
             </Button>
           </div>
@@ -1491,8 +1647,12 @@ export default function PrincipalDashboard() {
         <Card className="min-w-0 p-4 sm:p-6">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <h2 className="text-sm font-semibold text-slate-900">Academic oversight</h2>
-              <p className="mt-1 text-sm text-slate-500">Assessment workload for the current academic year.</p>
+              <h2 className="text-sm font-semibold text-slate-900">
+                Academic oversight
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Assessment workload for the current academic year.
+              </p>
             </div>
             <BookOpen size={20} className="shrink-0 text-wiser-600" />
           </div>
@@ -1551,8 +1711,12 @@ export default function PrincipalDashboard() {
           <div className="mt-6">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
-                <h3 className="text-sm font-semibold text-slate-900">Upcoming assessments</h3>
-                <p className="mt-1 text-xs text-slate-400">Next scheduled academic activities.</p>
+                <h3 className="text-sm font-semibold text-slate-900">
+                  Upcoming assessments
+                </h3>
+                <p className="mt-1 text-xs text-slate-400">
+                  Next scheduled academic activities.
+                </p>
               </div>
               <button
                 type="button"
@@ -1582,19 +1746,32 @@ export default function PrincipalDashboard() {
                 />
               ) : assessments.length > 0 ? (
                 assessments.map((assessment) => (
-                  <div key={assessment.id} className="rounded-xl border border-slate-200 p-3">
+                  <div
+                    key={assessment.id}
+                    className="rounded-xl border border-slate-200 p-3"
+                  >
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-slate-900">{assessment.title}</p>
+                        <p className="truncate text-sm font-medium text-slate-900">
+                          {assessment.title}
+                        </p>
                         <p className="mt-1 text-xs text-slate-500">
                           {assessment.subjectName} · {assessment.className}
                         </p>
                       </div>
-                      <span className="shrink-0 text-[11px] text-slate-400">{formatDate(assessment.assessmentDate)}</span>
+                      <span className="shrink-0 text-[11px] text-slate-400">
+                        {formatDate(assessment.assessmentDate)}
+                      </span>
                     </div>
                     <div className="mt-2 flex flex-wrap gap-1.5">
-                      <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-medium text-slate-600">{assessment.assessmentType}</span>
-                      <span className={`rounded-full px-2 py-1 text-[10px] font-medium ${statusClasses(assessment.status)}`}>{assessment.status}</span>
+                      <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-medium text-slate-600">
+                        {assessment.assessmentType}
+                      </span>
+                      <span
+                        className={`rounded-full px-2 py-1 text-[10px] font-medium ${statusClasses(assessment.status)}`}
+                      >
+                        {assessment.status}
+                      </span>
                     </div>
                   </div>
                 ))
@@ -1610,8 +1787,12 @@ export default function PrincipalDashboard() {
         <Card className="min-w-0 p-4 sm:p-6">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <h2 className="text-sm font-semibold text-slate-900">School operations</h2>
-              <p className="mt-1 text-sm text-slate-500">Admissions and day-to-day activity needing attention.</p>
+              <h2 className="text-sm font-semibold text-slate-900">
+                School operations
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Admissions and day-to-day activity needing attention.
+              </p>
             </div>
             <School size={20} className="shrink-0 text-wiser-600" />
           </div>
@@ -1619,9 +1800,13 @@ export default function PrincipalDashboard() {
           {sectionStatus.admissions !== "error" && (
             <div className="mt-5 flex items-center justify-between gap-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
               <div className="min-w-0">
-                <p className="text-xs font-medium uppercase tracking-wide text-amber-700">Admissions requiring review</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-amber-700">
+                  Admissions requiring review
+                </p>
                 <p className="mt-1 text-2xl font-semibold text-amber-900">
-                  {sectionStatus.admissions === "loading" ? "—" : stats.pendingAdmissions}
+                  {sectionStatus.admissions === "loading"
+                    ? "—"
+                    : stats.pendingAdmissions}
                 </p>
               </div>
               <UserPlus size={24} className="shrink-0 text-amber-700" />
@@ -1646,12 +1831,23 @@ export default function PrincipalDashboard() {
               />
             ) : admissions.length > 0 ? (
               admissions.map((admission) => (
-                <div key={admission.id} className="flex min-w-0 items-center justify-between gap-3 rounded-xl border border-slate-200 p-3">
+                <div
+                  key={admission.id}
+                  className="flex min-w-0 items-center justify-between gap-3 rounded-xl border border-slate-200 p-3"
+                >
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-slate-900">{admission.name}</p>
-                    <p className="mt-1 text-xs text-slate-400">{formatRelativeTime(admission.createdAt)}</p>
+                    <p className="truncate text-sm font-medium text-slate-900">
+                      {admission.name}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-400">
+                      {formatRelativeTime(admission.createdAt)}
+                    </p>
                   </div>
-                  <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-medium ${statusClasses(admission.status)}`}>{admission.status}</span>
+                  <span
+                    className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-medium ${statusClasses(admission.status)}`}
+                  >
+                    {admission.status}
+                  </span>
                 </div>
               ))
             ) : (
@@ -1675,7 +1871,13 @@ export default function PrincipalDashboard() {
             ) : null}
           </div>
 
-          <Button size="sm" variant="secondary" type="button" className="mt-4" onClick={() => navigate("/admissions")}>
+          <Button
+            size="sm"
+            variant="secondary"
+            type="button"
+            className="mt-4"
+            onClick={() => navigate("/admissions")}
+          >
             Open admissions
             <ArrowUpRight size={14} />
           </Button>
@@ -1686,8 +1888,12 @@ export default function PrincipalDashboard() {
         <Card className="min-w-0 p-4 sm:p-6">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <h2 className="text-sm font-semibold text-slate-900">Recent activity</h2>
-              <p className="mt-1 text-sm text-slate-500">The latest updates visible to school leadership.</p>
+              <h2 className="text-sm font-semibold text-slate-900">
+                Recent activity
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                The latest updates visible to school leadership.
+              </p>
             </div>
             <UserCheck size={20} className="shrink-0 text-wiser-600" />
           </div>
@@ -1703,9 +1909,15 @@ export default function PrincipalDashboard() {
                 <div key={activity.id} className="flex min-w-0 gap-3">
                   <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-wiser-600" />
                   <div className="min-w-0">
-                    <p className="break-words text-sm font-medium text-slate-900">{activity.title}</p>
-                    <p className="mt-0.5 break-words text-xs text-slate-500">{activity.description}</p>
-                    <p className="mt-1 text-[11px] text-slate-400">{activity.time}</p>
+                    <p className="break-words text-sm font-medium text-slate-900">
+                      {activity.title}
+                    </p>
+                    <p className="mt-0.5 break-words text-xs text-slate-500">
+                      {activity.description}
+                    </p>
+                    <p className="mt-1 text-[11px] text-slate-400">
+                      {activity.time}
+                    </p>
                   </div>
                 </div>
               ))
@@ -1720,8 +1932,12 @@ export default function PrincipalDashboard() {
         <Card className="min-w-0 p-4 sm:p-6">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <h2 className="text-sm font-semibold text-slate-900">School notices</h2>
-              <p className="mt-1 text-sm text-slate-500">Recent announcements for the school community.</p>
+              <h2 className="text-sm font-semibold text-slate-900">
+                School notices
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Recent announcements for the school community.
+              </p>
             </div>
             <Megaphone size={20} className="shrink-0 text-wiser-600" />
           </div>
@@ -1740,8 +1956,12 @@ export default function PrincipalDashboard() {
                   onClick={() => navigate("/announcements")}
                   className="block w-full border-b border-slate-100 pb-4 text-left last:border-0 last:pb-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wiser-500 focus-visible:ring-offset-2"
                 >
-                  <p className="break-words text-sm font-medium text-slate-900">{announcement.title}</p>
-                  <p className="mt-1 text-xs text-slate-400">{formatRelativeTime(announcement.createdAt)}</p>
+                  <p className="break-words text-sm font-medium text-slate-900">
+                    {announcement.title}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-400">
+                    {formatRelativeTime(announcement.createdAt)}
+                  </p>
                 </button>
               ))
             ) : (
@@ -1765,21 +1985,57 @@ export default function PrincipalDashboard() {
       <Card className="mt-6 min-w-0 p-4 sm:p-6">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <h2 className="text-sm font-semibold text-slate-900">Principal quick access</h2>
-            <p className="mt-1 text-sm text-slate-500">Common areas for daily school leadership work.</p>
+            <h2 className="text-sm font-semibold text-slate-900">
+              Principal quick access
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              Common areas for daily school leadership work.
+            </p>
           </div>
           <CheckCircle2 size={20} className="shrink-0 text-wiser-600" />
         </div>
 
         <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
-          <ActionButton label="Students" icon={<Users size={15} />} onClick={() => navigate("/students")} />
-          <ActionButton label="Teachers" icon={<GraduationCap size={15} />} onClick={() => navigate("/teachers")} />
-          <ActionButton label="Attendance" icon={<ClipboardCheck size={15} />} onClick={() => navigate("/attendance")} />
-          <ActionButton label="Assessments" icon={<BookOpen size={15} />} onClick={() => navigate("/assessments")} />
-          <ActionButton label="Timetable" icon={<CalendarDays size={15} />} onClick={() => navigate("/timetable")} />
-          <ActionButton label="Student results" icon={<CheckCircle2 size={15} />} onClick={() => navigate("/student-results")} />
-          <ActionButton label="Admissions" icon={<UserPlus size={15} />} onClick={() => navigate("/admissions")} />
-          <ActionButton label="Announcements" icon={<Megaphone size={15} />} onClick={() => navigate("/announcements")} />
+          <ActionButton
+            label="Students"
+            icon={<Users size={15} />}
+            onClick={() => navigate("/students")}
+          />
+          <ActionButton
+            label="Teachers"
+            icon={<GraduationCap size={15} />}
+            onClick={() => navigate("/teachers")}
+          />
+          <ActionButton
+            label="Attendance"
+            icon={<ClipboardCheck size={15} />}
+            onClick={() => navigate("/attendance")}
+          />
+          <ActionButton
+            label="Assessments"
+            icon={<BookOpen size={15} />}
+            onClick={() => navigate("/assessments")}
+          />
+          <ActionButton
+            label="Timetable"
+            icon={<CalendarDays size={15} />}
+            onClick={() => navigate("/timetable")}
+          />
+          <ActionButton
+            label="Student results"
+            icon={<CheckCircle2 size={15} />}
+            onClick={() => navigate("/student-results")}
+          />
+          <ActionButton
+            label="Admissions"
+            icon={<UserPlus size={15} />}
+            onClick={() => navigate("/admissions")}
+          />
+          <ActionButton
+            label="Announcements"
+            icon={<Megaphone size={15} />}
+            onClick={() => navigate("/announcements")}
+          />
         </div>
       </Card>
 
@@ -1794,7 +2050,9 @@ export default function PrincipalDashboard() {
 function MiniMetric({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl border border-slate-200 px-3 py-3">
-      <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">{label}</p>
+      <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
+        {label}
+      </p>
       <p className="mt-1 text-lg font-semibold text-slate-900">{value}</p>
     </div>
   );

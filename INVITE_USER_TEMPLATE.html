@@ -1,0 +1,46 @@
+<!-- Supabase Authentication → Email Templates → Invite User -->
+<h2>You&apos;ve been invited to Wiser</h2>
+
+{{ if eq .Data.role "parent" }}
+
+<p>Hello {{ .Data.first_name }},</p>
+
+<p>
+  You&apos;ve been invited to join Wiser as a parent. Click the button below to
+  securely accept your invitation and set up your account.
+</p>
+
+<p>
+  <a
+    href="{{ .RedirectTo }}?mode=parent&amp;token_hash={{ .TokenHash }}&amp;type=invite"
+    style="display:inline-block;padding:12px 20px;background:#4f46e5;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;"
+  >
+    Accept Invitation
+  </a>
+</p>
+
+<p>This invitation is intended only for the email address that received it.</p>
+
+{{ else }}
+
+<p>Hello {{ .Data.first_name }},</p>
+
+<p>
+  You&apos;ve been invited to join Wiser as a staff member. Click the button below to
+  continue to your secure account setup.
+</p>
+
+<p>
+  <a
+    href="{{ .RedirectTo }}?confirmation_url={{ .ConfirmationURL }}"
+    style="display:inline-block;padding:12px 20px;background:#4f46e5;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;"
+  >
+    Accept Invitation
+  </a>
+</p>
+
+<p>This invitation is intended only for the email address that received it.</p>
+
+{{ end }}
+
+<p>If you did not expect this invitation, you can safely ignore this email.</p>

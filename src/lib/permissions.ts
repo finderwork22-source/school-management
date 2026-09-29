@@ -1,15 +1,15 @@
 export type UserRole =
   | "Owner"
-  | "CEO"
   | "Principal"
   | "Head of Academics"
   | "Secretary"
-  | "Teacher";
+  | "Teacher"
+  | "Parent";
 
 export const ROLE_ACCESS: Record<UserRole, string[]> = {
   Owner: ["*"],
-  CEO: ["*"],
   Principal: ["*"],
+
   "Head of Academics": [
     "/",
     "/profile",
@@ -24,22 +24,34 @@ export const ROLE_ACCESS: Record<UserRole, string[]> = {
     "/attendance/reports",
     "/assessments",
     "/student-results",
+    "/announcements",
+    "/settings/academic",
+    "/settings/users",
   ],
+
   Secretary: [
     "/",
     "/profile",
+    "/admissions",
     "/students",
     "/students/:id",
     "/parents",
     "/pickup-desk",
     "/pickup-history",
+    "/finance",
+    "/finance/billing",
     "/finance/payments",
+    "/finance/receipts",
+    "/finance/reports",
+    "/announcements",
   ],
+
   Teacher: [
     "/",
     "/profile",
     "/students",
     "/students/:id",
+    "/teachers",
     "/academics",
     "/timetable",
     "/attendance",
@@ -47,27 +59,39 @@ export const ROLE_ACCESS: Record<UserRole, string[]> = {
     "/attendance/reports",
     "/assessments",
     "/student-results",
+    "/announcements",
+  ],
+
+  Parent: [
+    "/",
+    "/profile",
+    "/pickup-authorisations",
+    "/announcements",
   ],
 };
 
 export function normalizeRole(value?: string | null): UserRole {
-  const normalized = (value ?? "").trim().toLowerCase();
+  const normalized = (value ?? "")
+    .trim()
+    .toLowerCase()
+    .replaceAll("_", " ");
 
   switch (normalized) {
     case "owner":
       return "Owner";
-    case "ceo":
-      return "CEO";
     case "principal":
       return "Principal";
     case "head of academics":
-    case "head_of_academics":
-    case "head_of_academic":
+    case "head of academic":
       return "Head of Academics";
     case "secretary":
       return "Secretary";
     case "teacher":
       return "Teacher";
+    case "parent":
+    case "parent guardian":
+    case "parent/guardian":
+      return "Parent";
     default:
       return "Teacher";
   }
@@ -89,12 +113,17 @@ export function canAccessPath(
   path: string,
 ) {
   const role = normalizeRole(roleValue);
-  return ROLE_ACCESS[role].some((pattern) => matchesPath(pattern, path));
+
+  return ROLE_ACCESS[role].some((pattern) =>
+    matchesPath(pattern, path),
+  );
 }
 
 export function hasAnyAccess(
   roleValue: string | null | undefined,
   paths: string[],
 ) {
-  return paths.some((path) => canAccessPath(roleValue, path));
+  return paths.some((path) =>
+    canAccessPath(roleValue, path),
+  );
 }

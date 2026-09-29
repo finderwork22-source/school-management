@@ -6,7 +6,7 @@ import {
   type ReactNode,
 } from "react";
 
-import { supabase } from "../lib/supabase";
+import { getMySchoolMembership } from "../lib/auth";
 import { useAuth } from "./AuthContext";
 
 export interface School {
@@ -57,6 +57,7 @@ export function SchoolProvider({
     if (!user) {
       setSchool(null);
       setMembership(null);
+      setError(null);
       setLoading(false);
       return;
     }
@@ -64,52 +65,37 @@ export function SchoolProvider({
     setLoading(true);
     setError(null);
 
-    const { data, error: queryError } = await supabase
-      .from("school_members")
-      .select(
-        `
-          id,
-          school_id,
-          role,
-          schools (
-            id,
-            name,
-            slug,
-            email,
-            phone,
-            address,
-            city,
-            country,
-            logo_url
-          )
-        `,
-      )
-      .eq("user_id", user.id)
-      .limit(1)
-      .maybeSingle();
+    const {
+      membership: resolvedMembership,
+      error: membershipError,
+    } = await getMySchoolMembership();
 
-    if (queryError) {
-      console.error("Failed to load school:", queryError);
-      setError(queryError.message);
+    if (membershipError) {
+      console.error(
+        "Failed to resolve school membership:",
+        membershipError,
+      );
+
+      setError(membershipError.message);
       setSchool(null);
       setMembership(null);
       setLoading(false);
       return;
     }
 
-    if (!data) {
+    if (!resolvedMembership) {
       setSchool(null);
       setMembership(null);
       setLoading(false);
       return;
     }
 
-    const schoolData = data.schools as unknown as School;
+    const schoolData = resolvedMembership.school as School;
 
     setMembership({
-      id: data.id,
-      school_id: data.school_id,
-      role: data.role,
+      id: resolvedMembership.id,
+      school_id: resolvedMembership.school_id,
+      role: resolvedMembership.role,
       school: schoolData,
     });
 
@@ -118,9 +104,11 @@ export function SchoolProvider({
   }
 
   useEffect(() => {
-    if (authLoading) return;
+    if (authLoading) {
+      return;
+    }
 
-    loadSchool();
+    void loadSchool();
   }, [user, authLoading]);
 
   return (

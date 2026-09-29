@@ -23,7 +23,6 @@ import Button from "../components/ui/Button";
 
 type Role =
   | "Owner"
-  | "CEO"
   | "Principal"
   | "Head of Academics"
   | "Secretary"
@@ -65,12 +64,6 @@ const ROLE_DEFINITIONS: RoleDefinition[] = [
     finance: "Full",
   },
   {
-    role: "CEO",
-    description: "Full system access and school-wide oversight.",
-    access: ["School", "Academics", "Finance", "Users & Roles", "Settings"],
-    finance: "Full",
-  },
-  {
     role: "Principal",
     description: "Full school access and operational oversight.",
     access: ["School", "Academics", "Finance", "Users & Roles", "Settings"],
@@ -78,15 +71,15 @@ const ROLE_DEFINITIONS: RoleDefinition[] = [
   },
   {
     role: "Head of Academics",
-    description: "Manages academic operations without financial access.",
-    access: ["Students", "Teachers", "Academics", "Attendance", "Assessments"],
+    description: "Manages academic operations, academic settings and school users.",
+    access: ["Students", "Teachers", "Academics", "Attendance", "Assessments", "Users & Roles"],
     finance: "None",
   },
   {
     role: "Secretary",
-    description: "School operations with limited payment recording.",
-    access: ["Students", "Parents", "Admissions", "Payments"],
-    finance: "Limited",
+    description: "Manages school operations and the full finance workflow.",
+    access: ["Students", "Parents", "Admissions", "Finance"],
+    finance: "Full",
   },
   {
     role: "Teacher",
@@ -98,7 +91,6 @@ const ROLE_DEFINITIONS: RoleDefinition[] = [
 
 const ROLE_OPTIONS: Role[] = [
   "Owner",
-  "CEO",
   "Principal",
   "Head of Academics",
   "Secretary",
@@ -109,7 +101,6 @@ function normalizeRole(value: string): Role {
   const normalized = value.trim().toLowerCase();
 
   if (normalized === "owner") return "Owner";
-  if (normalized === "ceo") return "CEO";
   if (normalized === "principal") return "Principal";
   if (normalized === "head of academics" || normalized === "head_of_academics") {
     return "Head of Academics";
@@ -266,7 +257,6 @@ export default function UsersRoles() {
   const roleCounts = useMemo(() => {
     const counts: Record<Role, number> = {
       Owner: 0,
-      CEO: 0,
       Principal: 0,
       "Head of Academics": 0,
       Secretary: 0,
@@ -343,7 +333,6 @@ export default function UsersRoles() {
           label="Administrators"
           value={
             roleCounts.Owner +
-            roleCounts.CEO +
             roleCounts.Principal +
             roleCounts["Head of Academics"]
           }
@@ -517,7 +506,7 @@ export default function UsersRoles() {
             </h2>
 
             <p className="mt-1 text-xs text-slate-500">
-              High Gate's predefined SchoolOS roles and their access levels.
+              WISE school roles and their access levels.
             </p>
           </div>
 
@@ -832,7 +821,7 @@ function InviteUserModal({
             </h2>
 
             <p className="mt-1 text-xs text-slate-500">
-              Create an access request for a school staff member.
+              Invite a school staff member and assign their access role.
             </p>
           </div>
 

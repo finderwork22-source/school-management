@@ -33,6 +33,7 @@ import Assessments from "./pages/Assessments";
 import AssessmentMarks from "./pages/AssessmentMarks";
 import AssessmentResults from "./pages/AssessmentResults";
 import StudentResults from "./pages/StudentResults";
+import ParentPickupAuthorisations from "./pages/ParentPickupAuthorisations";
 
 // Finance
 import FeeStructure from "./pages/FeeStructure";
@@ -87,6 +88,10 @@ export default function App() {
           <Route path="teachers/:id" element={<TeacherProfile />} />
           <Route path="pickup-desk" element={<PickupDesk />} />
           <Route path="pickup-history" element={<PickupHistory />} />
+          <Route
+            path="pickup-authorisations"
+            element={<ParentPickupAuthorisations />}
+          />
 
           {/* Academics */}
           <Route path="academic-years" element={<AcademicYears />} />

@@ -634,7 +634,7 @@ function AdminDashboard() {
 
 
 
-interface CEOFeeSummary {
+interface OwnerFeeSummary {
   billed: number;
   collected: number;
   outstanding: number;
@@ -642,7 +642,7 @@ interface CEOFeeSummary {
   invoiceCount: number;
 }
 
-interface CEOAdmissionSummary {
+interface OwnerAdmissionSummary {
   total: number;
   pending: number;
   underReview: number;
@@ -650,7 +650,7 @@ interface CEOAdmissionSummary {
   enrolled: number;
 }
 
-interface CEOActivityItem {
+interface OwnerActivityItem {
   id: string;
   title: string;
   description: string;
@@ -658,24 +658,24 @@ interface CEOActivityItem {
   time: string;
 }
 
-interface CEOAnnouncementItem {
+interface OwnerAnnouncementItem {
   id: string;
   title: string;
   createdAt: string;
 }
 
-interface CEOAttendanceTrendPoint {
+interface OwnerAttendanceTrendPoint {
   label: string;
   rate: number;
   present: number;
 }
 
-interface CEOFeeTrendPoint {
+interface OwnerFeeTrendPoint {
   label: string;
   collected: number;
 }
 
-interface CEOAdmissionTrendPoint {
+interface OwnerAdmissionTrendPoint {
   label: string;
   applications: number;
   accepted: number;
@@ -688,7 +688,7 @@ function formatMoney(value: number) {
   }).format(value);
 }
 
-function getCEOAdmissionName(application: {
+function getOwnerAdmissionName(application: {
   first_name?: string | null;
   middle_name?: string | null;
   last_name?: string | null;
@@ -740,7 +740,7 @@ function buildAttendanceTrend(
   }>,
 ) {
   const today = new Date();
-  const points: CEOAttendanceTrendPoint[] = [];
+  const points: OwnerAttendanceTrendPoint[] = [];
 
   for (let offset = 6; offset >= 0; offset -= 1) {
     const date = new Date(
@@ -769,7 +769,7 @@ function buildFeeTrend(
   payments: Array<{ payment_date: string; amount: number | string | null }>,
 ) {
   const currentMonth = startOfMonth(new Date());
-  const points: CEOFeeTrendPoint[] = [];
+  const points: OwnerFeeTrendPoint[] = [];
 
   for (let offset = 5; offset >= 0; offset -= 1) {
     const date = shiftMonth(currentMonth, -offset);
@@ -802,7 +802,7 @@ function buildAdmissionTrend(
   applications: Array<{ application_date: string; status: string }>,
 ) {
   const currentMonth = startOfMonth(new Date());
-  const points: CEOAdmissionTrendPoint[] = [];
+  const points: OwnerAdmissionTrendPoint[] = [];
 
   for (let offset = 5; offset >= 0; offset -= 1) {
     const date = shiftMonth(currentMonth, -offset);
@@ -833,7 +833,7 @@ function buildAdmissionTrend(
   return points;
 }
 
-function CEOSummaryCard({
+function OwnerSummaryCard({
   label,
   value,
   helper,
@@ -867,7 +867,7 @@ function CEOSummaryCard({
   );
 }
 
-function CEOProgressRow({
+function OwnerProgressRow({
   label,
   value,
   percent,
@@ -905,7 +905,7 @@ function CEOProgressRow({
   );
 }
 
-function CEOQuickAccessCard({
+function OwnerQuickAccessCard({
   title,
   description,
   icon,
@@ -945,11 +945,11 @@ function CEOQuickAccessCard({
   );
 }
 
-function CEODashboard() {
+function OwnerDashboard() {
   const navigate = useNavigate();
   const { school } = useSchool();
 
-  const [firstName, setFirstName] = useState("CEO");
+  const [firstName, setFirstName] = useState("Owner");
   const [academicYearName, setAcademicYearName] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -966,7 +966,7 @@ function CEODashboard() {
     rate: 0,
   });
 
-  const [fees, setFees] = useState<CEOFeeSummary>({
+  const [fees, setFees] = useState<OwnerFeeSummary>({
     billed: 0,
     collected: 0,
     outstanding: 0,
@@ -974,7 +974,7 @@ function CEODashboard() {
     invoiceCount: 0,
   });
 
-  const [admissions, setAdmissions] = useState<CEOAdmissionSummary>({
+  const [admissions, setAdmissions] = useState<OwnerAdmissionSummary>({
     total: 0,
     pending: 0,
     underReview: 0,
@@ -982,16 +982,16 @@ function CEODashboard() {
     enrolled: 0,
   });
 
-  const [activities, setActivities] = useState<CEOActivityItem[]>([]);
-  const [announcements, setAnnouncements] = useState<CEOAnnouncementItem[]>(
+  const [activities, setActivities] = useState<OwnerActivityItem[]>([]);
+  const [announcements, setAnnouncements] = useState<OwnerAnnouncementItem[]>(
     [],
   );
-  const [attendanceTrend, setAttendanceTrend] = useState<CEOAttendanceTrendPoint[]>(
+  const [attendanceTrend, setAttendanceTrend] = useState<OwnerAttendanceTrendPoint[]>(
     [],
   );
-  const [feeTrend, setFeeTrend] = useState<CEOFeeTrendPoint[]>([]);
+  const [feeTrend, setFeeTrend] = useState<OwnerFeeTrendPoint[]>([]);
   const [admissionTrend, setAdmissionTrend] =
-    useState<CEOAdmissionTrendPoint[]>([]);
+    useState<OwnerAdmissionTrendPoint[]>([]);
 
   async function loadDashboard() {
     if (!school?.id) {
@@ -1292,7 +1292,7 @@ function CEODashboard() {
         ),
       );
 
-      const nextActivities: CEOActivityItem[] = [];
+      const nextActivities: OwnerActivityItem[] = [];
 
       for (const student of recentStudentsResult.data ?? []) {
         nextActivities.push({
@@ -1321,7 +1321,7 @@ function CEODashboard() {
         nextActivities.push({
           id: `admission-${application.id}`,
           title: "Admission application",
-          description: `${getCEOAdmissionName(application)} • ${application.status}`,
+          description: `${getOwnerAdmissionName(application)} • ${application.status}`,
           createdAt: application.created_at,
           time: formatRelativeTime(application.created_at),
         });
@@ -1343,11 +1343,11 @@ function CEODashboard() {
         })),
       );
     } catch (err) {
-      console.error("Failed to load CEO dashboard:", err);
+      console.error("Failed to load Owner dashboard:", err);
       setError(
         err instanceof Error
           ? err.message
-          : "Unable to load CEO dashboard data.",
+          : "Unable to load Owner dashboard data.",
       );
     } finally {
       setLoading(false);
@@ -1421,28 +1421,28 @@ function CEODashboard() {
       )}
 
       <div className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <CEOSummaryCard
+        <OwnerSummaryCard
           label="Students"
           value={loading ? "—" : String(students)}
           helper="All student records in this school."
           icon={<Users size={18} />}
         />
 
-        <CEOSummaryCard
+        <OwnerSummaryCard
           label="Teachers"
           value={loading ? "—" : String(teachers)}
           helper="All teacher records in this school."
           icon={<GraduationCap size={18} />}
         />
 
-        <CEOSummaryCard
+        <OwnerSummaryCard
           label="Active classes"
           value={loading ? "—" : String(classes)}
           helper="Currently active class records."
           icon={<School size={18} />}
         />
 
-        <CEOSummaryCard
+        <OwnerSummaryCard
           label="Fee collection"
           value={
             loading
@@ -1536,7 +1536,7 @@ function CEODashboard() {
                   }))
                 : attendanceBreakdown
               ).map((item) => (
-                <CEOProgressRow
+                <OwnerProgressRow
                   key={item.label}
                   label={item.label}
                   value={loading ? "—" : String(item.value)}
@@ -1559,7 +1559,7 @@ function CEODashboard() {
           </div>
 
           <div className="mt-6 space-y-5">
-            <CEOProgressRow
+            <OwnerProgressRow
               label="Collected"
               value={
                 loading
@@ -1606,13 +1606,13 @@ function CEODashboard() {
       </div>
 
       <div className="mt-6 grid min-w-0 gap-6 xl:grid-cols-2">
-        <CEOAttendanceTrendChart
+        <OwnerAttendanceTrendChart
           loading={loading}
           data={attendanceTrend}
           onViewDetails={() => navigate("/attendance")}
         />
 
-        <CEOFeeTrendChart
+        <OwnerFeeTrendChart
           loading={loading}
           data={feeTrend}
           onViewDetails={() => navigate("/finance/payments")}
@@ -1620,7 +1620,7 @@ function CEODashboard() {
       </div>
 
       <div className="mt-6">
-        <CEOAdmissionsTrendChart
+        <OwnerAdmissionsTrendChart
           loading={loading}
           data={admissionTrend}
           onViewDetails={() => navigate("/admissions")}
@@ -1670,7 +1670,7 @@ function CEODashboard() {
           </div>
 
           <div className="mt-6 grid gap-5 md:grid-cols-2">
-            <CEOProgressRow
+            <OwnerProgressRow
               label="Accepted"
               value={loading ? "—" : String(admissions.accepted)}
               percent={
@@ -1681,7 +1681,7 @@ function CEODashboard() {
               description="Applications with an accepted decision."
             />
 
-            <CEOProgressRow
+            <OwnerProgressRow
               label="Enrolled"
               value={loading ? "—" : String(admissions.enrolled)}
               percent={
@@ -1813,42 +1813,42 @@ function CEODashboard() {
           </div>
 
           <div className="mt-5 grid min-w-0 gap-3 sm:grid-cols-2">
-            <CEOQuickAccessCard
+            <OwnerQuickAccessCard
               title="Students"
               description="Review enrollment and student records."
               icon={<Users size={17} />}
               onClick={() => navigate("/students")}
             />
 
-            <CEOQuickAccessCard
+            <OwnerQuickAccessCard
               title="Teachers"
               description="Review teaching staff and assignments."
               icon={<GraduationCap size={17} />}
               onClick={() => navigate("/teachers")}
             />
 
-            <CEOQuickAccessCard
+            <OwnerQuickAccessCard
               title="Admissions"
               description="Review the current application pipeline."
               icon={<UserPlus size={17} />}
               onClick={() => navigate("/admissions")}
             />
 
-            <CEOQuickAccessCard
+            <OwnerQuickAccessCard
               title="Finance"
               description="Review invoices, payments and balances."
               icon={<CreditCard size={17} />}
               onClick={() => navigate("/finance/payments")}
             />
 
-            <CEOQuickAccessCard
+            <OwnerQuickAccessCard
               title="Academics"
               description="Manage classes, subjects and academic years."
               icon={<BookOpen size={17} />}
               onClick={() => navigate("/academics")}
             />
 
-            <CEOQuickAccessCard
+            <OwnerQuickAccessCard
               title="Users & roles"
               description="Manage staff access and permissions."
               icon={<CheckCircle2 size={17} />}
@@ -1861,7 +1861,7 @@ function CEODashboard() {
   );
 }
 
-function CEOChartHeader({
+function OwnerChartHeader({
   title,
   description,
   actionLabel,
@@ -1891,7 +1891,7 @@ function CEOChartHeader({
   );
 }
 
-function CEOLineChart({
+function OwnerLineChart({
   data,
   valueKey,
   formatValue,
@@ -1987,7 +1987,7 @@ function CEOLineChart({
   );
 }
 
-function CEOBarChart({
+function OwnerBarChart({
   data,
   valueKey,
   formatValue,
@@ -2028,20 +2028,20 @@ function CEOBarChart({
   );
 }
 
-function CEOAdmissionsTrendChart({
+function OwnerAdmissionsTrendChart({
   loading,
   data,
   onViewDetails,
 }: {
   loading: boolean;
-  data: CEOAdmissionTrendPoint[];
+  data: OwnerAdmissionTrendPoint[];
   onViewDetails: () => void;
 }) {
   const maxValue = Math.max(...data.map((item) => item.applications), 1);
 
   return (
     <Card className="min-w-0 p-4 sm:p-6">
-      <CEOChartHeader
+      <OwnerChartHeader
         title="Admissions trend"
         description="Applications received over the last six months."
         actionLabel="Open admissions"
@@ -2104,18 +2104,18 @@ function CEOAdmissionsTrendChart({
   );
 }
 
-function CEOAttendanceTrendChart({
+function OwnerAttendanceTrendChart({
   loading,
   data,
   onViewDetails,
 }: {
   loading: boolean;
-  data: CEOAttendanceTrendPoint[];
+  data: OwnerAttendanceTrendPoint[];
   onViewDetails: () => void;
 }) {
   return (
     <Card className="min-w-0 p-4 sm:p-6">
-      <CEOChartHeader
+      <OwnerChartHeader
         title="Attendance trend"
         description="Daily attendance rate across the last seven days."
         actionLabel="View attendance"
@@ -2133,7 +2133,7 @@ function CEOAttendanceTrendChart({
         </div>
       ) : (
         <>
-          <CEOLineChart
+          <OwnerLineChart
             data={data}
             valueKey="rate"
             formatValue={(value) => `${value.toFixed(0)}%`}
@@ -2151,18 +2151,18 @@ function CEOAttendanceTrendChart({
   );
 }
 
-function CEOFeeTrendChart({
+function OwnerFeeTrendChart({
   loading,
   data,
   onViewDetails,
 }: {
   loading: boolean;
-  data: CEOFeeTrendPoint[];
+  data: OwnerFeeTrendPoint[];
   onViewDetails: () => void;
 }) {
   return (
     <Card className="min-w-0 p-4 sm:p-6">
-      <CEOChartHeader
+      <OwnerChartHeader
         title="Fee collection trend"
         description="Payments received over the last six months."
         actionLabel="Open finance"
@@ -2180,7 +2180,7 @@ function CEOFeeTrendChart({
         </div>
       ) : (
         <>
-          <CEOBarChart
+          <OwnerBarChart
             data={data}
             valueKey="collected"
             formatValue={(value) => formatMoney(value)}
@@ -2793,8 +2793,8 @@ export default function Dashboard() {
     return <HeadOfAcademicsDashboard />;
   }
 
-  if (role === "CEO") {
-    return <CEODashboard />;
+  if (role === "Owner") {
+    return <OwnerDashboard />;
   }
 
   if (role === "Principal") {

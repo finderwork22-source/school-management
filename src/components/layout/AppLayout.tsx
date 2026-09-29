@@ -23,6 +23,7 @@ import {
   Bell,
   ShieldCheck,
   History,
+  UserCheck,
   Receipt,
   CreditCard,
   BarChart3,
@@ -48,6 +49,7 @@ type NavigationItem = {
 type NavigationSection = {
   label: string;
   items: NavigationItem[];
+  allowedRoles?: string[];
 };
 
 const navigation: NavigationSection[] = [
@@ -58,6 +60,34 @@ const navigation: NavigationSection[] = [
         label: "Dashboard",
         icon: LayoutDashboard,
         path: "/",
+      },
+    ],
+  },
+
+
+  {
+    label: "Parent",
+    allowedRoles: ["Parent"],
+    items: [
+      {
+        label: "My Children",
+        icon: Users,
+        path: "/",
+      },
+      {
+        label: "Pickup Authorisations",
+        icon: ShieldCheck,
+        path: "/pickup-authorisations",
+      },
+      {
+        label: "Announcements",
+        icon: Megaphone,
+        path: "/announcements",
+      },
+      {
+        label: "My Profile",
+        icon: UserCheck,
+        path: "/profile",
       },
     ],
   },
@@ -260,6 +290,15 @@ function Sidebar({
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-5">
         {navigation.map((section) => {
+          // Parent-specific navigation must only be shown to Parent users.
+          // Route-level access is still enforced separately by canAccessPath.
+          if (
+            section.allowedRoles &&
+            !section.allowedRoles.includes(role)
+          ) {
+            return null;
+          }
+
           const visibleItems = section.items
             .map((item) => {
               if (!item.children?.length) {
@@ -464,6 +503,7 @@ function Header({ onOpenNavigation }: { onOpenNavigation: () => void }) {
   const { school, membership } = useSchool();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const role = normalizeRole(membership?.role);
 
   const [notifications, setNotifications] = useState<SchoolNotification[]>([]);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -493,12 +533,18 @@ function Header({ onOpenNavigation }: { onOpenNavigation: () => void }) {
       setNotificationsLoading(true);
       setNotificationsError("");
 
+      const now = new Date().toISOString();
+
       const { data, error } = await supabase
         .from("announcements")
-        .select("id, title, created_at")
+        .select(
+          "id, title, content, created_at, status, audience_type, publish_date, expiry_date, priority",
+        )
         .eq("school_id", schoolId)
+        .eq("status", "Published")
+        .lte("publish_date", now)
         .order("created_at", { ascending: false })
-        .limit(6);
+        .limit(12);
 
       if (cancelled) return;
 
@@ -507,13 +553,42 @@ function Header({ onOpenNavigation }: { onOpenNavigation: () => void }) {
         setNotifications([]);
         setNotificationsError("Unable to load school notifications.");
       } else {
+        const visibleAnnouncements = (data ?? []).filter((item) => {
+          const expiryDate = item.expiry_date
+            ? new Date(item.expiry_date)
+            : null;
+
+          if (expiryDate && expiryDate < new Date()) {
+            return false;
+          }
+
+          // Teachers should only receive announcements intended for
+          // the whole school, teachers, or staff.
+          if (role === "Teacher") {
+            return ["All School", "Teachers", "Staff"].includes(
+              item.audience_type,
+            );
+          }
+
+          return true;
+        });
+
         setNotifications(
-          (data ?? []).map((item) => ({
-            id: item.id,
-            title: item.title || "School announcement",
-            description: "New school announcement",
-            createdAt: item.created_at,
-          })),
+          visibleAnnouncements.slice(0, 6).map((item) => {
+            const cleanContent = (item.content ?? "")
+              .replace(/\s+/g, " ")
+              .trim();
+
+            return {
+              id: item.id,
+              title: item.title || "School announcement",
+              description:
+                cleanContent.length > 110
+                  ? `${cleanContent.slice(0, 110)}...`
+                  : cleanContent || "New school announcement",
+              createdAt: item.created_at,
+            };
+          }),
         );
       }
 
@@ -525,7 +600,7 @@ function Header({ onOpenNavigation }: { onOpenNavigation: () => void }) {
     return () => {
       cancelled = true;
     };
-  }, [school?.id]);
+  }, [school?.id, role]);
 
   useEffect(() => {
     if (!notificationsOpen) return;
@@ -550,8 +625,14 @@ function Header({ onOpenNavigation }: { onOpenNavigation: () => void }) {
     setNotificationsOpen((current) => !current);
   }
 
-  function openAnnouncement() {
+  function openAnnouncement(announcementId?: string) {
     setNotificationsOpen(false);
+
+    if (announcementId) {
+      navigate(`/announcements?id=${encodeURIComponent(announcementId)}`);
+      return;
+    }
+
     navigate("/announcements");
   }
 
@@ -651,7 +732,7 @@ function Header({ onOpenNavigation }: { onOpenNavigation: () => void }) {
                       <button
                         key={notification.id}
                         type="button"
-                        onClick={openAnnouncement}
+                        onClick={() => openAnnouncement(notification.id)}
                         className="flex w-full gap-3 px-4 py-3.5 text-left transition hover:bg-slate-50 focus:outline-none focus-visible:bg-wiser-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-wiser-500"
                       >
                         <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-wiser-600" />
@@ -676,7 +757,7 @@ function Header({ onOpenNavigation }: { onOpenNavigation: () => void }) {
               <div className="border-t border-slate-200 p-2">
                 <button
                   type="button"
-                  onClick={openAnnouncement}
+                  onClick={() => openAnnouncement()}
                   className="flex w-full items-center justify-center rounded-lg px-3 py-2 text-sm font-medium text-wiser-600 transition hover:bg-wiser-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-wiser-500"
                 >
                   View all announcements
