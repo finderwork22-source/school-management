@@ -12,7 +12,6 @@ import { Link, useNavigate } from "react-router-dom";
 
 import WiserLogo from "../assets/wiser-logo-cropped.png";
 import { signUp } from "../lib/auth";
-import { supabase } from "../lib/supabase";
 
 export default function SignUp() {
   const navigate = useNavigate();
@@ -27,18 +26,12 @@ export default function SignUp() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [loading, setLoading] = useState(false);
-  const [resending, setResending] = useState(false);
-
   const [error, setError] = useState("");
   const [confirmationSent, setConfirmationSent] = useState(false);
-  const [resendMessage, setResendMessage] = useState("");
-
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     setError("");
-    setResendMessage("");
-
     const normalizedFirstName = firstName.trim();
     const normalizedLastName = lastName.trim();
     const normalizedEmail = email.trim().toLowerCase();
@@ -108,40 +101,6 @@ export default function SignUp() {
     navigate("/setup-school", { replace: true });
   }
 
-  async function handleResendConfirmation() {
-    const normalizedEmail = email.trim().toLowerCase();
-
-    if (!normalizedEmail) {
-      setError("Please enter your email address.");
-      return;
-    }
-
-    setError("");
-    setResendMessage("");
-    setResending(true);
-
-    const { error: resendError } = await supabase.auth.resend({
-      type: "signup",
-      email: normalizedEmail,
-      options: {
-        emailRedirectTo: `${window.location.origin}/setup-school`,
-      },
-    });
-
-    if (resendError) {
-      setError(
-        resendError.message ||
-          "We could not resend the confirmation email. Please try again.",
-      );
-      setResending(false);
-      return;
-    }
-
-    setResendMessage(
-      "A new confirmation email has been sent. Please check your inbox.",
-    );
-    setResending(false);
-  }
 
   if (confirmationSent) {
     return (
@@ -206,8 +165,8 @@ export default function SignUp() {
               </p>
 
               <p className="mt-4 text-sm leading-6 text-wiser-text-secondary">
-                Confirm your email address, then return to WISE and sign in.
-                You can continue with your school request after signing in.
+                We sent a confirmation link to your email address. Confirm your
+                email, then sign in to continue with your school request.
               </p>
 
               {error && (
@@ -219,28 +178,10 @@ export default function SignUp() {
                 </div>
               )}
 
-              {resendMessage && (
-                <div
-                  role="status"
-                  className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm leading-6 text-emerald-700"
-                >
-                  {resendMessage}
-                </div>
-              )}
-
               <button
                 type="button"
-                onClick={() => void handleResendConfirmation()}
-                disabled={resending}
-                className="mt-6 flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-wiser-border bg-white px-4 text-sm font-semibold text-wiser-text transition hover:bg-wiser-50 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {resending ? "Sending..." : "Resend confirmation email"}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => navigate("/login")}
-                className="mt-3 flex h-11 w-full items-center justify-center rounded-lg bg-wiser-600 px-4 text-sm font-semibold text-white transition hover:bg-wiser-700"
+                onClick={() => navigate("/login", { replace: true })}
+                className="mt-6 flex h-11 w-full items-center justify-center rounded-lg bg-wiser-600 px-4 text-sm font-semibold text-white transition hover:bg-wiser-700"
               >
                 Go to sign in
               </button>
