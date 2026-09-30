@@ -5,7 +5,6 @@ import {
   Bell,
   CalendarDays,
   CheckCircle2,
-  ChevronDown,
   ChevronRight,
   Clock3,
   ClipboardCheck,
