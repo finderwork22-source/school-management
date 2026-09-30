@@ -43,16 +43,17 @@ export async function signUp({
   lastName: string;
 }) {
   return supabase.auth.signUp({
-    email,
+    email: email.trim(),
     password,
     options: {
       data: {
-        first_name: firstName,
-        last_name: lastName,
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
       },
 
-      // New school accounts should continue directly
-      // to the school onboarding page after email confirmation.
+      // Normal school account signup should continue through the
+      // regular email-confirmation flow. Invitations use a separate
+      // /accept-invitation flow.
       emailRedirectTo: `${window.location.origin}/login`,
     },
   });
@@ -63,13 +64,16 @@ export async function signOut() {
 }
 
 /**
- * Resolve the authenticated SchoolOS role.
+ * Resolve the authenticated WISE school role.
  *
- * Parent role resolution is performed through a SECURITY DEFINER RPC so
- * parents-table RLS cannot incorrectly make a real parent account look like
- * a staff account.
+ * Parents are linked through parents.user_id and are resolved through the
+ * SECURITY DEFINER get_my_parent_membership() RPC.
  *
- * Staff accounts continue to resolve from school_members.
+ * Staff users are resolved through school_members.user_id.
+ *
+ * This helper is intentionally the single source of truth used by the
+ * login flow and SchoolContext, so parents and staff receive the same
+ * role-aware school context after authentication.
  */
 export async function getMySchoolMembership(): Promise<{
   membership: SchoolMembershipResult | null;
@@ -113,6 +117,8 @@ export async function getMySchoolMembership(): Promise<{
       parentRpcError,
     );
 
+    // Only block the account when it explicitly identifies itself as a
+    // Parent. Staff accounts are allowed to continue to the staff lookup.
     if (metadataRole === "parent") {
       return {
         membership: null,

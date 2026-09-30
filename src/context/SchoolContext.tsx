@@ -7,6 +7,7 @@ import {
 } from "react";
 
 import { getMySchoolMembership } from "../lib/auth";
+import type { SchoolMembershipResult } from "../lib/auth";
 import { useAuth } from "./AuthContext";
 
 export interface School {
@@ -72,13 +73,12 @@ export function SchoolProvider({
 
     if (membershipError) {
       console.error(
-        "Failed to resolve school membership:",
+        "Failed to resolve authenticated school membership:",
         membershipError,
       );
-
-      setError(membershipError.message);
       setSchool(null);
       setMembership(null);
+      setError(membershipError.message);
       setLoading(false);
       return;
     }
@@ -90,26 +90,28 @@ export function SchoolProvider({
       return;
     }
 
-    const schoolData = resolvedMembership.school as School;
+    // getMySchoolMembership uses the same SchoolMembershipResult shape for
+    // parents and staff. Keep the context contract unchanged for the rest of
+    // the application.
+    const typedMembership =
+      resolvedMembership as SchoolMembershipResult;
 
     setMembership({
-      id: resolvedMembership.id,
-      school_id: resolvedMembership.school_id,
-      role: resolvedMembership.role,
-      school: schoolData,
+      id: typedMembership.id,
+      school_id: typedMembership.school_id,
+      role: typedMembership.role,
+      school: typedMembership.school,
     });
 
-    setSchool(schoolData);
+    setSchool(typedMembership.school);
     setLoading(false);
   }
 
   useEffect(() => {
-    if (authLoading) {
-      return;
-    }
+    if (authLoading) return;
 
     void loadSchool();
-  }, [user, authLoading]);
+  }, [user?.id, authLoading]);
 
   return (
     <SchoolContext.Provider
