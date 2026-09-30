@@ -56,6 +56,13 @@ import MyProfile from "./pages/MyProfile";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminPlaceholder from "./pages/admin/AdminPlaceholder";
 import AdminApplications from "./pages/admin/AdminApplications";
+import AdminBilling from "./pages/admin/AdminBilling";
+import AdminSchools from "./pages/admin/AdminSchools";
+import AdminAnalytics from "./pages/admin/AdminAnalytics";
+import AdminAuditLogs from "./pages/admin/AdminAuditLogs";
+import AdminPlatformSettings from "./pages/admin/AdminPlatformSettings";
+import AdminForgotPassword from "./pages/admin/AdminForgotPassword";
+import AdminResetPassword from "./pages/admin/AdminResetPassword";
 
 export default function App() {
   return (
@@ -71,6 +78,11 @@ export default function App() {
           can establish their password before signing in. */}
       <Route path="/accept-invitation" element={<AcceptInvitation />} />
 
+      {/* WISE Admin password recovery stays public so an administrator
+          can recover access without an active platform session. */}
+      <Route path="/admin/forgot-password" element={<AdminForgotPassword />} />
+      <Route path="/admin/reset-password" element={<AdminResetPassword />} />
+
       {/* =====================================================
           WISE ADMIN — PLATFORM LEVEL
           This is intentionally separate from school AppLayout.
@@ -84,55 +96,12 @@ export default function App() {
         }
       >
         <Route index element={<AdminDashboard />} />
-        <Route
-          path="schools"
-          element={
-            <AdminPlaceholder
-              title="Schools"
-              description="Manage the schools registered on WISE, including platform status, subscriptions and school-level platform information."
-            />
-          }
-        />
-        <Route
-          path="applications"
-          element={<AdminApplications />}
-        />
-        <Route
-          path="billing"
-          element={
-            <AdminPlaceholder
-              title="Billing"
-              description="Manage WISE subscriptions, invoices, payments and payment allocations owed by schools to the WISE platform."
-            />
-          }
-        />
-        <Route
-          path="analytics"
-          element={
-            <AdminPlaceholder
-              title="Analytics"
-              description="Provide platform-level usage, growth, subscription and school activity reporting."
-            />
-          }
-        />
-        <Route
-          path="audit"
-          element={
-            <AdminPlaceholder
-              title="Audit logs"
-              description="Review security-sensitive WISE platform actions recorded in the platform audit log."
-            />
-          }
-        />
-        <Route
-          path="settings"
-          element={
-            <AdminPlaceholder
-              title="Platform settings"
-              description="Configure WISE company information, platform defaults, subscription settings and other platform-level controls."
-            />
-          }
-        />
+        <Route path="schools" element={<AdminSchools />} />
+        <Route path="applications" element={<AdminApplications />} />
+        <Route path="billing" element={<AdminBilling />} />
+        <Route path="analytics" element={<AdminAnalytics />} />
+        <Route path="audit" element={<AdminAuditLogs />} />
+        <Route path="settings" element={<AdminPlatformSettings />} />
       </Route>
 
       {/* =====================================================
