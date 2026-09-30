@@ -53,7 +53,7 @@ export async function signUp({
 
       // New school accounts should continue directly
       // to the school onboarding page after email confirmation.
-      emailRedirectTo: `${window.location.origin}/setup-school`,
+      emailRedirectTo: `${window.location.origin}/login`,
     },
   });
 }
