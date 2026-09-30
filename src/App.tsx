@@ -54,7 +54,6 @@ import MyProfile from "./pages/MyProfile";
 
 // WISE Admin
 import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminPlaceholder from "./pages/admin/AdminPlaceholder";
 import AdminApplications from "./pages/admin/AdminApplications";
 import AdminBilling from "./pages/admin/AdminBilling";
 import AdminSchools from "./pages/admin/AdminSchools";
