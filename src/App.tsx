@@ -12,7 +12,7 @@ import AcceptInvitation from "./pages/AcceptInvitation";
 import SetupSchool from "./pages/SetupSchool";
 
 // Overview
-import Dashboard from "./pages/Dashboard";
+
 
 // School
 import Admissions from "./pages/Admissions";
@@ -62,6 +62,7 @@ import AdminAuditLogs from "./pages/admin/AdminAuditLogs";
 import AdminPlatformSettings from "./pages/admin/AdminPlatformSettings";
 import AdminForgotPassword from "./pages/admin/AdminForgotPassword";
 import AdminResetPassword from "./pages/admin/AdminResetPassword";
+import PostAuthRedirect from "./components/auth/PostAuthRedirect";
 
 export default function App() {
   return (
@@ -112,7 +113,7 @@ export default function App() {
 
         <Route element={<AppLayout />}>
           {/* Overview */}
-          <Route index element={<Dashboard />} />
+          <Route index element={<PostAuthRedirect />} />
 
           {/* Personal profile */}
           <Route path="profile" element={<MyProfile />} />
