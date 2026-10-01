@@ -531,11 +531,6 @@ export default function Students() {
                         <div className="mt-0.5 break-words text-xs text-slate-400">
                           {student.parentPhone}
                         </div>
-                        {student.parentEmail && (
-                          <div className="mt-0.5 break-words text-xs text-slate-400">
-                            {student.parentEmail}
-                          </div>
-                        )}
                       </td>
 
                       <td className="px-5 py-4">
@@ -653,10 +648,6 @@ export default function Students() {
                       label="Phone"
                       value={student.parentPhone || "—"}
                     />
-                    <MobileStudentDetail
-                      label="Parent email"
-                      value={student.parentEmail || "—"}
-                    />
                   </div>
                 </div>
               ))}
@@ -765,8 +756,6 @@ function AddStudentModal({
 
   const [parentPhone, setParentPhone] = useState("");
 
-  const [parentEmail, setParentEmail] = useState("");
-
   const [gender, setGender] = useState<"Male" | "Female">("Male");
 
   const [saving, setSaving] = useState(false);
@@ -865,7 +854,6 @@ function AddStudentModal({
       p_photo_url: uploadedPhotoUrl || null,
       p_parent_name: parent.trim(),
       p_parent_phone: parentPhone.trim() || "",
-      p_parent_email: parentEmail.trim() || "",
     });
 
     if (createError) {
@@ -1106,6 +1094,10 @@ function AddStudentModal({
                 Parent / guardian
               </h3>
 
+              <p className="mt-1 text-xs leading-5 text-slate-500">
+                When the same parent already has a child at this school, use the same parent name or phone number. MojaSchool will reuse the existing parent record instead of creating a duplicate.
+              </p>
+
               <div className="mt-3 grid gap-4 sm:grid-cols-2">
                 <Field
                   label="Parent / guardian name"
@@ -1119,15 +1111,6 @@ function AddStudentModal({
                   value={parentPhone}
                   onChange={setParentPhone}
                   placeholder="+250 7XX XXX XXX"
-                  type="tel"
-                />
-
-                <Field
-                  label="Email address"
-                  value={parentEmail}
-                  onChange={setParentEmail}
-                  placeholder="parent@example.com"
-                  type="email"
                 />
               </div>
             </div>
@@ -1252,8 +1235,6 @@ function StudentDetails({ student, onClose }: StudentDetailsProps) {
           <InfoItem label="Parent" value={student.parent} />
 
           <InfoItem label="Phone" value={student.parentPhone} />
-
-          <InfoItem label="Parent email" value={student.parentEmail || "—"} />
 
           <InfoItem label="Status" value={student.status} />
 
