@@ -11,6 +11,7 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 
 import { signIn, getMySchoolMembership } from "../lib/auth";
+import { isPlatformAdmin } from "../lib/platformAuth";
 import { supabase } from "../lib/supabase";
 
 type LoginMode = "signIn" | "forgot" | "reset";
@@ -183,6 +184,24 @@ export default function Login() {
         return;
       }
 
+      // Platform Super Admins are not school members. Resolve platform
+      // access before checking school membership so they go to /admin
+      // instead of being incorrectly sent to school setup.
+      const { isAdmin, error: adminError } = await isPlatformAdmin();
+
+      if (adminError) {
+        console.error("Platform admin access check failed:", adminError);
+        setError(
+          "Your account was signed in, but platform access could not be verified. Please try again.",
+        );
+        return;
+      }
+
+      if (isAdmin) {
+        navigate("/admin", { replace: true });
+        return;
+      }
+
       const { membership, error: membershipError } =
         await getMySchoolMembership();
 
@@ -217,7 +236,7 @@ export default function Login() {
               className="h-auto w-[180px]"
             />
 
-          <div className="mt-8 max-w-lg">
+          <div className="mt-14 max-w-lg">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-MojaSchoolr-200">
               School management
             </p>
@@ -267,7 +286,7 @@ export default function Login() {
                 ? "Sign in to your school account."
                 : isForgot
                   ? "Enter your email and we'll send you a link to reset your password."
-                  : "Choose a new password for your MojaSchool account."}
+                  : "Choose a new password for your MojaSchoolr account."}
             </p>
           </div>
 
