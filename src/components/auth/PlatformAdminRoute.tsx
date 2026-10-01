@@ -54,7 +54,7 @@ export default function PlatformAdminRoute({
       if (adminError) {
         setAllowed(false);
         setError(
-          "We could not verify your WISE Admin access. Please try again.",
+          "We could not verify your MojaSchool Admin access. Please try again.",
         );
         setChecking(false);
         return;
@@ -73,11 +73,11 @@ export default function PlatformAdminRoute({
 
   if (checking) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-wiser-background px-6">
+      <div className="flex min-h-screen items-center justify-center bg-MojaSchoolr-background px-6">
         <div className="text-center">
-          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-wiser-200 border-t-wiser-600" />
-          <p className="mt-4 text-sm text-wiser-text-secondary">
-            Verifying WISE Admin access...
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-MojaSchoolr-200 border-t-MojaSchoolr-600" />
+          <p className="mt-4 text-sm text-MojaSchoolr-text-secondary">
+            Verifying MojaSchool Admin access...
           </p>
         </div>
       </div>
@@ -90,20 +90,20 @@ export default function PlatformAdminRoute({
 
   if (!allowed) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-wiser-background px-6">
-        <div className="w-full max-w-md rounded-2xl border border-wiser-border bg-white p-6 text-center shadow-sm">
-          <h1 className="text-lg font-semibold text-wiser-text">
-            WISE Admin access required
+      <div className="flex min-h-screen items-center justify-center bg-MojaSchoolr-background px-6">
+        <div className="w-full max-w-md rounded-2xl border border-MojaSchoolr-border bg-white p-6 text-center shadow-sm">
+          <h1 className="text-lg font-semibold text-MojaSchoolr-text">
+            MojaSchool Admin access required
           </h1>
 
-          <p className="mt-2 text-sm leading-6 text-wiser-text-secondary">
+          <p className="mt-2 text-sm leading-6 text-MojaSchoolr-text-secondary">
             {error ||
-              "This account is not registered as an active WISE platform administrator."}
+              "This account is not registered as an active MojaSchool platform administrator."}
           </p>
 
           <a
             href="/"
-            className="mt-6 inline-flex h-10 items-center justify-center rounded-lg bg-wiser-600 px-4 text-sm font-semibold text-white transition hover:bg-wiser-700"
+            className="mt-6 inline-flex h-10 items-center justify-center rounded-lg bg-MojaSchoolr-600 px-4 text-sm font-semibold text-white transition hover:bg-MojaSchoolr-700"
           >
             Return to school dashboard
           </a>

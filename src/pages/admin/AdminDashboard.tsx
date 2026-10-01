@@ -175,11 +175,11 @@ export default function AdminDashboard() {
 
       setApplications((recentApplicationsResult.data ?? []) as ApplicationRow[]);
     } catch (loadError) {
-      console.error("Failed to load WISE Admin dashboard:", loadError);
+      console.error("Failed to load MojaSchool Admin dashboard:", loadError);
       setError(
         loadError instanceof Error
           ? loadError.message
-          : "Could not load the WISE Admin dashboard.",
+          : "Could not load the MojaSchool Admin dashboard.",
       );
     } finally {
       setLoading(false);
@@ -235,13 +235,13 @@ export default function AdminDashboard() {
     <div className="mx-auto w-full max-w-[1440px]">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-wiser-600">
-            WISE platform
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-MojaSchoolr-600">
+            MojaSchool platform
           </p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-wiser-text sm:text-3xl">
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-MojaSchoolr-text sm:text-3xl">
             {greeting}, Admin
           </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-wiser-text-secondary">
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-MojaSchoolr-text-secondary">
             Monitor schools, onboarding activity, subscriptions and platform billing from one place.
           </p>
         </div>
@@ -250,7 +250,7 @@ export default function AdminDashboard() {
           type="button"
           onClick={() => void loadDashboard(true)}
           disabled={refreshing}
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-wiser-border bg-white px-4 text-sm font-semibold text-wiser-text-secondary transition hover:bg-wiser-50 hover:text-wiser-text disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-MojaSchoolr-border bg-white px-4 text-sm font-semibold text-MojaSchoolr-text-secondary transition hover:bg-MojaSchoolr-50 hover:text-MojaSchoolr-text disabled:cursor-not-allowed disabled:opacity-60"
         >
           <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
           {refreshing ? "Refreshing..." : "Refresh"}
@@ -274,29 +274,29 @@ export default function AdminDashboard() {
               onClick={() => stat.action && navigate(stat.action)}
               disabled={!stat.action}
               className={[
-                "rounded-xl border border-wiser-border bg-white p-5 text-left shadow-sm",
+                "rounded-xl border border-MojaSchoolr-border bg-white p-5 text-left shadow-sm",
                 stat.action
-                  ? "transition hover:-translate-y-0.5 hover:border-wiser-200 hover:shadow"
+                  ? "transition hover:-translate-y-0.5 hover:border-MojaSchoolr-200 hover:shadow"
                   : "cursor-default",
               ].join(" ")}
             >
               <div className="flex items-start justify-between gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-wiser-50 text-wiser-600">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-MojaSchoolr-50 text-MojaSchoolr-600">
                   <Icon size={19} />
                 </div>
                 {stat.action && (
-                  <ArrowRight size={16} className="text-wiser-text-muted" />
+                  <ArrowRight size={16} className="text-MojaSchoolr-text-muted" />
                 )}
               </div>
 
-              <p className="mt-5 text-xs font-medium text-wiser-text-muted">
+              <p className="mt-5 text-xs font-medium text-MojaSchoolr-text-muted">
                 {stat.label}
               </p>
-              <p className="mt-1 text-2xl font-semibold tracking-tight text-wiser-text">
+              <p className="mt-1 text-2xl font-semibold tracking-tight text-MojaSchoolr-text">
                 {stat.value}
               </p>
               {stat.secondary && (
-                <p className="mt-1 text-xs text-wiser-text-secondary">
+                <p className="mt-1 text-xs text-MojaSchoolr-text-secondary">
                   {stat.secondary}
                 </p>
               )}
@@ -306,21 +306,21 @@ export default function AdminDashboard() {
       </div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <section className="min-w-0 overflow-hidden rounded-xl border border-wiser-border bg-white shadow-sm">
-          <div className="flex items-center justify-between border-b border-wiser-border px-5 py-4">
+        <section className="min-w-0 overflow-hidden rounded-xl border border-MojaSchoolr-border bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b border-MojaSchoolr-border px-5 py-4">
             <div>
-              <h2 className="text-base font-semibold text-wiser-text">
+              <h2 className="text-base font-semibold text-MojaSchoolr-text">
                 Recent school requests
               </h2>
-              <p className="mt-1 text-xs text-wiser-text-secondary">
-                Latest applications submitted through WISE onboarding.
+              <p className="mt-1 text-xs text-MojaSchoolr-text-secondary">
+                Latest applications submitted through MojaSchool onboarding.
               </p>
             </div>
 
             <button
               type="button"
               onClick={() => navigate("/admin/applications")}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-wiser-600 hover:text-wiser-700"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-MojaSchoolr-600 hover:text-MojaSchoolr-700"
             >
               View all
               <ArrowRight size={13} />
@@ -330,7 +330,7 @@ export default function AdminDashboard() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px]">
               <thead>
-                <tr className="border-b border-wiser-border bg-slate-50/70">
+                <tr className="border-b border-MojaSchoolr-border bg-slate-50/70">
                   {[
                     "School",
                     "Applicant",
@@ -341,7 +341,7 @@ export default function AdminDashboard() {
                   ].map((label) => (
                     <th
                       key={label}
-                      className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-wiser-text-muted"
+                      className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-MojaSchoolr-text-muted"
                     >
                       {label}
                     </th>
@@ -354,7 +354,7 @@ export default function AdminDashboard() {
                   <tr>
                     <td
                       colSpan={6}
-                      className="px-5 py-12 text-center text-sm text-wiser-text-secondary"
+                      className="px-5 py-12 text-center text-sm text-MojaSchoolr-text-secondary"
                     >
                       Loading requests...
                     </td>
@@ -366,10 +366,10 @@ export default function AdminDashboard() {
                         size={22}
                         className="mx-auto text-emerald-500"
                       />
-                      <p className="mt-3 text-sm font-medium text-wiser-text">
+                      <p className="mt-3 text-sm font-medium text-MojaSchoolr-text">
                         No school requests yet
                       </p>
-                      <p className="mt-1 text-xs text-wiser-text-secondary">
+                      <p className="mt-1 text-xs text-MojaSchoolr-text-secondary">
                         New onboarding applications will appear here.
                       </p>
                     </td>
@@ -378,20 +378,20 @@ export default function AdminDashboard() {
                   applications.map((application) => (
                     <tr key={application.id} className="hover:bg-slate-50/70">
                       <td className="px-5 py-4">
-                        <p className="text-sm font-semibold text-wiser-text">
+                        <p className="text-sm font-semibold text-MojaSchoolr-text">
                           {application.school_name}
                         </p>
-                        <p className="mt-0.5 text-xs text-wiser-text-secondary">
+                        <p className="mt-0.5 text-xs text-MojaSchoolr-text-secondary">
                           {application.applicant_email}
                         </p>
                       </td>
-                      <td className="px-5 py-4 text-sm text-wiser-text-secondary">
+                      <td className="px-5 py-4 text-sm text-MojaSchoolr-text-secondary">
                         {`${application.applicant_first_name} ${application.applicant_last_name}`.trim()}
                       </td>
-                      <td className="px-5 py-4 text-sm text-wiser-text-secondary">
+                      <td className="px-5 py-4 text-sm text-MojaSchoolr-text-secondary">
                         {application.city}, {application.country}
                       </td>
-                      <td className="px-5 py-4 text-sm text-wiser-text-secondary">
+                      <td className="px-5 py-4 text-sm text-MojaSchoolr-text-secondary">
                         {application.requested_role || "—"}
                       </td>
                       <td className="px-5 py-4">
@@ -401,7 +401,7 @@ export default function AdminDashboard() {
                           {formatStatus(application.status)}
                         </span>
                       </td>
-                      <td className="px-5 py-4 text-xs text-wiser-text-secondary">
+                      <td className="px-5 py-4 text-xs text-MojaSchoolr-text-secondary">
                         {formatDate(application.created_at)}
                       </td>
                     </tr>
@@ -413,16 +413,16 @@ export default function AdminDashboard() {
         </section>
 
         <div className="space-y-6">
-          <section className="rounded-xl border border-wiser-border bg-white p-5 shadow-sm">
+          <section className="rounded-xl border border-MojaSchoolr-border bg-white p-5 shadow-sm">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-wiser-50 text-wiser-600">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-MojaSchoolr-50 text-MojaSchoolr-600">
                 <Building2 size={18} />
               </div>
               <div>
-                <h2 className="text-sm font-semibold text-wiser-text">
+                <h2 className="text-sm font-semibold text-MojaSchoolr-text">
                   School onboarding
                 </h2>
-                <p className="mt-1 text-xs text-wiser-text-secondary">
+                <p className="mt-1 text-xs text-MojaSchoolr-text-secondary">
                   Review and approve new schools before platform access is activated.
                 </p>
               </div>
@@ -431,38 +431,38 @@ export default function AdminDashboard() {
             <button
               type="button"
               onClick={() => navigate("/admin/applications")}
-              className="mt-5 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-wiser-600 px-4 text-sm font-semibold text-white transition hover:bg-wiser-700"
+              className="mt-5 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-MojaSchoolr-600 px-4 text-sm font-semibold text-white transition hover:bg-MojaSchoolr-700"
             >
               Open school requests
               <ArrowRight size={15} />
             </button>
           </section>
 
-          <section className="rounded-xl border border-wiser-border bg-white p-5 shadow-sm">
+          <section className="rounded-xl border border-MojaSchoolr-border bg-white p-5 shadow-sm">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
                 <CreditCard size={18} />
               </div>
               <div>
-                <h2 className="text-sm font-semibold text-wiser-text">
+                <h2 className="text-sm font-semibold text-MojaSchoolr-text">
                   Platform billing
                 </h2>
-                <p className="mt-1 text-xs text-wiser-text-secondary">
-                  WISE invoices and payments remain separate from each school's internal finance records.
+                <p className="mt-1 text-xs text-MojaSchoolr-text-secondary">
+                  MojaSchool invoices and payments remain separate from each school's internal finance records.
                 </p>
               </div>
             </div>
 
             <div className="mt-5 grid grid-cols-2 gap-3">
               <div className="rounded-lg bg-slate-50 p-3">
-                <p className="text-[11px] text-wiser-text-muted">Outstanding</p>
-                <p className="mt-1 text-sm font-semibold text-wiser-text">
+                <p className="text-[11px] text-MojaSchoolr-text-muted">Outstanding</p>
+                <p className="mt-1 text-sm font-semibold text-MojaSchoolr-text">
                   {loading ? "—" : formatMoney(stats.outstandingAmount)}
                 </p>
               </div>
               <div className="rounded-lg bg-slate-50 p-3">
-                <p className="text-[11px] text-wiser-text-muted">This month</p>
-                <p className="mt-1 text-sm font-semibold text-wiser-text">
+                <p className="text-[11px] text-MojaSchoolr-text-muted">This month</p>
+                <p className="mt-1 text-sm font-semibold text-MojaSchoolr-text">
                   {loading ? "—" : formatMoney(stats.receivedThisMonth)}
                 </p>
               </div>
@@ -471,21 +471,21 @@ export default function AdminDashboard() {
             <button
               type="button"
               onClick={() => navigate("/admin/billing")}
-              className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-wiser-600 hover:text-wiser-700"
+              className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-MojaSchoolr-600 hover:text-MojaSchoolr-700"
             >
               Open billing
               <ArrowRight size={13} />
             </button>
           </section>
 
-          <section className="rounded-xl border border-wiser-border bg-wiser-900 p-5 text-white shadow-sm">
+          <section className="rounded-xl border border-MojaSchoolr-border bg-MojaSchoolr-900 p-5 text-white shadow-sm">
             <div className="flex items-start gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10">
                 <Activity size={18} />
               </div>
               <div>
                 <h2 className="text-sm font-semibold">Platform health</h2>
-                <p className="mt-1 text-xs leading-5 text-wiser-100">
+                <p className="mt-1 text-xs leading-5 text-MojaSchoolr-100">
                   Use the audit and analytics areas for deeper operational visibility as those modules are built.
                 </p>
               </div>

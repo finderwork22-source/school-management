@@ -111,7 +111,7 @@ export default function AdminResetPassword() {
         if (!mounted) return;
 
         if (exchangeError) {
-          console.error("Failed to exchange WISE Admin password reset code:", exchangeError);
+          console.error("Failed to exchange MojaSchool Admin password reset code:", exchangeError);
           setInvalidState(
             getReadableError(
               exchangeError,
@@ -206,13 +206,13 @@ export default function AdminResetPassword() {
       setNewPassword("");
       setConfirmPassword("");
       setStatus("success");
-      setStatusMessage("Your WISE Admin password has been updated successfully.");
+      setStatusMessage("Your MojaSchool Admin password has been updated successfully.");
 
       // End the recovery session so the admin signs back in with the new password.
       await supabase.auth.signOut();
       navigate("/login?reset=success", { replace: true });
     } catch (updateError) {
-      console.error("Failed to update WISE Admin password:", updateError);
+      console.error("Failed to update MojaSchool Admin password:", updateError);
       setError(
         getReadableError(
           updateError,
@@ -229,20 +229,20 @@ export default function AdminResetPassword() {
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6">
       <div className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-md items-center justify-center">
-        <div className="w-full rounded-2xl border border-wiser-border bg-white p-6 shadow-sm sm:p-8">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-wiser-50 text-wiser-600">
+        <div className="w-full rounded-2xl border border-MojaSchoolr-border bg-white p-6 shadow-sm sm:p-8">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-MojaSchoolr-50 text-MojaSchoolr-600">
             <KeyRound size={21} />
           </div>
 
           <div className="mt-5">
-            <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-wiser-600">
+            <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-MojaSchoolr-600">
               <ShieldCheck size={13} />
-              WISE Admin
+              MojaSchool Admin
             </div>
-            <h1 className="mt-2 text-2xl font-semibold tracking-tight text-wiser-text">
+            <h1 className="mt-2 text-2xl font-semibold tracking-tight text-MojaSchoolr-text">
               Set a new password
             </h1>
-            <p className="mt-2 text-sm leading-6 text-wiser-text-secondary">
+            <p className="mt-2 text-sm leading-6 text-MojaSchoolr-text-secondary">
               Create a new password for your super admin account. The reset link
               is valid only for this password-recovery session.
             </p>
@@ -271,7 +271,7 @@ export default function AdminResetPassword() {
               </div>
               <Link
                 to="/admin/forgot-password"
-                className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-wiser-700 hover:text-wiser-800"
+                className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-MojaSchoolr-700 hover:text-MojaSchoolr-800"
               >
                 <ArrowLeft size={15} />
                 Request a new reset email
@@ -354,7 +354,7 @@ export default function AdminResetPassword() {
               <button
                 type="submit"
                 disabled={formDisabled}
-                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-wiser-600 px-4 text-sm font-semibold text-white transition hover:bg-wiser-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-MojaSchoolr-600 px-4 text-sm font-semibold text-white transition hover:bg-MojaSchoolr-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {saving ? (
                   <Loader2 size={16} className="animate-spin" />
@@ -369,7 +369,7 @@ export default function AdminResetPassword() {
           <div className="mt-6 border-t border-slate-100 pt-5">
             <Link
               to="/login"
-              className="inline-flex items-center gap-2 text-sm font-semibold text-wiser-600 transition hover:text-wiser-700"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-MojaSchoolr-600 transition hover:text-MojaSchoolr-700"
             >
               <ArrowLeft size={15} />
               Back to login
@@ -414,7 +414,7 @@ function PasswordField({
           onChange={(event) => onChange(event.target.value)}
           autoComplete={autoComplete}
           disabled={disabled}
-          className="h-11 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-11 text-sm text-slate-700 outline-none placeholder:text-slate-400 focus:border-wiser-500 focus:ring-2 focus:ring-wiser-100 disabled:bg-slate-50"
+          className="h-11 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-11 text-sm text-slate-700 outline-none placeholder:text-slate-400 focus:border-MojaSchoolr-500 focus:ring-2 focus:ring-MojaSchoolr-100 disabled:bg-slate-50"
         />
         <button
           type="button"

@@ -145,16 +145,16 @@ function humanizeUserAgent(value: string | null) {
 function EmptyState({ searchActive }: { searchActive: boolean }) {
   return (
     <div className="px-5 py-16 text-center">
-      <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-wiser-50 text-wiser-600">
+      <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-MojaSchoolr-50 text-MojaSchoolr-600">
         <FileClock size={20} />
       </div>
-      <h3 className="mt-4 text-sm font-semibold text-wiser-text">
+      <h3 className="mt-4 text-sm font-semibold text-MojaSchoolr-text">
         {searchActive ? "No audit events match your filters" : "No audit events yet"}
       </h3>
-      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-wiser-text-secondary">
+      <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-MojaSchoolr-text-secondary">
         {searchActive
           ? "Try clearing a filter or using a broader search term."
-          : "Security-sensitive WISE platform actions will appear here as they are recorded."}
+          : "Security-sensitive MojaSchool platform actions will appear here as they are recorded."}
       </p>
     </div>
   );
@@ -275,11 +275,11 @@ export default function AdminAuditLogs() {
       setTotalCount(logResult.count ?? 0);
       setRecentCount(recentResult.count ?? 0);
     } catch (loadError) {
-      console.error("Failed to load WISE audit logs:", loadError);
+      console.error("Failed to load MojaSchool audit logs:", loadError);
       setError(
         loadError instanceof Error
           ? loadError.message
-          : "Could not load WISE audit logs.",
+          : "Could not load MojaSchool audit logs.",
       );
       setLogs([]);
       setTotalCount(0);
@@ -367,15 +367,15 @@ export default function AdminAuditLogs() {
     <div className="mx-auto w-full max-w-[1440px]">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-wiser-600">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-MojaSchoolr-600">
             <Activity size={14} />
-            WISE platform security
+            MojaSchool platform security
           </div>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-wiser-text sm:text-3xl">
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-MojaSchoolr-text sm:text-3xl">
             Audit logs
           </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-wiser-text-secondary">
-            Review security-sensitive actions performed across the WISE platform, including who performed them, what changed, and when.
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-MojaSchoolr-text-secondary">
+            Review security-sensitive actions performed across the MojaSchool platform, including who performed them, what changed, and when.
           </p>
         </div>
 
@@ -383,7 +383,7 @@ export default function AdminAuditLogs() {
           type="button"
           onClick={() => void loadAuditLogs(true)}
           disabled={refreshing}
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-wiser-border bg-white px-4 text-sm font-semibold text-wiser-text-secondary shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-MojaSchoolr-border bg-white px-4 text-sm font-semibold text-MojaSchoolr-text-secondary shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
         >
           <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
           {refreshing ? "Refreshing..." : "Refresh"}
@@ -406,7 +406,7 @@ export default function AdminAuditLogs() {
         <SummaryCard
           label="Events in last 24 hours"
           value={loading ? "—" : recentCount.toLocaleString()}
-          caption="Across the WISE platform"
+          caption="Across the MojaSchool platform"
           icon={Clock3}
         />
         <SummaryCard
@@ -417,8 +417,8 @@ export default function AdminAuditLogs() {
         />
       </div>
 
-      <section className="mt-6 overflow-hidden rounded-xl border border-wiser-border bg-white shadow-sm">
-        <div className="border-b border-wiser-border p-4 sm:p-5">
+      <section className="mt-6 overflow-hidden rounded-xl border border-MojaSchoolr-border bg-white shadow-sm">
+        <div className="border-b border-MojaSchoolr-border p-4 sm:p-5">
           <div className="grid gap-3 xl:grid-cols-[minmax(260px,1fr)_180px_180px_220px_170px_auto]">
             <div className="relative">
               <Search
@@ -429,7 +429,7 @@ export default function AdminAuditLogs() {
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search action, entity, school, ID..."
-                className="h-10 w-full rounded-lg border border-slate-200 pl-9 pr-3 text-sm outline-none transition focus:border-wiser-400 focus:ring-2 focus:ring-wiser-100"
+                className="h-10 w-full rounded-lg border border-slate-200 pl-9 pr-3 text-sm outline-none transition focus:border-MojaSchoolr-400 focus:ring-2 focus:ring-MojaSchoolr-100"
               />
             </div>
 
@@ -490,7 +490,7 @@ export default function AdminAuditLogs() {
                     type="date"
                     value={customStart}
                     onChange={(event) => setCustomStart(event.target.value)}
-                    className="h-10 w-full rounded-lg border border-slate-200 pl-9 pr-3 text-sm text-slate-700 outline-none focus:border-wiser-400 focus:ring-2 focus:ring-wiser-100"
+                    className="h-10 w-full rounded-lg border border-slate-200 pl-9 pr-3 text-sm text-slate-700 outline-none focus:border-MojaSchoolr-400 focus:ring-2 focus:ring-MojaSchoolr-100"
                   />
                 </div>
               </label>
@@ -506,7 +506,7 @@ export default function AdminAuditLogs() {
                     type="date"
                     value={customEnd}
                     onChange={(event) => setCustomEnd(event.target.value)}
-                    className="h-10 w-full rounded-lg border border-slate-200 pl-9 pr-3 text-sm text-slate-700 outline-none focus:border-wiser-400 focus:ring-2 focus:ring-wiser-100"
+                    className="h-10 w-full rounded-lg border border-slate-200 pl-9 pr-3 text-sm text-slate-700 outline-none focus:border-MojaSchoolr-400 focus:ring-2 focus:ring-MojaSchoolr-100"
                   />
                 </div>
               </label>
@@ -528,7 +528,7 @@ export default function AdminAuditLogs() {
                 ].map((heading) => (
                   <th
                     key={heading}
-                    className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-wiser-text-muted"
+                    className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-MojaSchoolr-text-muted"
                   >
                     {heading}
                   </th>
@@ -582,7 +582,7 @@ export default function AdminAuditLogs() {
                       <button
                         type="button"
                         onClick={() => openDetails(log)}
-                        className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition hover:border-wiser-200 hover:bg-wiser-50 hover:text-wiser-700"
+                        className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600 transition hover:border-MojaSchoolr-200 hover:bg-MojaSchoolr-50 hover:text-MojaSchoolr-700"
                       >
                         <Eye size={14} />
                         View details
@@ -631,7 +631,7 @@ export default function AdminAuditLogs() {
           )}
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-wiser-border px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+        <div className="flex flex-col gap-3 border-t border-MojaSchoolr-border px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
           <p className="text-xs text-slate-500">{summaryLabel}</p>
           <div className="flex items-center gap-2">
             <button
@@ -684,16 +684,16 @@ function SummaryCard({
   icon: typeof Activity;
 }) {
   return (
-    <div className="rounded-xl border border-wiser-border bg-white p-5 shadow-sm">
+    <div className="rounded-xl border border-MojaSchoolr-border bg-white p-5 shadow-sm">
       <div className="flex items-start justify-between gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-wiser-50 text-wiser-600">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-MojaSchoolr-50 text-MojaSchoolr-600">
           <Icon size={18} />
         </div>
         <ShieldCheck size={17} className="text-slate-300" />
       </div>
-      <p className="mt-5 text-xs font-medium text-wiser-text-muted">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tracking-tight text-wiser-text">{value}</p>
-      <p className="mt-1 text-xs text-wiser-text-secondary">{caption}</p>
+      <p className="mt-5 text-xs font-medium text-MojaSchoolr-text-muted">{label}</p>
+      <p className="mt-1 text-2xl font-semibold tracking-tight text-MojaSchoolr-text">{value}</p>
+      <p className="mt-1 text-xs text-MojaSchoolr-text-secondary">{caption}</p>
     </div>
   );
 }
@@ -711,7 +711,7 @@ function SelectField({
     <select
       value={value}
       onChange={(event) => onChange(event.target.value)}
-      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-wiser-400 focus:ring-2 focus:ring-wiser-100"
+      className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-MojaSchoolr-400 focus:ring-2 focus:ring-MojaSchoolr-100"
     >
       {options.map((option) => (
         <option key={option.value} value={option.value}>
@@ -742,7 +742,7 @@ function AuditDetailsModal({
       <div className="flex max-h-[94vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:max-h-[90vh] sm:rounded-2xl">
         <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 sm:px-6">
           <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-wiser-600">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-MojaSchoolr-600">
               Audit event
             </p>
             <h2 className="mt-2 truncate text-lg font-semibold text-slate-900">
@@ -826,7 +826,7 @@ function AuditDetailsModal({
           <div className="mt-6 rounded-xl border border-slate-200">
             <div className="border-b border-slate-200 px-4 py-3">
               <div className="flex items-center gap-2">
-                <Activity size={15} className="text-wiser-600" />
+                <Activity size={15} className="text-MojaSchoolr-600" />
                 <h3 className="text-sm font-semibold text-slate-800">Event context</h3>
               </div>
             </div>
@@ -860,7 +860,7 @@ function AuditDetailsModal({
 
           <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
             <div className="flex items-start gap-3">
-              <ShieldCheck size={17} className="mt-0.5 shrink-0 text-wiser-600" />
+              <ShieldCheck size={17} className="mt-0.5 shrink-0 text-MojaSchoolr-600" />
               <div>
                 <p className="text-xs font-semibold text-slate-800">Audit record is read-only</p>
                 <p className="mt-1 text-xs leading-5 text-slate-500">
@@ -875,7 +875,7 @@ function AuditDetailsModal({
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-10 items-center justify-center rounded-lg bg-wiser-600 px-4 text-sm font-semibold text-white transition hover:bg-wiser-700"
+            className="inline-flex h-10 items-center justify-center rounded-lg bg-MojaSchoolr-600 px-4 text-sm font-semibold text-white transition hover:bg-MojaSchoolr-700"
           >
             Close
           </button>

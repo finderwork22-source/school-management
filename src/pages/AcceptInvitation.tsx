@@ -682,7 +682,7 @@ export default function AcceptInvitation() {
 
           <p className="mt-3 max-w-md text-sm leading-6 text-slate-500">
             Your password has been set successfully. We are taking you to your
-            Wiser dashboard.
+            MojaSchoolr dashboard.
           </p>
 
           <div className="mt-7 flex items-center gap-2 text-sm font-medium text-slate-500">
@@ -703,7 +703,7 @@ export default function AcceptInvitation() {
           </div>
 
           <p className="mt-6 text-xs font-semibold uppercase tracking-[0.18em] text-indigo-600">
-            Wiser invitation
+            MojaSchoolr invitation
           </p>
 
           <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
@@ -711,7 +711,7 @@ export default function AcceptInvitation() {
           </h1>
 
           <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-500">
-            You&apos;ve been invited to join your school on Wiser. Continue below
+            You&apos;ve been invited to join your school on MojaSchoolr. Continue below
             to securely verify this invitation before creating your password.
           </p>
         </div>
@@ -769,7 +769,7 @@ export default function AcceptInvitation() {
         </div>
 
         <p className="mt-6 text-xs font-semibold uppercase tracking-[0.18em] text-indigo-600">
-          Wiser invitation
+          MojaSchoolr invitation
         </p>
 
         <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
@@ -778,7 +778,7 @@ export default function AcceptInvitation() {
 
         <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-500">
           Your invitation has been verified. Set a secure password to finish
-          creating your Wiser account.
+          creating your MojaSchoolr account.
         </p>
       </div>
 

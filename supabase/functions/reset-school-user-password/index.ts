@@ -92,7 +92,7 @@ function generateTemporaryPassword() {
   }
 
   // Keep the generated password readable while still adding symbol/number variety.
-  return `Wiser-${password.slice(0, 8)}!${password.slice(8, 16)}7`;
+  return `MojaSchoolr-${password.slice(0, 8)}!${password.slice(8, 16)}7`;
 }
 
 Deno.serve(async (request) => {
@@ -193,7 +193,7 @@ Deno.serve(async (request) => {
   }
 
   // Resolve the selected teacher record first. The Teachers table is the source
-  // of the staff record shown in the Wiser UI, while the auth user lives in
+  // of the staff record shown in the MojaSchoolr UI, while the auth user lives in
   // Supabase Auth. We bridge them through the teacher's email address.
   const { data: targetTeacher, error: targetTeacherError } = await admin
     .from("teachers")

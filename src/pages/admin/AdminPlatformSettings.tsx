@@ -171,7 +171,7 @@ export default function AdminPlatformSettings() {
         setSuccess("Platform settings are ready to configure.");
       }
     } catch (loadError) {
-      console.error("Failed to load WISE platform settings:", loadError);
+      console.error("Failed to load MojaSchool platform settings:", loadError);
       setError(getReadableError(loadError, "Could not load platform settings."));
     } finally {
       setLoading(false);
@@ -279,7 +279,7 @@ export default function AdminPlatformSettings() {
 
       setSuccess("Platform company settings saved successfully.");
     } catch (saveError) {
-      console.error("Failed to save WISE company settings:", saveError);
+      console.error("Failed to save MojaSchool company settings:", saveError);
       setError(getReadableError(saveError, "Could not save company settings."));
     } finally {
       setSavingCompany(false);
@@ -373,7 +373,7 @@ export default function AdminPlatformSettings() {
       closePlanModal();
       await loadSettings(true);
     } catch (saveError) {
-      console.error("Failed to save WISE subscription plan:", saveError);
+      console.error("Failed to save MojaSchool subscription plan:", saveError);
       setError(getReadableError(saveError, "Could not save subscription plan."));
     } finally {
       setSavingPlan(false);
@@ -404,7 +404,7 @@ export default function AdminPlatformSettings() {
         `${plan.name} ${plan.is_active ? "deactivated" : "activated"} successfully.`,
       );
     } catch (toggleError) {
-      console.error("Failed to toggle WISE subscription plan:", toggleError);
+      console.error("Failed to toggle MojaSchool subscription plan:", toggleError);
       setError(getReadableError(toggleError, "Could not update subscription plan."));
     }
   }
@@ -412,7 +412,7 @@ export default function AdminPlatformSettings() {
   if (loading) {
     return (
       <div className="mx-auto flex min-h-[420px] w-full max-w-[1440px] items-center justify-center">
-        <div className="flex items-center gap-2 text-sm text-wiser-text-secondary">
+        <div className="flex items-center gap-2 text-sm text-MojaSchoolr-text-secondary">
           <Loader2 size={17} className="animate-spin" />
           Loading platform settings...
         </div>
@@ -424,15 +424,15 @@ export default function AdminPlatformSettings() {
     <div className="mx-auto w-full max-w-[1440px]">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-wiser-600">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-MojaSchoolr-600">
             <Settings2 size={14} />
-            WISE platform
+            MojaSchool platform
           </div>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-wiser-text sm:text-3xl">
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-MojaSchoolr-text sm:text-3xl">
             Platform settings
           </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-wiser-text-secondary">
-            Configure WISE company details, platform billing defaults and subscription plans.
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-MojaSchoolr-text-secondary">
+            Configure MojaSchool company details, platform billing defaults and subscription plans.
           </p>
         </div>
 
@@ -440,7 +440,7 @@ export default function AdminPlatformSettings() {
           type="button"
           onClick={() => void loadSettings(true)}
           disabled={refreshing}
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-wiser-border bg-white px-4 text-sm font-semibold text-wiser-text-secondary shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-MojaSchoolr-border bg-white px-4 text-sm font-semibold text-MojaSchoolr-text-secondary shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
         >
           <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
           {refreshing ? "Refreshing..." : "Refresh"}
@@ -459,7 +459,7 @@ export default function AdminPlatformSettings() {
       )}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
-        <aside className="h-fit rounded-xl border border-wiser-border bg-white p-2 shadow-sm">
+        <aside className="h-fit rounded-xl border border-MojaSchoolr-border bg-white p-2 shadow-sm">
           <SettingsNavButton
             active={tab === "company"}
             icon={Building2}
@@ -535,13 +535,13 @@ function CompanySettings({
 }) {
   if (!company) {
     return (
-      <section className="rounded-xl border border-wiser-border bg-white p-5 shadow-sm sm:p-6">
+      <section className="rounded-xl border border-MojaSchoolr-border bg-white p-5 shadow-sm sm:p-6">
         <div className="flex min-h-[360px] flex-col items-center justify-center text-center">
-          <Building2 size={28} className="text-wiser-400" />
-          <h2 className="mt-4 text-base font-semibold text-wiser-text">
-            WISE company record not found
+          <Building2 size={28} className="text-MojaSchoolr-400" />
+          <h2 className="mt-4 text-base font-semibold text-MojaSchoolr-text">
+            MojaSchool company record not found
           </h2>
-          <p className="mt-2 max-w-md text-sm leading-6 text-wiser-text-secondary">
+          <p className="mt-2 max-w-md text-sm leading-6 text-MojaSchoolr-text-secondary">
             The platform company table is currently empty. Run the platform foundation migration first, then return here to configure the company profile.
           </p>
         </div>
@@ -551,11 +551,11 @@ function CompanySettings({
 
   return (
     <form onSubmit={onSubmit} className="space-y-6">
-      <section className="rounded-xl border border-wiser-border bg-white shadow-sm">
+      <section className="rounded-xl border border-MojaSchoolr-border bg-white shadow-sm">
         <SectionHeader
           icon={Building2}
           title="Company identity"
-          description="These details appear as the WISE platform business identity on billing documents."
+          description="These details appear as the MojaSchool platform business identity on billing documents."
         />
 
         <div className="grid gap-5 p-5 sm:grid-cols-2 sm:p-6">
@@ -563,7 +563,7 @@ function CompanySettings({
             <Input
               value={company.trading_name}
               onChange={(value) => onChange("trading_name", value)}
-              placeholder="WISE"
+              placeholder="MojaSchool"
             />
           </Field>
 
@@ -571,7 +571,7 @@ function CompanySettings({
             <Input
               value={company.legal_name ?? ""}
               onChange={(value) => onChange("legal_name", value)}
-              placeholder="WISE Rwanda Ltd"
+              placeholder="MojaSchool Rwanda Ltd"
             />
           </Field>
 
@@ -593,11 +593,11 @@ function CompanySettings({
         </div>
       </section>
 
-      <section className="rounded-xl border border-wiser-border bg-white shadow-sm">
+      <section className="rounded-xl border border-MojaSchoolr-border bg-white shadow-sm">
         <SectionHeader
           icon={MapPin}
           title="Business location"
-          description="Use the official WISE business address for invoices and platform correspondence."
+          description="Use the official MojaSchool business address for invoices and platform correspondence."
         />
 
         <div className="grid gap-5 p-5 sm:grid-cols-2 sm:p-6">
@@ -632,7 +632,7 @@ function CompanySettings({
         </div>
       </section>
 
-      <section className="rounded-xl border border-wiser-border bg-white shadow-sm">
+      <section className="rounded-xl border border-MojaSchoolr-border bg-white shadow-sm">
         <SectionHeader
           icon={Mail}
           title="Contact and billing defaults"
@@ -645,7 +645,7 @@ function CompanySettings({
               type="email"
               value={company.email ?? ""}
               onChange={(value) => onChange("email", value)}
-              placeholder="billing@wise.rw"
+              placeholder="billing@MojaSchool.rw"
               icon={Mail}
             />
           </Field>
@@ -670,24 +670,24 @@ function CompanySettings({
 
           <div className="flex items-end">
             <div className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-wiser-text-muted">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-MojaSchoolr-text-muted">
                 Current billing currency
               </p>
-              <p className="mt-1 text-sm font-semibold text-wiser-text">
+              <p className="mt-1 text-sm font-semibold text-MojaSchoolr-text">
                 {company.default_currency || "Not set"}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-wiser-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <p className="text-xs leading-5 text-wiser-text-muted">
-            Saving company settings updates the platform company record used <br/> by WISE billing.
+        <div className="flex flex-col gap-3 border-t border-MojaSchoolr-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <p className="text-xs leading-5 text-MojaSchoolr-text-muted">
+            Saving company settings updates the platform company record used <br/> by MojaSchool billing.
           </p>
           <button
             type="submit"
             disabled={saving}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-wiser-600 px-4 text-sm font-semibold text-white transition hover:bg-wiser-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-MojaSchoolr-600 px-4 text-sm font-semibold text-white transition hover:bg-MojaSchoolr-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
             {saving ? "Saving..." : "Save company settings"}
@@ -715,24 +715,24 @@ function SubscriptionSettings({
 }) {
   return (
     <div className="space-y-6">
-      <section className="rounded-xl border border-wiser-border bg-white shadow-sm">
-        <div className="flex flex-col gap-4 border-b border-wiser-border px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+      <section className="rounded-xl border border-MojaSchoolr-border bg-white shadow-sm">
+        <div className="flex flex-col gap-4 border-b border-MojaSchoolr-border px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-wiser-600">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-MojaSchoolr-600">
               Billing catalogue
             </p>
-            <h2 className="mt-2 text-base font-semibold text-wiser-text">
+            <h2 className="mt-2 text-base font-semibold text-MojaSchoolr-text">
               Subscription plans
             </h2>
-            <p className="mt-1 max-w-2xl text-sm leading-6 text-wiser-text-secondary">
-              Create and maintain the plans that can be assigned to schools in WISE.
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-MojaSchoolr-text-secondary">
+              Create and maintain the plans that can be assigned to schools in MojaSchool.
             </p>
           </div>
 
           <button
             type="button"
             onClick={onCreate}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-wiser-600 px-4 text-sm font-semibold text-white transition hover:bg-wiser-700"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-MojaSchoolr-600 px-4 text-sm font-semibold text-white transition hover:bg-MojaSchoolr-700"
           >
             <Plus size={16} />
             New plan
@@ -746,10 +746,10 @@ function SubscriptionSettings({
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-xl border border-wiser-border bg-white shadow-sm">
-        <div className="border-b border-wiser-border px-5 py-4 sm:px-6">
-          <h3 className="text-sm font-semibold text-wiser-text">Plan catalogue</h3>
-          <p className="mt-1 text-xs text-wiser-text-secondary">
+      <section className="overflow-hidden rounded-xl border border-MojaSchoolr-border bg-white shadow-sm">
+        <div className="border-b border-MojaSchoolr-border px-5 py-4 sm:px-6">
+          <h3 className="text-sm font-semibold text-MojaSchoolr-text">Plan catalogue</h3>
+          <p className="mt-1 text-xs text-MojaSchoolr-text-secondary">
             Plans are reused by school subscriptions and platform invoices.
           </p>
         </div>
@@ -757,14 +757,14 @@ function SubscriptionSettings({
         {plans.length === 0 ? (
           <div className="px-5 py-14 text-center sm:px-6">
             <CreditCard size={26} className="mx-auto text-slate-300" />
-            <p className="mt-3 text-sm font-semibold text-wiser-text">No subscription plans yet</p>
-            <p className="mt-1 text-sm text-wiser-text-secondary">
-              Create the first WISE plan to start assigning subscription pricing to schools.
+            <p className="mt-3 text-sm font-semibold text-MojaSchoolr-text">No subscription plans yet</p>
+            <p className="mt-1 text-sm text-MojaSchoolr-text-secondary">
+              Create the first MojaSchool plan to start assigning subscription pricing to schools.
             </p>
             <button
               type="button"
               onClick={onCreate}
-              className="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-wiser-border bg-white px-4 text-sm font-semibold text-wiser-text-secondary transition hover:bg-slate-50"
+              className="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-MojaSchoolr-border bg-white px-4 text-sm font-semibold text-MojaSchoolr-text-secondary transition hover:bg-slate-50"
             >
               <Plus size={16} />
               Create plan
@@ -774,7 +774,7 @@ function SubscriptionSettings({
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px]">
               <thead>
-                <tr className="border-b border-wiser-border bg-slate-50/70">
+                <tr className="border-b border-MojaSchoolr-border bg-slate-50/70">
                   {[
                     "Plan",
                     "Billing cycle",
@@ -785,7 +785,7 @@ function SubscriptionSettings({
                   ].map((heading) => (
                     <th
                       key={heading}
-                      className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.12em] text-wiser-text-muted"
+                      className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.12em] text-MojaSchoolr-text-muted"
                     >
                       {heading}
                     </th>
@@ -796,20 +796,20 @@ function SubscriptionSettings({
                 {plans.map((plan) => (
                   <tr key={plan.id} className="hover:bg-slate-50/70">
                     <td className="px-5 py-4">
-                      <p className="text-sm font-semibold text-wiser-text">{plan.name}</p>
+                      <p className="text-sm font-semibold text-MojaSchoolr-text">{plan.name}</p>
                       {plan.description && (
-                        <p className="mt-1 max-w-[360px] text-xs leading-5 text-wiser-text-secondary">
+                        <p className="mt-1 max-w-[360px] text-xs leading-5 text-MojaSchoolr-text-secondary">
                           {plan.description}
                         </p>
                       )}
                     </td>
-                    <td className="px-5 py-4 text-sm text-wiser-text-secondary">
+                    <td className="px-5 py-4 text-sm text-MojaSchoolr-text-secondary">
                       {formatCycle(plan.billing_cycle)}
                     </td>
-                    <td className="px-5 py-4 text-sm font-semibold text-wiser-text">
+                    <td className="px-5 py-4 text-sm font-semibold text-MojaSchoolr-text">
                       {formatMoney(Number(plan.amount), plan.currency)}
                     </td>
-                    <td className="px-5 py-4 text-sm text-wiser-text-secondary">
+                    <td className="px-5 py-4 text-sm text-MojaSchoolr-text-secondary">
                       {plan.currency}
                     </td>
                     <td className="px-5 py-4">
@@ -859,11 +859,11 @@ function SubscriptionSettings({
 function SecuritySettings() {
   return (
     <div className="space-y-6">
-      <section className="rounded-xl border border-wiser-border bg-white shadow-sm">
+      <section className="rounded-xl border border-MojaSchoolr-border bg-white shadow-sm">
         <SectionHeader
           icon={ShieldCheck}
           title="Platform access"
-          description="WISE Admin accounts are controlled at the platform level and remain separate from school staff roles."
+          description="MojaSchool Admin accounts are controlled at the platform level and remain separate from school staff roles."
         />
 
         <div className="grid gap-4 p-5 sm:grid-cols-2 sm:p-6">
@@ -871,7 +871,7 @@ function SecuritySettings() {
             icon={ShieldCheck}
             title="Platform administrators"
             value="Managed through platform admin access"
-            description="WISE Admin is not a school_members role."
+            description="MojaSchool Admin is not a school_members role."
           />
           <InfoCard
             icon={Settings2}
@@ -882,7 +882,7 @@ function SecuritySettings() {
         </div>
       </section>
 
-      <section className="rounded-xl border border-wiser-border bg-white shadow-sm">
+      <section className="rounded-xl border border-MojaSchoolr-border bg-white shadow-sm">
         <SectionHeader
           icon={KeyRound}
           title="Password recovery"
@@ -891,15 +891,15 @@ function SecuritySettings() {
 
         <div className="flex flex-col gap-4 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="max-w-2xl">
-            <p className="text-sm font-semibold text-wiser-text">Need to reset the administrator password?</p>
-            <p className="mt-1 text-sm leading-6 text-wiser-text-secondary">
-              The reset link takes the administrator back to WISE, verifies the recovery session, and lets them choose a new password without storing passwords in the platform database.
+            <p className="text-sm font-semibold text-MojaSchoolr-text">Need to reset the administrator password?</p>
+            <p className="mt-1 text-sm leading-6 text-MojaSchoolr-text-secondary">
+              The reset link takes the administrator back to MojaSchool, verifies the recovery session, and lets them choose a new password without storing passwords in the platform database.
             </p>
           </div>
 
           <a
             href="/admin/forgot-password"
-            className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-wiser-border bg-white px-4 text-sm font-semibold text-wiser-text-secondary transition hover:bg-slate-50"
+            className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-MojaSchoolr-border bg-white px-4 text-sm font-semibold text-MojaSchoolr-text-secondary transition hover:bg-slate-50"
           >
             <KeyRound size={16} />
             Open password recovery
@@ -916,7 +916,7 @@ function SecuritySettings() {
           <div>
             <h3 className="text-sm font-semibold text-amber-900">Authentication remains server-authoritative</h3>
             <p className="mt-1 text-sm leading-6 text-amber-800/80">
-              Passwords are managed by Supabase Auth. WISE stores platform-admin identity and authorization separately and does not expose password hashes or credentials in its application tables.
+              Passwords are managed by Supabase Auth. MojaSchool stores platform-admin identity and authorization separately and does not expose password hashes or credentials in its application tables.
             </p>
           </div>
         </div>
@@ -945,10 +945,10 @@ function PlanModal({
       <div className="max-h-[94vh] w-full max-w-2xl overflow-y-auto rounded-t-2xl bg-white shadow-2xl sm:max-h-[90vh] sm:rounded-2xl">
         <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4 sm:px-6">
           <div>
-            <h2 className="text-base font-semibold text-wiser-text">
+            <h2 className="text-base font-semibold text-MojaSchoolr-text">
               {editingPlan ? "Edit subscription plan" : "Create subscription plan"}
             </h2>
-            <p className="mt-1 text-xs text-wiser-text-secondary">
+            <p className="mt-1 text-xs text-MojaSchoolr-text-secondary">
               Define the price and billing cycle schools can subscribe to.
             </p>
           </div>
@@ -983,7 +983,7 @@ function PlanModal({
                   }
                   rows={3}
                   placeholder="Describe what is included in this plan..."
-                  className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-700 outline-none placeholder:text-slate-400 focus:border-wiser-500 focus:ring-2 focus:ring-wiser-100"
+                  className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-700 outline-none placeholder:text-slate-400 focus:border-MojaSchoolr-500 focus:ring-2 focus:ring-MojaSchoolr-100"
                 />
               </Field>
             </div>
@@ -997,7 +997,7 @@ function PlanModal({
                     billing_cycle: event.target.value as BillingCycle,
                   }))
                 }
-                className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-wiser-500 focus:ring-2 focus:ring-wiser-100"
+                className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-MojaSchoolr-500 focus:ring-2 focus:ring-MojaSchoolr-100"
               >
                 {BILLING_CYCLES.map((cycle) => (
                   <option key={cycle.value} value={cycle.value}>
@@ -1056,7 +1056,7 @@ function PlanModal({
             <button
               type="submit"
               disabled={saving}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-wiser-600 px-4 text-sm font-semibold text-white transition hover:bg-wiser-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-MojaSchoolr-600 px-4 text-sm font-semibold text-white transition hover:bg-MojaSchoolr-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
               {saving ? "Saving..." : editingPlan ? "Save changes" : "Create plan"}
@@ -1087,19 +1087,19 @@ function SettingsNavButton({
       onClick={onClick}
       className={[
         "flex w-full items-start gap-3 rounded-lg px-3 py-3 text-left transition",
-        active ? "bg-wiser-50 text-wiser-700" : "text-slate-600 hover:bg-slate-50",
+        active ? "bg-MojaSchoolr-50 text-MojaSchoolr-700" : "text-slate-600 hover:bg-slate-50",
       ].join(" ")}
     >
       <div
         className={[
           "mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
-          active ? "bg-white text-wiser-600 shadow-sm" : "bg-slate-100 text-slate-500",
+          active ? "bg-white text-MojaSchoolr-600 shadow-sm" : "bg-slate-100 text-slate-500",
         ].join(" ")}
       >
         <Icon size={16} />
       </div>
       <div className="min-w-0">
-        <p className={active ? "text-sm font-semibold text-wiser-700" : "text-sm font-semibold text-slate-700"}>
+        <p className={active ? "text-sm font-semibold text-MojaSchoolr-700" : "text-sm font-semibold text-slate-700"}>
           {title}
         </p>
         <p className="mt-0.5 text-[11px] leading-5 text-slate-400">{description}</p>
@@ -1118,13 +1118,13 @@ function SectionHeader({
   description: string;
 }) {
   return (
-    <div className="flex items-start gap-3 border-b border-wiser-border px-5 py-4 sm:px-6">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-wiser-50 text-wiser-600">
+    <div className="flex items-start gap-3 border-b border-MojaSchoolr-border px-5 py-4 sm:px-6">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-MojaSchoolr-50 text-MojaSchoolr-600">
         <Icon size={18} />
       </div>
       <div>
-        <h2 className="text-sm font-semibold text-wiser-text">{title}</h2>
-        <p className="mt-1 text-xs leading-5 text-wiser-text-secondary">{description}</p>
+        <h2 className="text-sm font-semibold text-MojaSchoolr-text">{title}</h2>
+        <p className="mt-1 text-xs leading-5 text-MojaSchoolr-text-secondary">{description}</p>
       </div>
     </div>
   );
@@ -1143,7 +1143,7 @@ function Field({
     <label className="block">
       <span className="mb-1.5 block text-xs font-semibold text-slate-600">
         {label}
-        {required && <span className="ml-1 text-wiser-600">*</span>}
+        {required && <span className="ml-1 text-MojaSchoolr-600">*</span>}
       </span>
       {children}
     </label>
@@ -1183,7 +1183,7 @@ function Input({
         min={min}
         step={step}
         className={[
-          "h-10 w-full rounded-lg border border-slate-200 bg-white text-sm text-slate-700 outline-none placeholder:text-slate-400 focus:border-wiser-500 focus:ring-2 focus:ring-wiser-100",
+          "h-10 w-full rounded-lg border border-slate-200 bg-white text-sm text-slate-700 outline-none placeholder:text-slate-400 focus:border-MojaSchoolr-500 focus:ring-2 focus:ring-MojaSchoolr-100",
           Icon ? "pl-9 pr-3" : "px-3",
         ].join(" ")}
       />
@@ -1203,12 +1203,12 @@ function MetricCard({
   return (
     <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
       <div className="flex items-center justify-between gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-wiser-600 shadow-sm">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-MojaSchoolr-600 shadow-sm">
           <Icon size={16} />
         </div>
-        <span className="text-2xl font-semibold tracking-tight text-wiser-text">{value}</span>
+        <span className="text-2xl font-semibold tracking-tight text-MojaSchoolr-text">{value}</span>
       </div>
-      <p className="mt-3 text-xs font-medium text-wiser-text-secondary">{label}</p>
+      <p className="mt-3 text-xs font-medium text-MojaSchoolr-text-secondary">{label}</p>
     </div>
   );
 }
@@ -1226,12 +1226,12 @@ function InfoCard({
 }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-wiser-600 shadow-sm">
+      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-MojaSchoolr-600 shadow-sm">
         <Icon size={16} />
       </div>
-      <p className="mt-4 text-xs font-medium text-wiser-text-muted">{title}</p>
-      <p className="mt-1 text-sm font-semibold text-wiser-text">{value}</p>
-      <p className="mt-1 text-xs leading-5 text-wiser-text-secondary">{description}</p>
+      <p className="mt-4 text-xs font-medium text-MojaSchoolr-text-muted">{title}</p>
+      <p className="mt-1 text-sm font-semibold text-MojaSchoolr-text">{value}</p>
+      <p className="mt-1 text-xs leading-5 text-MojaSchoolr-text-secondary">{description}</p>
     </div>
   );
 }

@@ -4,7 +4,6 @@ import { normalizeRole, canAccessPath } from "../../lib/permissions";
 import { useAuth } from "../../context/AuthContext";
 import { useSchool } from "../../context/SchoolContext";
 import { supabase } from "../../lib/supabase";
-import WiserLogo from "../../assets/wiser-logo-cropped.png";
 
 import {
   LayoutDashboard,
@@ -71,7 +70,6 @@ const navigation: NavigationSection[] = [
       },
     ],
   },
-
 
   {
     label: "Parent",
@@ -282,13 +280,13 @@ function Sidebar({
 
   const sidebarContent = (
     <>
-      <div className="flex h-16 shrink-0 items-center border-b border-wiser-border px-4 sm:px-5">
+      <div className="flex h-16 shrink-0 items-center border-b border-MojaSchoolr-border px-4 sm:px-5">
         <div className="min-w-0">
-          <div className="w-[110px] shrink-0">
+          <div className="w-[180px] shrink-0">
             <img
-              src={WiserLogo}
-              alt="Wiser"
-              className="block h-auto w-[85px]"
+              src="/MojaSchool-white.svg"
+              alt="MojaSchool"
+              className="h-auto w-[180px]"
             />
           </div>
         </div>
@@ -297,7 +295,7 @@ function Sidebar({
           type="button"
           onClick={onClose}
           aria-label="Close navigation"
-          className="ml-auto flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-wiser-500 focus-visible:ring-offset-2 lg:hidden"
+          className="ml-auto flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-MojaSchoolr-500 focus-visible:ring-offset-2 lg:hidden"
         >
           <X size={19} />
         </button>
@@ -305,10 +303,7 @@ function Sidebar({
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-5">
         {navigation.map((section) => {
-          if (
-            section.allowedRoles &&
-            !section.allowedRoles.includes(role)
-          ) {
+          if (section.allowedRoles && !section.allowedRoles.includes(role)) {
             return null;
           }
 
@@ -338,7 +333,7 @@ function Sidebar({
 
           return (
             <div key={section.label} className="mb-6 last:mb-2">
-              <div className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-wiser-text-muted">
+              <div className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-MojaSchoolr-text-muted">
                 {section.label}
               </div>
 
@@ -355,10 +350,10 @@ function Sidebar({
                           onClick={onClose}
                           className={({ isActive }) =>
                             [
-                              "flex min-h-11 items-center gap-3 rounded-lg border-l-2 border-transparent px-3 py-2.5 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-wiser-500 focus-visible:ring-offset-1",
+                              "flex min-h-11 items-center gap-3 rounded-lg border-l-2 border-transparent px-3 py-2.5 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-MojaSchoolr-500 focus-visible:ring-offset-1",
                               isActive
-                                ? "border-wiser-600 bg-wiser-50 text-wiser-700 shadow-sm"
-                                : "text-slate-600 hover:border-wiser-200 hover:bg-slate-50 hover:text-slate-900",
+                                ? "border-MojaSchoolr-600 bg-MojaSchoolr-50 text-MojaSchoolr-700 shadow-sm"
+                                : "text-slate-600 hover:border-MojaSchoolr-200 hover:bg-slate-50 hover:text-slate-900",
                             ].join(" ")
                           }
                         >
@@ -385,10 +380,10 @@ function Sidebar({
                                 onClick={onClose}
                                 className={({ isActive }) =>
                                   [
-                                    "flex min-h-10 items-center gap-2 rounded-lg border-l-2 border-transparent px-3 py-2 text-xs font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-wiser-500 focus-visible:ring-offset-1",
+                                    "flex min-h-10 items-center gap-2 rounded-lg border-l-2 border-transparent px-3 py-2 text-xs font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-MojaSchoolr-500 focus-visible:ring-offset-1",
                                     isActive
-                                      ? "border-wiser-600 bg-wiser-50 text-wiser-700"
-                                      : "text-slate-500 hover:border-wiser-200 hover:bg-slate-50 hover:text-slate-900",
+                                      ? "border-MojaSchoolr-600 bg-MojaSchoolr-50 text-MojaSchoolr-700"
+                                      : "text-slate-500 hover:border-MojaSchoolr-200 hover:bg-slate-50 hover:text-slate-900",
                                   ].join(" ")
                                 }
                               >
@@ -412,10 +407,10 @@ function Sidebar({
                       onClick={onClose}
                       className={({ isActive }) =>
                         [
-                          "flex min-h-11 items-center gap-3 rounded-lg border-l-2 border-transparent px-3 py-2.5 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-wiser-500 focus-visible:ring-offset-1",
+                          "flex min-h-11 items-center gap-3 rounded-lg border-l-2 border-transparent px-3 py-2.5 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-MojaSchoolr-500 focus-visible:ring-offset-1",
                           isActive
-                            ? "border-wiser-600 bg-wiser-50 text-wiser-700 shadow-sm"
-                            : "text-slate-600 hover:border-wiser-200 hover:bg-slate-50 hover:text-slate-900",
+                            ? "border-MojaSchoolr-600 bg-MojaSchoolr-50 text-MojaSchoolr-700 shadow-sm"
+                            : "text-slate-600 hover:border-MojaSchoolr-200 hover:bg-slate-50 hover:text-slate-900",
                         ].join(" ")
                       }
                     >
@@ -430,7 +425,7 @@ function Sidebar({
         })}
       </div>
 
-      <div className="shrink-0 border-t border-wiser-border p-3">
+      <div className="shrink-0 border-t border-MojaSchoolr-border p-3">
         <button
           type="button"
           onClick={() => void handleLogout()}
@@ -446,7 +441,7 @@ function Sidebar({
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden h-screen w-64 shrink-0 border-r border-wiser-border bg-white lg:flex lg:flex-col">
+      <aside className="hidden h-screen w-64 shrink-0 border-r border-MojaSchoolr-border bg-white lg:flex lg:flex-col">
         {sidebarContent}
       </aside>
 
@@ -460,7 +455,7 @@ function Sidebar({
             className="absolute inset-0 bg-slate-950/35 backdrop-blur-[1px]"
           />
 
-          <aside className="relative flex h-full w-[min(86vw,20rem)] max-w-full flex-col border-r border-wiser-border bg-white shadow-2xl">
+          <aside className="relative flex h-full w-[min(86vw,20rem)] max-w-full flex-col border-r border-MojaSchoolr-border bg-white shadow-2xl">
             {sidebarContent}
           </aside>
         </div>
@@ -571,9 +566,7 @@ function Header({ onOpenNavigation }: { onOpenNavigation: () => void }) {
       ? parentFirstName || metadataFirstName
       : metadataFirstName;
   const lastName =
-    role === "Parent"
-      ? parentLastName || metadataLastName
-      : metadataLastName;
+    role === "Parent" ? parentLastName || metadataLastName : metadataLastName;
 
   const fullName = `${firstName} ${lastName}`.trim() || "School Admin";
 
@@ -697,19 +690,19 @@ function Header({ onOpenNavigation }: { onOpenNavigation: () => void }) {
   }
 
   return (
-    <header className="relative z-40 flex min-h-16 shrink-0 items-center justify-between gap-3 border-b border-wiser-border bg-white px-3 sm:min-h-20 sm:px-5 lg:px-8">
+    <header className="relative z-40 flex min-h-16 shrink-0 items-center justify-between gap-3 border-b border-MojaSchoolr-border bg-white px-3 sm:min-h-20 sm:px-5 lg:px-8">
       <div className="flex min-w-0 items-center gap-2.5">
         <button
           type="button"
           onClick={onOpenNavigation}
           aria-label="Open navigation"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-wiser-500 focus-visible:ring-offset-2 lg:hidden"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-MojaSchoolr-500 focus-visible:ring-offset-2 lg:hidden"
         >
           <Menu size={20} />
         </button>
 
         <div className="min-w-0">
-          <div className="text-xs text-wiser-text-muted sm:text-sm">School</div>
+          <div className="text-xs text-MojaSchoolr-text-muted sm:text-sm">School</div>
 
           <div className="mt-0.5 max-w-[52vw] truncate text-sm font-semibold text-slate-900 sm:max-w-[60vw]">
             {school?.name ?? "School"}
@@ -726,24 +719,24 @@ function Header({ onOpenNavigation }: { onOpenNavigation: () => void }) {
             aria-haspopup="true"
             onClick={openNotifications}
             className={[
-              "relative flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-wiser-500 focus-visible:ring-offset-2",
+              "relative flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-MojaSchoolr-500 focus-visible:ring-offset-2",
               notificationsOpen
-                ? "bg-wiser-50 text-wiser-700"
+                ? "bg-MojaSchoolr-50 text-MojaSchoolr-700"
                 : "hover:bg-slate-100",
             ].join(" ")}
           >
             {notifications.length > 0 && (
               <span
                 aria-hidden="true"
-                className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-wiser-600 ring-2 ring-white"
+                className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-MojaSchoolr-600 ring-2 ring-white"
               />
             )}
             <Bell size={18} strokeWidth={1.8} />
           </button>
 
           {notificationsOpen && (
-            <div className="absolute right-0 top-12 z-50 w-[min(92vw,22rem)] overflow-hidden rounded-xl border border-wiser-border bg-white shadow-xl">
-              <div className="flex items-center justify-between border-b border-wiser-border px-4 py-3">
+            <div className="absolute right-0 top-12 z-50 w-[min(92vw,22rem)] overflow-hidden rounded-xl border border-MojaSchoolr-border bg-white shadow-xl">
+              <div className="flex items-center justify-between border-b border-MojaSchoolr-border px-4 py-3">
                 <div>
                   <h2 className="text-sm font-semibold text-slate-900">
                     Notifications
@@ -757,7 +750,7 @@ function Header({ onOpenNavigation }: { onOpenNavigation: () => void }) {
                   type="button"
                   onClick={() => setNotificationsOpen(false)}
                   aria-label="Close notifications"
-                  className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-wiser-500 focus-visible:ring-offset-1"
+                  className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-MojaSchoolr-500 focus-visible:ring-offset-1"
                 >
                   <X size={16} />
                 </button>
@@ -793,9 +786,9 @@ function Header({ onOpenNavigation }: { onOpenNavigation: () => void }) {
                         key={notification.id}
                         type="button"
                         onClick={() => openAnnouncement(notification.id)}
-                        className="flex w-full gap-3 px-4 py-3.5 text-left transition hover:bg-slate-50 focus:outline-none focus-visible:bg-wiser-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-wiser-500"
+                        className="flex w-full gap-3 px-4 py-3.5 text-left transition hover:bg-slate-50 focus:outline-none focus-visible:bg-MojaSchoolr-50 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-MojaSchoolr-500"
                       >
-                        <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-wiser-600" />
+                        <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-MojaSchoolr-600" />
 
                         <span className="min-w-0">
                           <span className="block break-words text-sm font-medium text-slate-900">
@@ -818,7 +811,7 @@ function Header({ onOpenNavigation }: { onOpenNavigation: () => void }) {
                 <button
                   type="button"
                   onClick={() => openAnnouncement()}
-                  className="flex w-full items-center justify-center rounded-lg px-3 py-2 text-sm font-medium text-wiser-600 transition hover:bg-wiser-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-wiser-500"
+                  className="flex w-full items-center justify-center rounded-lg px-3 py-2 text-sm font-medium text-MojaSchoolr-600 transition hover:bg-MojaSchoolr-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-MojaSchoolr-500"
                 >
                   View all announcements
                 </button>
@@ -831,7 +824,7 @@ function Header({ onOpenNavigation }: { onOpenNavigation: () => void }) {
           type="button"
           onClick={() => navigate("/profile")}
           aria-label="Open my profile"
-          className="flex items-center gap-2 rounded-lg px-1.5 py-1 transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-wiser-500 focus-visible:ring-offset-2 sm:gap-3"
+          className="flex items-center gap-2 rounded-lg px-1.5 py-1 transition hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-MojaSchoolr-500 focus-visible:ring-offset-2 sm:gap-3"
         >
           <div className="hidden text-right md:block">
             <div className="max-w-[180px] truncate text-sm font-semibold text-slate-900">
@@ -843,7 +836,7 @@ function Header({ onOpenNavigation }: { onOpenNavigation: () => void }) {
             </div>
           </div>
 
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-wiser-100 text-sm font-semibold text-wiser-700 ring-1 ring-wiser-200">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-MojaSchoolr-100 text-sm font-semibold text-MojaSchoolr-700 ring-1 ring-MojaSchoolr-200">
             {initials}
           </div>
         </button>
@@ -863,11 +856,11 @@ function AccessDenied() {
           Access denied
         </h1>
         <p className="mt-2 text-sm leading-6 text-slate-500">
-          You do not have permission to access this section of Wiser.
+          You do not have permission to access this section of MojaSchoolr.
         </p>
         <NavLink
           to="/"
-          className="mt-5 inline-flex items-center justify-center rounded-lg bg-wiser-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-wiser-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-wiser-500 focus-visible:ring-offset-2"
+          className="mt-5 inline-flex items-center justify-center rounded-lg bg-MojaSchoolr-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-MojaSchoolr-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-MojaSchoolr-500 focus-visible:ring-offset-2"
         >
           Back to dashboard
         </NavLink>
@@ -901,7 +894,7 @@ export default function AppLayout() {
   }, [mobileNavigationOpen]);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-wiser-background">
+    <div className="flex h-screen overflow-hidden bg-MojaSchoolr-background">
       <Sidebar
         mobileOpen={mobileNavigationOpen}
         onClose={() => setMobileNavigationOpen(false)}

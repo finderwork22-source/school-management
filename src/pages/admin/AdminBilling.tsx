@@ -386,11 +386,11 @@ export default function AdminBilling() {
       setAllocations((allocationsResult.data ?? []) as AllocationRecord[]);
       setCompanyId(companyResult.data?.id ?? "");
     } catch (loadError) {
-      console.error("Failed to load WISE billing:", loadError);
+      console.error("Failed to load MojaSchool billing:", loadError);
       setError(
         loadError instanceof Error
           ? loadError.message
-          : "Could not load WISE billing.",
+          : "Could not load MojaSchool billing.",
       );
     } finally {
       setLoading(false);
@@ -671,15 +671,15 @@ export default function AdminBilling() {
     <div className="mx-auto w-full max-w-[1440px]">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-wiser-600">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-MojaSchoolr-600">
             <WalletCards size={14} />
-            WISE platform billing
+            MojaSchool platform billing
           </div>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-wiser-text sm:text-3xl">
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-MojaSchoolr-text sm:text-3xl">
             Billing
           </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-wiser-text-secondary">
-            Manage WISE subscriptions, invoices, payments and payment allocations owed by schools to the platform.
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-MojaSchoolr-text-secondary">
+            Manage MojaSchool subscriptions, invoices, payments and payment allocations owed by schools to the platform.
           </p>
         </div>
 
@@ -688,7 +688,7 @@ export default function AdminBilling() {
             type="button"
             onClick={() => void loadBilling(true)}
             disabled={refreshing}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-wiser-border bg-white px-4 text-sm font-semibold text-wiser-text-secondary shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-MojaSchoolr-border bg-white px-4 text-sm font-semibold text-MojaSchoolr-text-secondary shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
             {refreshing ? "Refreshing..." : "Refresh"}
@@ -696,7 +696,7 @@ export default function AdminBilling() {
           <button
             type="button"
             onClick={() => setShowPaymentForm(true)}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-wiser-border bg-white px-4 text-sm font-semibold text-wiser-text-secondary shadow-sm transition hover:bg-slate-50"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-MojaSchoolr-border bg-white px-4 text-sm font-semibold text-MojaSchoolr-text-secondary shadow-sm transition hover:bg-slate-50"
           >
             <ReceiptText size={16} />
             Record payment
@@ -704,7 +704,7 @@ export default function AdminBilling() {
           <button
             type="button"
             onClick={() => setShowInvoiceForm(true)}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-wiser-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-wiser-700"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-MojaSchoolr-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-MojaSchoolr-700"
           >
             <Plus size={16} />
             Create invoice
@@ -742,8 +742,8 @@ export default function AdminBilling() {
         />
       </div>
 
-      <div className="mt-6 overflow-hidden rounded-xl border border-wiser-border bg-white shadow-sm">
-        <div className="flex flex-wrap border-b border-wiser-border px-4 pt-3 sm:px-5">
+      <div className="mt-6 overflow-hidden rounded-xl border border-MojaSchoolr-border bg-white shadow-sm">
+        <div className="flex flex-wrap border-b border-MojaSchoolr-border px-4 pt-3 sm:px-5">
           {(
             [
               ["overview", "Overview"],
@@ -759,7 +759,7 @@ export default function AdminBilling() {
               className={[
                 "border-b-2 px-3 py-3 text-sm font-semibold transition sm:px-4",
                 tab === value
-                  ? "border-wiser-600 text-wiser-700"
+                  ? "border-MojaSchoolr-600 text-MojaSchoolr-700"
                   : "border-transparent text-slate-500 hover:text-slate-800",
               ].join(" ")}
             >
@@ -879,7 +879,7 @@ function OverviewTab({
         />
         <div className="divide-y divide-slate-100">
           {recentInvoices.length === 0 ? (
-            <EmptyBlock title="No invoices yet" description="Create your first WISE invoice to start the platform ledger." />
+            <EmptyBlock title="No invoices yet" description="Create your first MojaSchool invoice to start the platform ledger." />
           ) : (
             recentInvoices.map((invoice) => (
               <button
@@ -1027,7 +1027,7 @@ function InvoicesTab({
                 <tr key={invoice.id} className="transition hover:bg-slate-50">
                   <td className="px-5 py-4">
                     <button type="button" onClick={() => onInvoice(invoice.id)} className="text-left">
-                      <p className="text-sm font-semibold text-slate-800 hover:text-wiser-700">{invoice.invoice_number}</p>
+                      <p className="text-sm font-semibold text-slate-800 hover:text-MojaSchoolr-700">{invoice.invoice_number}</p>
                       <p className="mt-1 text-xs text-slate-400">{invoice.plan?.name ?? "No plan"}</p>
                     </button>
                   </td>
@@ -1118,7 +1118,7 @@ function PaymentsTab({
               <tr key={payment.id} className="hover:bg-slate-50">
                 <td className="px-5 py-4">
                   <button type="button" onClick={() => onPayment(payment.id)} className="text-left">
-                    <p className="text-sm font-semibold text-slate-800 hover:text-wiser-700">{payment.payment_number}</p>
+                    <p className="text-sm font-semibold text-slate-800 hover:text-MojaSchoolr-700">{payment.payment_number}</p>
                     <p className="mt-1 text-xs text-slate-400">{payment.allocations.length} allocation{payment.allocations.length === 1 ? "" : "s"}</p>
                   </button>
                 </td>
@@ -1432,11 +1432,11 @@ function InvoiceDetail({
 
   return (
     <div className="mx-auto w-full max-w-[1440px]">
-      <button type="button" onClick={onBack} className="inline-flex items-center gap-2 text-sm font-semibold text-wiser-600 hover:text-wiser-700"><ArrowLeft size={16} />Back to billing</button>
+      <button type="button" onClick={onBack} className="inline-flex items-center gap-2 text-sm font-semibold text-MojaSchoolr-600 hover:text-MojaSchoolr-700"><ArrowLeft size={16} />Back to billing</button>
       <div className="mt-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <div className="flex flex-wrap items-center gap-2"><h1 className="text-2xl font-semibold tracking-tight text-wiser-text sm:text-3xl">{invoice.invoice_number}</h1><span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${invoiceStatusClasses(invoice.status)}`}>{formatStatus(invoice.status)}</span></div>
-          <p className="mt-2 text-sm text-wiser-text-secondary">{invoice.school?.name ?? getSchoolName(schools, invoice.school_id)} · Issued {formatDate(invoice.issue_date)}</p>
+          <div className="flex flex-wrap items-center gap-2"><h1 className="text-2xl font-semibold tracking-tight text-MojaSchoolr-text sm:text-3xl">{invoice.invoice_number}</h1><span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${invoiceStatusClasses(invoice.status)}`}>{formatStatus(invoice.status)}</span></div>
+          <p className="mt-2 text-sm text-MojaSchoolr-text-secondary">{invoice.school?.name ?? getSchoolName(schools, invoice.school_id)} · Issued {formatDate(invoice.issue_date)}</p>
         </div>
         <div className="text-left lg:text-right"><p className="text-xs uppercase tracking-[0.08em] text-slate-400">Outstanding balance</p><p className="mt-1 text-2xl font-semibold text-slate-900">{formatMoney(invoice.balance, invoice.currency)}</p></div>
       </div>
@@ -1451,7 +1451,7 @@ function InvoiceDetail({
           <InfoCard title="Payment allocations" icon={ReceiptText}>
             <div className="flex items-center justify-between gap-3 mb-4">
               <p className="text-xs text-slate-500">Link confirmed or pending platform payments to this invoice, including partial amounts.</p>
-              <button type="button" onClick={() => setShowAllocationForm(true)} disabled={processing || invoice.status === "void" || invoice.status === "cancelled" || invoice.balance <= 0} className="inline-flex h-9 shrink-0 items-center gap-2 rounded-lg bg-wiser-600 px-3 text-xs font-semibold text-white hover:bg-wiser-700 disabled:cursor-not-allowed disabled:opacity-50"><Plus size={14} />Allocate payment</button>
+              <button type="button" onClick={() => setShowAllocationForm(true)} disabled={processing || invoice.status === "void" || invoice.status === "cancelled" || invoice.balance <= 0} className="inline-flex h-9 shrink-0 items-center gap-2 rounded-lg bg-MojaSchoolr-600 px-3 text-xs font-semibold text-white hover:bg-MojaSchoolr-700 disabled:cursor-not-allowed disabled:opacity-50"><Plus size={14} />Allocate payment</button>
             </div>
             <div className="divide-y divide-slate-100">
               {invoiceAllocations.length === 0 ? <EmptyState title="No payment allocations" description="No payments have been allocated to this invoice yet." /> : invoiceAllocations.map((allocation) => {
@@ -1463,7 +1463,7 @@ function InvoiceDetail({
           </InfoCard>
         </div>
         <div className="h-fit space-y-4 xl:sticky xl:top-24">
-          <section className="rounded-xl border border-wiser-border bg-white shadow-sm"><div className="border-b border-wiser-border px-5 py-4"><div className="flex items-center gap-2"><Filter size={17} className="text-wiser-600" /><h2 className="text-base font-semibold text-wiser-text">Invoice controls</h2></div><p className="mt-1 text-xs leading-5 text-wiser-text-secondary">Edit invoice details, change its ledger state, or void it without deleting the record.</p></div><div className="space-y-2 p-5"><button type="button" onClick={() => setShowEdit(true)} disabled={processing || invoice.status === "void"} className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"><Edit3 size={16} />Edit invoice</button>{invoice.status !== "void" && <button type="button" onClick={() => void voidInvoice()} disabled={processing} className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"><Trash2 size={16} />Void invoice</button>}</div></section>
+          <section className="rounded-xl border border-MojaSchoolr-border bg-white shadow-sm"><div className="border-b border-MojaSchoolr-border px-5 py-4"><div className="flex items-center gap-2"><Filter size={17} className="text-MojaSchoolr-600" /><h2 className="text-base font-semibold text-MojaSchoolr-text">Invoice controls</h2></div><p className="mt-1 text-xs leading-5 text-MojaSchoolr-text-secondary">Edit invoice details, change its ledger state, or void it without deleting the record.</p></div><div className="space-y-2 p-5"><button type="button" onClick={() => setShowEdit(true)} disabled={processing || invoice.status === "void"} className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"><Edit3 size={16} />Edit invoice</button>{invoice.status !== "void" && <button type="button" onClick={() => void voidInvoice()} disabled={processing} className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"><Trash2 size={16} />Void invoice</button>}</div></section>
           <div className="rounded-xl border border-slate-200 bg-white p-4 text-xs text-slate-400"><MetaLine label="Invoice ID" value={invoice.id} /><MetaLine label="School ID" value={invoice.school_id} /><MetaLine label="Subscription ID" value={invoice.subscription_id || "—"} /></div>
         </div>
       </div>
@@ -1495,7 +1495,7 @@ function AllocationRow({ allocation, payment, currency, disabled, maxAmount, onS
   const [editing, setEditing] = useState(false);
   const [amount, setAmount] = useState(String(allocation.amount));
   useEffect(() => { setAmount(String(allocation.amount)); }, [allocation.amount]);
-  return <div className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><p className="truncate text-sm font-semibold text-slate-800">{payment?.payment_number ?? "Payment"}</p><p className="mt-1 text-xs text-slate-400">{payment ? `${formatStatus(payment.status)} · ${formatDate(payment.payment_date)}` : formatDate(allocation.created_at)}</p></div>{editing ? <div className="flex items-center gap-2"><input type="number" min="0.01" step="0.01" max={maxAmount} value={amount} onChange={(e) => setAmount(e.target.value)} className="h-9 w-32 rounded-lg border border-slate-200 px-3 text-sm" /><button type="button" onClick={() => { const n = Number(amount); if (Number.isFinite(n) && n > 0) { onSave(n); setEditing(false); } }} disabled={disabled} className="inline-flex h-9 items-center gap-1 rounded-lg bg-wiser-600 px-3 text-xs font-semibold text-white"><Save size={13} />Save</button><button type="button" onClick={() => setEditing(false)} disabled={disabled} className="h-9 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600">Cancel</button></div> : <div className="flex items-center gap-3"><p className="text-sm font-semibold text-slate-800">{formatMoney(allocation.amount, currency)}</p><button type="button" onClick={() => setEditing(true)} disabled={disabled} className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100"><Edit3 size={14} /></button><button type="button" onClick={onRemove} disabled={disabled} className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600"><Unlink2 size={14} /></button></div>}</div>;
+  return <div className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between"><div className="min-w-0"><p className="truncate text-sm font-semibold text-slate-800">{payment?.payment_number ?? "Payment"}</p><p className="mt-1 text-xs text-slate-400">{payment ? `${formatStatus(payment.status)} · ${formatDate(payment.payment_date)}` : formatDate(allocation.created_at)}</p></div>{editing ? <div className="flex items-center gap-2"><input type="number" min="0.01" step="0.01" max={maxAmount} value={amount} onChange={(e) => setAmount(e.target.value)} className="h-9 w-32 rounded-lg border border-slate-200 px-3 text-sm" /><button type="button" onClick={() => { const n = Number(amount); if (Number.isFinite(n) && n > 0) { onSave(n); setEditing(false); } }} disabled={disabled} className="inline-flex h-9 items-center gap-1 rounded-lg bg-MojaSchoolr-600 px-3 text-xs font-semibold text-white"><Save size={13} />Save</button><button type="button" onClick={() => setEditing(false)} disabled={disabled} className="h-9 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-600">Cancel</button></div> : <div className="flex items-center gap-3"><p className="text-sm font-semibold text-slate-800">{formatMoney(allocation.amount, currency)}</p><button type="button" onClick={() => setEditing(true)} disabled={disabled} className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100"><Edit3 size={14} /></button><button type="button" onClick={onRemove} disabled={disabled} className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600"><Unlink2 size={14} /></button></div>}</div>;
 }
 
 function AllocationForm({ invoice, payments, allocations, onClose, onSave, saving }: { invoice: InvoiceWithRelations; payments: PaymentRecord[]; allocations: AllocationRecord[]; onClose: () => void; onSave: (paymentId: string, amount: number) => void; saving: boolean; }) {
@@ -1506,7 +1506,7 @@ function AllocationForm({ invoice, payments, allocations, onClose, onSave, savin
   useEffect(() => { const item = availablePayments.find((entry) => entry.payment.id === paymentId); if (item && !amount) setAmount(String(Math.min(item.available, invoice.balance))); }, [paymentId, availablePayments, invoice.balance, amount]);
   const selected = availablePayments.find((entry) => entry.payment.id === paymentId);
   function submit(e: FormEvent) { e.preventDefault(); const n = Number(amount); if (!selected) return; if (!Number.isFinite(n) || n <= 0) return; onSave(paymentId, n); }
-  return <Modal title="Allocate payment" onClose={onClose}><form onSubmit={submit} className="space-y-4"><FormRow label="Payment"><select value={paymentId} onChange={(e) => { setPaymentId(e.target.value); setAmount(""); }} className={inputClass}><option value="">Select payment</option>{availablePayments.map((entry) => <option key={entry.payment.id} value={entry.payment.id}>{entry.payment.payment_number} · Available {formatMoney(entry.available, entry.payment.currency)}</option>)}</select></FormRow><div className="grid gap-4 sm:grid-cols-2"><FormRow label="Amount"><input type="number" min="0.01" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} className={inputClass} /></FormRow><FormRow label="Invoice balance"><input value={formatMoney(invoice.balance, invoice.currency)} readOnly className={`${inputClass} bg-slate-50`} /></FormRow></div>{selected && <div className="rounded-lg bg-slate-50 p-3 text-xs text-slate-500">Payment has {formatMoney(selected.available, selected.payment.currency)} available for allocation.</div>}<div className="flex justify-end gap-2 pt-2"><button type="button" onClick={onClose} className="h-10 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-600">Cancel</button><button type="submit" disabled={saving || !selected} className="inline-flex h-10 items-center gap-2 rounded-lg bg-wiser-600 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">{saving && <Loader2 size={15} className="animate-spin" />}Allocate payment</button></div></form></Modal>;
+  return <Modal title="Allocate payment" onClose={onClose}><form onSubmit={submit} className="space-y-4"><FormRow label="Payment"><select value={paymentId} onChange={(e) => { setPaymentId(e.target.value); setAmount(""); }} className={inputClass}><option value="">Select payment</option>{availablePayments.map((entry) => <option key={entry.payment.id} value={entry.payment.id}>{entry.payment.payment_number} · Available {formatMoney(entry.available, entry.payment.currency)}</option>)}</select></FormRow><div className="grid gap-4 sm:grid-cols-2"><FormRow label="Amount"><input type="number" min="0.01" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} className={inputClass} /></FormRow><FormRow label="Invoice balance"><input value={formatMoney(invoice.balance, invoice.currency)} readOnly className={`${inputClass} bg-slate-50`} /></FormRow></div>{selected && <div className="rounded-lg bg-slate-50 p-3 text-xs text-slate-500">Payment has {formatMoney(selected.available, selected.payment.currency)} available for allocation.</div>}<div className="flex justify-end gap-2 pt-2"><button type="button" onClick={onClose} className="h-10 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-600">Cancel</button><button type="submit" disabled={saving || !selected} className="inline-flex h-10 items-center gap-2 rounded-lg bg-MojaSchoolr-600 px-4 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">{saving && <Loader2 size={15} className="animate-spin" />}Allocate payment</button></div></form></Modal>;
 }
 
 function InvoiceEditModal({ invoice, subscriptions, allocatedAmount, onClose, onSaved }: { invoice: InvoiceRecord; subscriptions: SubscriptionRecord[]; allocatedAmount: number; onClose: () => void; onSaved: () => void; }) {
@@ -1548,13 +1548,13 @@ function InvoiceEditModal({ invoice, subscriptions, allocatedAmount, onClose, on
       if (updateError) throw updateError;
       onSaved();
     } catch (updateError) {
-      console.error("Failed to edit WISE invoice:", updateError);
+      console.error("Failed to edit MojaSchool invoice:", updateError);
       setError(updateError instanceof Error ? updateError.message : "Could not update invoice.");
     } finally {
       setSaving(false);
     }
   }
-  return <Modal title={`Edit ${invoice.invoice_number}`} onClose={onClose}><form onSubmit={submit} className="space-y-4"><div className="rounded-lg bg-slate-50 p-3 text-xs text-slate-500">School: <span className="font-semibold text-slate-700">{schoolId}</span></div><FormRow label="Subscription (optional)"><select value={subscriptionId} onChange={(e) => setSubscriptionId(e.target.value)} className={inputClass}><option value="">No subscription link</option>{filteredSubscriptions.map((subscription) => <option key={subscription.id} value={subscription.id}>{subscription.id} · {formatMoney(subscription.price, subscription.currency)}</option>)}</select></FormRow><div className="grid gap-4 sm:grid-cols-2"><FormRow label="Invoice number"><input value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} className={inputClass} /></FormRow><FormRow label="Currency"><input value={currency} onChange={(e) => setCurrency(e.target.value.toUpperCase())} maxLength={3} className={inputClass} /></FormRow><FormRow label="Issue date"><input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} className={inputClass} /></FormRow><FormRow label="Due date"><input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className={inputClass} /></FormRow><FormRow label="Subtotal"><input type="number" min="0" step="0.01" value={subtotal} onChange={(e) => setSubtotal(e.target.value)} className={inputClass} /></FormRow><FormRow label="Tax"><input type="number" min="0" step="0.01" value={tax} onChange={(e) => setTax(e.target.value)} className={inputClass} /></FormRow><FormRow label="Discount"><input type="number" min="0" step="0.01" value={discount} onChange={(e) => setDiscount(e.target.value)} className={inputClass} /></FormRow><FormRow label="Status"><select value={status} onChange={(e) => setStatus(e.target.value as InvoiceStatus)} className={inputClass}>{["draft","issued","partially_paid","paid","overdue","cancelled"].map((item) => <option key={item} value={item}>{formatStatus(item)}</option>)}</select></FormRow></div><FormRow label="Notes"><textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className={`${inputClass} py-2.5`} /></FormRow>{error && <InlineError message={error} />}<div className="flex justify-end gap-2 pt-2"><button type="button" onClick={onClose} className="h-10 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-600">Cancel</button><button type="submit" disabled={saving} className="inline-flex h-10 items-center gap-2 rounded-lg bg-wiser-600 px-4 text-sm font-semibold text-white disabled:opacity-60">{saving && <Loader2 size={15} className="animate-spin" />}Save changes</button></div></form></Modal>;
+  return <Modal title={`Edit ${invoice.invoice_number}`} onClose={onClose}><form onSubmit={submit} className="space-y-4"><div className="rounded-lg bg-slate-50 p-3 text-xs text-slate-500">School: <span className="font-semibold text-slate-700">{schoolId}</span></div><FormRow label="Subscription (optional)"><select value={subscriptionId} onChange={(e) => setSubscriptionId(e.target.value)} className={inputClass}><option value="">No subscription link</option>{filteredSubscriptions.map((subscription) => <option key={subscription.id} value={subscription.id}>{subscription.id} · {formatMoney(subscription.price, subscription.currency)}</option>)}</select></FormRow><div className="grid gap-4 sm:grid-cols-2"><FormRow label="Invoice number"><input value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} className={inputClass} /></FormRow><FormRow label="Currency"><input value={currency} onChange={(e) => setCurrency(e.target.value.toUpperCase())} maxLength={3} className={inputClass} /></FormRow><FormRow label="Issue date"><input type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} className={inputClass} /></FormRow><FormRow label="Due date"><input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className={inputClass} /></FormRow><FormRow label="Subtotal"><input type="number" min="0" step="0.01" value={subtotal} onChange={(e) => setSubtotal(e.target.value)} className={inputClass} /></FormRow><FormRow label="Tax"><input type="number" min="0" step="0.01" value={tax} onChange={(e) => setTax(e.target.value)} className={inputClass} /></FormRow><FormRow label="Discount"><input type="number" min="0" step="0.01" value={discount} onChange={(e) => setDiscount(e.target.value)} className={inputClass} /></FormRow><FormRow label="Status"><select value={status} onChange={(e) => setStatus(e.target.value as InvoiceStatus)} className={inputClass}>{["draft","issued","partially_paid","paid","overdue","cancelled"].map((item) => <option key={item} value={item}>{formatStatus(item)}</option>)}</select></FormRow></div><FormRow label="Notes"><textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className={`${inputClass} py-2.5`} /></FormRow>{error && <InlineError message={error} />}<div className="flex justify-end gap-2 pt-2"><button type="button" onClick={onClose} className="h-10 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-600">Cancel</button><button type="submit" disabled={saving} className="inline-flex h-10 items-center gap-2 rounded-lg bg-MojaSchoolr-600 px-4 text-sm font-semibold text-white disabled:opacity-60">{saving && <Loader2 size={15} className="animate-spin" />}Save changes</button></div></form></Modal>;
 }
 
 function PaymentDetail({
@@ -1631,7 +1631,7 @@ function PaymentDetail({
       setLocalSuccess("Payment updated successfully.");
       onRefresh();
     } catch (updateError) {
-      console.error("Failed to update WISE payment:", updateError);
+      console.error("Failed to update MojaSchool payment:", updateError);
       setLocalError(updateError instanceof Error ? updateError.message : "Could not update payment.");
     } finally {
       setProcessing(false);
@@ -1662,15 +1662,15 @@ function PaymentDetail({
 
   return (
     <div className="mx-auto w-full max-w-[1440px]">
-      <button type="button" onClick={onBack} className="inline-flex items-center gap-2 text-sm font-semibold text-wiser-600 hover:text-wiser-700"><ArrowLeft size={16} />Back to billing</button>
-      <div className="mt-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"><div><div className="flex flex-wrap items-center gap-2"><h1 className="text-2xl font-semibold tracking-tight text-wiser-text sm:text-3xl">{payment.payment_number}</h1><span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${paymentStatusClasses(payment.status)}`}>{formatStatus(payment.status)}</span></div><p className="mt-2 text-sm text-wiser-text-secondary">{payment.school?.name ?? "Unknown school"} · {formatDate(payment.payment_date)}</p></div><div className="text-left lg:text-right"><p className="text-xs uppercase tracking-[0.08em] text-slate-400">Payment amount</p><p className="mt-1 text-2xl font-semibold text-slate-900">{formatMoney(payment.amount, payment.currency)}</p></div></div>
+      <button type="button" onClick={onBack} className="inline-flex items-center gap-2 text-sm font-semibold text-MojaSchoolr-600 hover:text-MojaSchoolr-700"><ArrowLeft size={16} />Back to billing</button>
+      <div className="mt-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"><div><div className="flex flex-wrap items-center gap-2"><h1 className="text-2xl font-semibold tracking-tight text-MojaSchoolr-text sm:text-3xl">{payment.payment_number}</h1><span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${paymentStatusClasses(payment.status)}`}>{formatStatus(payment.status)}</span></div><p className="mt-2 text-sm text-MojaSchoolr-text-secondary">{payment.school?.name ?? "Unknown school"} · {formatDate(payment.payment_date)}</p></div><div className="text-left lg:text-right"><p className="text-xs uppercase tracking-[0.08em] text-slate-400">Payment amount</p><p className="mt-1 text-2xl font-semibold text-slate-900">{formatMoney(payment.amount, payment.currency)}</p></div></div>
       {error && <AlertMessage tone="error" message={error} />} {success && <AlertMessage tone="success" message={success} />} {localError && <AlertMessage tone="error" message={localError} />} {localSuccess && <AlertMessage tone="success" message={localSuccess} />}
       <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
         <div className="space-y-6">
           <InfoCard title="Payment details" icon={ReceiptText}><InfoGrid><InfoItem label="Payment number" value={payment.payment_number} /><InfoItem label="School" value={payment.school?.name ?? "Unknown school"} /><InfoItem label="Payment method" value={formatStatus(payment.payment_method)} /><InfoItem label="Payment date" value={formatDate(payment.payment_date)} /><InfoItem label="Reference" value={payment.reference || "—"} /><InfoItem label="Provider" value={payment.provider || "—"} /><InfoItem label="Provider transaction ID" value={payment.provider_transaction_id || "—"} /><InfoItem label="Currency" value={payment.currency} /></InfoGrid></InfoCard>
           <InfoCard title="Payment allocations" icon={WalletCards}>{paymentAllocations.length === 0 ? <EmptyState title="No allocations" description="This payment is currently unallocated." /> : <div className="divide-y divide-slate-100">{paymentAllocations.map((allocation) => { const invoice = invoices.find((item) => item.id === allocation.invoice_id); return <div key={allocation.id} className="flex items-center justify-between gap-4 py-3"><div className="min-w-0"><p className="truncate text-sm font-semibold text-slate-800">{invoice?.invoice_number ?? "Invoice"}</p><p className="mt-1 text-xs text-slate-400">{invoice?.school?.name ?? "Unknown school"} · {formatDate(allocation.created_at)}</p></div><div className="flex items-center gap-3"><p className="text-sm font-semibold text-slate-800">{formatMoney(allocation.amount, payment.currency)}</p><button type="button" onClick={() => void removeAllocation(allocation.id)} disabled={processing} className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600"><Unlink2 size={14} /></button></div></div>; })}</div>}</InfoCard>
         </div>
-        <div className="h-fit xl:sticky xl:top-24"><section className="rounded-xl border border-wiser-border bg-white shadow-sm"><div className="border-b border-wiser-border px-5 py-4"><div className="flex items-center gap-2"><Edit3 size={17} className="text-wiser-600" /><h2 className="text-base font-semibold text-wiser-text">Edit payment</h2></div></div><div className="space-y-4 p-5"><FormRow label="Amount"><input type="number" min={allocatedAmount} step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} className={inputClass} /></FormRow><FormRow label="Payment method"><select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)} className={inputClass}>{PAYMENT_METHODS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></FormRow><FormRow label="Payment date"><input type="date" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} className={inputClass} /></FormRow><FormRow label="Reference"><input value={reference} onChange={(e) => setReference(e.target.value)} className={inputClass} /></FormRow><FormRow label="Provider"><input value={provider} onChange={(e) => setProvider(e.target.value)} className={inputClass} /></FormRow><FormRow label="Provider transaction ID"><input value={transactionId} onChange={(e) => setTransactionId(e.target.value)} className={inputClass} /></FormRow><FormRow label="Status"><select value={status} onChange={(e) => setStatus(e.target.value as PaymentStatus)} className={inputClass}>{PAYMENT_STATUSES.filter((item) => item.value !== "all").map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></FormRow><FormRow label="Notes"><textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className={`${inputClass} py-2.5`} /></FormRow><button type="button" onClick={() => void savePayment()} disabled={processing} className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-wiser-600 px-4 text-sm font-semibold text-white hover:bg-wiser-700 disabled:cursor-not-allowed disabled:opacity-50">{processing ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}Save payment changes</button></div></section><div className="mt-4 rounded-xl border border-slate-200 bg-white p-4 text-xs text-slate-400"><MetaLine label="Payment ID" value={payment.id} /><MetaLine label="Allocated" value={formatMoney(allocatedAmount, payment.currency)} /><MetaLine label="Unallocated" value={formatMoney(Math.max(0, Number(payment.amount) - allocatedAmount), payment.currency)} /></div></div>
+        <div className="h-fit xl:sticky xl:top-24"><section className="rounded-xl border border-MojaSchoolr-border bg-white shadow-sm"><div className="border-b border-MojaSchoolr-border px-5 py-4"><div className="flex items-center gap-2"><Edit3 size={17} className="text-MojaSchoolr-600" /><h2 className="text-base font-semibold text-MojaSchoolr-text">Edit payment</h2></div></div><div className="space-y-4 p-5"><FormRow label="Amount"><input type="number" min={allocatedAmount} step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} className={inputClass} /></FormRow><FormRow label="Payment method"><select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)} className={inputClass}>{PAYMENT_METHODS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></FormRow><FormRow label="Payment date"><input type="date" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} className={inputClass} /></FormRow><FormRow label="Reference"><input value={reference} onChange={(e) => setReference(e.target.value)} className={inputClass} /></FormRow><FormRow label="Provider"><input value={provider} onChange={(e) => setProvider(e.target.value)} className={inputClass} /></FormRow><FormRow label="Provider transaction ID"><input value={transactionId} onChange={(e) => setTransactionId(e.target.value)} className={inputClass} /></FormRow><FormRow label="Status"><select value={status} onChange={(e) => setStatus(e.target.value as PaymentStatus)} className={inputClass}>{PAYMENT_STATUSES.filter((item) => item.value !== "all").map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></FormRow><FormRow label="Notes"><textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className={`${inputClass} py-2.5`} /></FormRow><button type="button" onClick={() => void savePayment()} disabled={processing} className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-MojaSchoolr-600 px-4 text-sm font-semibold text-white hover:bg-MojaSchoolr-700 disabled:cursor-not-allowed disabled:opacity-50">{processing ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}Save payment changes</button></div></section><div className="mt-4 rounded-xl border border-slate-200 bg-white p-4 text-xs text-slate-400"><MetaLine label="Payment ID" value={payment.id} /><MetaLine label="Allocated" value={formatMoney(allocatedAmount, payment.currency)} /><MetaLine label="Unallocated" value={formatMoney(Math.max(0, Number(payment.amount) - allocatedAmount), payment.currency)} /></div></div>
       </div>
     </div>
   );
@@ -1712,7 +1712,7 @@ function InvoiceForm({
 
   useEffect(() => {
     if (!invoiceNumber) {
-      setInvoiceNumber(`WISE-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`);
+      setInvoiceNumber(`MojaSchool-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`);
     }
   }, [invoiceNumber]);
 
@@ -1736,7 +1736,7 @@ function InvoiceForm({
     if (!issueDate || !dueDate) return setError("Issue and due dates are required.");
     if (!Number.isFinite(subtotalNumber) || subtotalNumber <= 0) return setError("Subtotal must be greater than 0.");
     if (dueDate < issueDate) return setError("Due date cannot be before the issue date.");
-    if (!companyId) return setError("WISE company record is not configured.");
+    if (!companyId) return setError("MojaSchool company record is not configured.");
     setSaving(true);
     try {
       const { error: insertError } = await supabase.from("platform_invoices").insert({
@@ -1757,14 +1757,14 @@ function InvoiceForm({
       if (insertError) throw insertError;
       onCreated();
     } catch (insertError) {
-      console.error("Failed to create WISE invoice:", insertError);
+      console.error("Failed to create MojaSchool invoice:", insertError);
       setError(insertError instanceof Error ? insertError.message : "Could not create invoice.");
     } finally {
       setSaving(false);
     }
   }
 
-  return <Modal title="Create invoice" onClose={onClose}><form onSubmit={submit} className="space-y-4"><FormRow label="School"><select value={schoolId} onChange={(event) => { setSchoolId(event.target.value); setSubscriptionId(""); }} className={inputClass}><option value="">Select school</option>{schools.map((school) => <option key={school.id} value={school.id}>{school.name}</option>)}</select></FormRow><FormRow label="Subscription (optional)"><select value={subscriptionId} onChange={(event) => setSubscriptionId(event.target.value)} className={inputClass}><option value="">No subscription link</option>{schoolSubscriptions.map((subscription) => { const plan = plans.find((item) => item.id === subscription.plan_id); return <option key={subscription.id} value={subscription.id}>{plan?.name ?? "Subscription"} · {formatMoney(subscription.price, subscription.currency)}</option>; })}</select></FormRow><div className="grid gap-4 sm:grid-cols-2"><FormRow label="Invoice number"><input value={invoiceNumber} onChange={(event) => setInvoiceNumber(event.target.value)} className={inputClass} /></FormRow><FormRow label="Currency"><input value={currency} onChange={(event) => setCurrency(event.target.value.toUpperCase())} className={inputClass} maxLength={3} /></FormRow><FormRow label="Issue date"><input type="date" value={issueDate} onChange={(event) => setIssueDate(event.target.value)} className={inputClass} /></FormRow><FormRow label="Due date"><input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} className={inputClass} /></FormRow><FormRow label="Subtotal"><input type="number" min="0" step="0.01" value={subtotal} onChange={(event) => setSubtotal(event.target.value)} className={inputClass} /></FormRow><FormRow label="Tax"><input type="number" min="0" step="0.01" value={tax} onChange={(event) => setTax(event.target.value)} className={inputClass} /></FormRow><FormRow label="Discount"><input type="number" min="0" step="0.01" value={discount} onChange={(event) => setDiscount(event.target.value)} className={inputClass} /></FormRow><FormRow label="Status"><select value={status} onChange={(event) => setStatus(event.target.value as InvoiceStatus)} className={inputClass}>{["draft", "issued", "cancelled", "void"].map((item) => <option key={item} value={item}>{formatStatus(item)}</option>)}</select></FormRow></div><FormRow label="Notes"><textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={3} className={`${inputClass} py-2.5`} placeholder="Optional billing note" /></FormRow>{error && <InlineError message={error} />}<div className="flex justify-end gap-2 pt-2"><button type="button" onClick={onClose} className="h-10 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-600 hover:bg-slate-50">Cancel</button><button type="submit" disabled={saving} className="inline-flex h-10 items-center gap-2 rounded-lg bg-wiser-600 px-4 text-sm font-semibold text-white hover:bg-wiser-700 disabled:cursor-not-allowed disabled:opacity-60">{saving && <Loader2 size={15} className="animate-spin" />}Create invoice</button></div></form></Modal>;
+  return <Modal title="Create invoice" onClose={onClose}><form onSubmit={submit} className="space-y-4"><FormRow label="School"><select value={schoolId} onChange={(event) => { setSchoolId(event.target.value); setSubscriptionId(""); }} className={inputClass}><option value="">Select school</option>{schools.map((school) => <option key={school.id} value={school.id}>{school.name}</option>)}</select></FormRow><FormRow label="Subscription (optional)"><select value={subscriptionId} onChange={(event) => setSubscriptionId(event.target.value)} className={inputClass}><option value="">No subscription link</option>{schoolSubscriptions.map((subscription) => { const plan = plans.find((item) => item.id === subscription.plan_id); return <option key={subscription.id} value={subscription.id}>{plan?.name ?? "Subscription"} · {formatMoney(subscription.price, subscription.currency)}</option>; })}</select></FormRow><div className="grid gap-4 sm:grid-cols-2"><FormRow label="Invoice number"><input value={invoiceNumber} onChange={(event) => setInvoiceNumber(event.target.value)} className={inputClass} /></FormRow><FormRow label="Currency"><input value={currency} onChange={(event) => setCurrency(event.target.value.toUpperCase())} className={inputClass} maxLength={3} /></FormRow><FormRow label="Issue date"><input type="date" value={issueDate} onChange={(event) => setIssueDate(event.target.value)} className={inputClass} /></FormRow><FormRow label="Due date"><input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} className={inputClass} /></FormRow><FormRow label="Subtotal"><input type="number" min="0" step="0.01" value={subtotal} onChange={(event) => setSubtotal(event.target.value)} className={inputClass} /></FormRow><FormRow label="Tax"><input type="number" min="0" step="0.01" value={tax} onChange={(event) => setTax(event.target.value)} className={inputClass} /></FormRow><FormRow label="Discount"><input type="number" min="0" step="0.01" value={discount} onChange={(event) => setDiscount(event.target.value)} className={inputClass} /></FormRow><FormRow label="Status"><select value={status} onChange={(event) => setStatus(event.target.value as InvoiceStatus)} className={inputClass}>{["draft", "issued", "cancelled", "void"].map((item) => <option key={item} value={item}>{formatStatus(item)}</option>)}</select></FormRow></div><FormRow label="Notes"><textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={3} className={`${inputClass} py-2.5`} placeholder="Optional billing note" /></FormRow>{error && <InlineError message={error} />}<div className="flex justify-end gap-2 pt-2"><button type="button" onClick={onClose} className="h-10 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-600 hover:bg-slate-50">Cancel</button><button type="submit" disabled={saving} className="inline-flex h-10 items-center gap-2 rounded-lg bg-MojaSchoolr-600 px-4 text-sm font-semibold text-white hover:bg-MojaSchoolr-700 disabled:cursor-not-allowed disabled:opacity-60">{saving && <Loader2 size={15} className="animate-spin" />}Create invoice</button></div></form></Modal>;
 }
 
 function PaymentForm({
@@ -1815,7 +1815,7 @@ function PaymentForm({
     if (!schoolId) return setError("Please select a school.");
     if (!Number.isFinite(amountNumber) || amountNumber <= 0) return setError("Payment amount must be greater than 0.");
     if (selectedInvoice && amountNumber > selectedInvoice.balance) return setError(`Payment cannot exceed the invoice balance of ${formatMoney(selectedInvoice.balance, selectedInvoice.currency)}.`);
-    if (!companyId) return setError("WISE company record is not configured.");
+    if (!companyId) return setError("MojaSchool company record is not configured.");
     setSaving(true);
     try {
       const paymentNumber = `PAY-${new Date().getFullYear()}-${String(Date.now()).slice(-6)}`;
@@ -1847,14 +1847,14 @@ function PaymentForm({
       }
       onCreated();
     } catch (insertError) {
-      console.error("Failed to record WISE payment:", insertError);
+      console.error("Failed to record MojaSchool payment:", insertError);
       setError(insertError instanceof Error ? insertError.message : "Could not record payment.");
     } finally {
       setSaving(false);
     }
   }
 
-  return <Modal title="Record payment" onClose={onClose}><form onSubmit={submit} className="space-y-4"><FormRow label="School"><select value={schoolId} onChange={(event) => { setSchoolId(event.target.value); setInvoiceId(""); setAmount(""); }} className={inputClass}><option value="">Select school</option>{schools.map((school) => <option key={school.id} value={school.id}>{school.name}</option>)}</select></FormRow><FormRow label="Allocate to invoice (optional)"><select value={invoiceId} onChange={(event) => setInvoiceId(event.target.value)} className={inputClass}><option value="">Unallocated payment</option>{schoolInvoices.map((invoice) => <option key={invoice.id} value={invoice.id}>{invoice.invoice_number} · Balance {formatMoney(invoice.balance, invoice.currency)}</option>)}</select></FormRow><div className="grid gap-4 sm:grid-cols-2"><FormRow label="Amount"><input type="number" min="0" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} className={inputClass} /></FormRow><FormRow label="Currency"><input value={currency} onChange={(event) => setCurrency(event.target.value.toUpperCase())} className={inputClass} maxLength={3} /></FormRow><FormRow label="Payment method"><select value={method} onChange={(event) => setMethod(event.target.value as PaymentMethod)} className={inputClass}>{PAYMENT_METHODS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></FormRow><FormRow label="Payment date"><input type="date" value={paymentDate} onChange={(event) => setPaymentDate(event.target.value)} className={inputClass} /></FormRow><FormRow label="Reference"><input value={reference} onChange={(event) => setReference(event.target.value)} className={inputClass} placeholder="Optional reference" /></FormRow><FormRow label="Provider"><input value={provider} onChange={(event) => setProvider(event.target.value)} className={inputClass} placeholder="Flutterwave, bank, etc." /></FormRow><FormRow label="Provider transaction ID"><input value={transactionId} onChange={(event) => setTransactionId(event.target.value)} className={inputClass} /></FormRow><FormRow label="Status"><select value={status} onChange={(event) => setStatus(event.target.value as PaymentStatus)} className={inputClass}>{PAYMENT_STATUSES.slice(1).map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></FormRow></div><FormRow label="Notes"><textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={3} className={`${inputClass} py-2.5`} /></FormRow>{error && <InlineError message={error} />}<div className="flex justify-end gap-2 pt-2"><button type="button" onClick={onClose} className="h-10 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-600 hover:bg-slate-50">Cancel</button><button type="submit" disabled={saving} className="inline-flex h-10 items-center gap-2 rounded-lg bg-wiser-600 px-4 text-sm font-semibold text-white hover:bg-wiser-700 disabled:cursor-not-allowed disabled:opacity-60">{saving && <Loader2 size={15} className="animate-spin" />}Record payment</button></div></form></Modal>;
+  return <Modal title="Record payment" onClose={onClose}><form onSubmit={submit} className="space-y-4"><FormRow label="School"><select value={schoolId} onChange={(event) => { setSchoolId(event.target.value); setInvoiceId(""); setAmount(""); }} className={inputClass}><option value="">Select school</option>{schools.map((school) => <option key={school.id} value={school.id}>{school.name}</option>)}</select></FormRow><FormRow label="Allocate to invoice (optional)"><select value={invoiceId} onChange={(event) => setInvoiceId(event.target.value)} className={inputClass}><option value="">Unallocated payment</option>{schoolInvoices.map((invoice) => <option key={invoice.id} value={invoice.id}>{invoice.invoice_number} · Balance {formatMoney(invoice.balance, invoice.currency)}</option>)}</select></FormRow><div className="grid gap-4 sm:grid-cols-2"><FormRow label="Amount"><input type="number" min="0" step="0.01" value={amount} onChange={(event) => setAmount(event.target.value)} className={inputClass} /></FormRow><FormRow label="Currency"><input value={currency} onChange={(event) => setCurrency(event.target.value.toUpperCase())} className={inputClass} maxLength={3} /></FormRow><FormRow label="Payment method"><select value={method} onChange={(event) => setMethod(event.target.value as PaymentMethod)} className={inputClass}>{PAYMENT_METHODS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></FormRow><FormRow label="Payment date"><input type="date" value={paymentDate} onChange={(event) => setPaymentDate(event.target.value)} className={inputClass} /></FormRow><FormRow label="Reference"><input value={reference} onChange={(event) => setReference(event.target.value)} className={inputClass} placeholder="Optional reference" /></FormRow><FormRow label="Provider"><input value={provider} onChange={(event) => setProvider(event.target.value)} className={inputClass} placeholder="Flutterwave, bank, etc." /></FormRow><FormRow label="Provider transaction ID"><input value={transactionId} onChange={(event) => setTransactionId(event.target.value)} className={inputClass} /></FormRow><FormRow label="Status"><select value={status} onChange={(event) => setStatus(event.target.value as PaymentStatus)} className={inputClass}>{PAYMENT_STATUSES.slice(1).map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></FormRow></div><FormRow label="Notes"><textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={3} className={`${inputClass} py-2.5`} /></FormRow>{error && <InlineError message={error} />}<div className="flex justify-end gap-2 pt-2"><button type="button" onClick={onClose} className="h-10 rounded-lg border border-slate-200 px-4 text-sm font-semibold text-slate-600 hover:bg-slate-50">Cancel</button><button type="submit" disabled={saving} className="inline-flex h-10 items-center gap-2 rounded-lg bg-MojaSchoolr-600 px-4 text-sm font-semibold text-white hover:bg-MojaSchoolr-700 disabled:cursor-not-allowed disabled:opacity-60">{saving && <Loader2 size={15} className="animate-spin" />}Record payment</button></div></form></Modal>;
 }
 
 function Toolbar({
@@ -1872,22 +1872,22 @@ function Toolbar({
   filterOptions: Array<{ value: string; label: string }>;
   onFilter: (value: never) => void;
 }) {
-  return <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5"><div className="relative w-full sm:max-w-md"><Search size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" /><input value={search} onChange={(event) => onSearch(event.target.value)} placeholder={placeholder} className="h-10 w-full rounded-lg border border-wiser-border bg-white pl-10 pr-4 text-sm text-slate-800 outline-none placeholder:text-slate-400 focus:border-wiser-500 focus:ring-2 focus:ring-wiser-100" /></div><div className="flex flex-wrap items-center gap-2"><Filter size={15} className="text-slate-400" />{filterOptions.map((item) => <button key={item.value} type="button" onClick={() => onFilter(item.value as never)} className={[
+  return <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5"><div className="relative w-full sm:max-w-md"><Search size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" /><input value={search} onChange={(event) => onSearch(event.target.value)} placeholder={placeholder} className="h-10 w-full rounded-lg border border-MojaSchoolr-border bg-white pl-10 pr-4 text-sm text-slate-800 outline-none placeholder:text-slate-400 focus:border-MojaSchoolr-500 focus:ring-2 focus:ring-MojaSchoolr-100" /></div><div className="flex flex-wrap items-center gap-2"><Filter size={15} className="text-slate-400" />{filterOptions.map((item) => <button key={item.value} type="button" onClick={() => onFilter(item.value as never)} className={[
     "rounded-lg px-3 py-2 text-xs font-semibold transition",
-    filter === item.value ? "bg-wiser-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200",
+    filter === item.value ? "bg-MojaSchoolr-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200",
   ].join(" ")}>{item.label}</button>)}</div></div>;
 }
 
 function SummaryCard({ label, value, caption, icon: Icon }: { label: string; value: string; caption: string; icon: typeof WalletCards }) {
-  return <div className="rounded-xl border border-wiser-border bg-white p-4 shadow-sm"><div className="flex items-start justify-between gap-4"><div className="min-w-0"><p className="text-xs font-medium text-wiser-text-secondary">{label}</p><p className="mt-2 truncate text-xl font-semibold tracking-tight text-wiser-text sm:text-2xl">{value}</p><p className="mt-1 text-[11px] text-slate-400">{caption}</p></div><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-wiser-50 text-wiser-600"><Icon size={18} /></div></div></div>;
+  return <div className="rounded-xl border border-MojaSchoolr-border bg-white p-4 shadow-sm"><div className="flex items-start justify-between gap-4"><div className="min-w-0"><p className="text-xs font-medium text-MojaSchoolr-text-secondary">{label}</p><p className="mt-2 truncate text-xl font-semibold tracking-tight text-MojaSchoolr-text sm:text-2xl">{value}</p><p className="mt-1 text-[11px] text-slate-400">{caption}</p></div><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-MojaSchoolr-50 text-MojaSchoolr-600"><Icon size={18} /></div></div></div>;
 }
 
 function SectionHeader({ title, icon: Icon, actionLabel, onAction }: { title: string; icon: typeof FileText; actionLabel?: string; onAction?: () => void }) {
-  return <div className="flex items-center justify-between gap-4 border-b border-slate-200 px-4 py-4 sm:px-5"><div className="flex items-center gap-2"><Icon size={17} className="text-wiser-600" /><h2 className="text-sm font-semibold text-slate-800">{title}</h2></div>{actionLabel && onAction && <button type="button" onClick={onAction} className="text-xs font-semibold text-wiser-600 hover:text-wiser-700">{actionLabel}</button>}</div>;
+  return <div className="flex items-center justify-between gap-4 border-b border-slate-200 px-4 py-4 sm:px-5"><div className="flex items-center gap-2"><Icon size={17} className="text-MojaSchoolr-600" /><h2 className="text-sm font-semibold text-slate-800">{title}</h2></div>{actionLabel && onAction && <button type="button" onClick={onAction} className="text-xs font-semibold text-MojaSchoolr-600 hover:text-MojaSchoolr-700">{actionLabel}</button>}</div>;
 }
 
 function InfoCard({ title, icon: Icon, children }: { title: string; icon: typeof FileText; children: ReactNode }) {
-  return <section className="rounded-xl border border-wiser-border bg-white shadow-sm"><div className="flex items-center gap-2 border-b border-wiser-border px-5 py-4"><Icon size={17} className="text-wiser-600" /><h2 className="text-base font-semibold text-wiser-text">{title}</h2></div><div className="p-5">{children}</div></section>;
+  return <section className="rounded-xl border border-MojaSchoolr-border bg-white shadow-sm"><div className="flex items-center gap-2 border-b border-MojaSchoolr-border px-5 py-4"><Icon size={17} className="text-MojaSchoolr-600" /><h2 className="text-base font-semibold text-MojaSchoolr-text">{title}</h2></div><div className="p-5">{children}</div></section>;
 }
 
 function InfoGrid({ children }: { children: ReactNode }) { return <div className="grid gap-4 sm:grid-cols-2">{children}</div>; }
@@ -1907,6 +1907,6 @@ function EmptyBlock({ title, description }: { title: string; description: string
 function EmptyTable({ colSpan, title }: { colSpan: number; title: string }) { return <tr><td colSpan={colSpan} className="px-5 py-12 text-center text-sm text-slate-500">{title}</td></tr>; }
 function LoadingTable({ colSpan, label }: { colSpan: number; label: string }) { return <tr><td colSpan={colSpan} className="px-5 py-12 text-center text-sm text-slate-500"><span className="inline-flex items-center gap-2"><Loader2 size={16} className="animate-spin" />{label}</span></td></tr>; }
 function EmptyState({ title, description }: { title: string; description: string }) { return <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4"><p className="text-sm font-semibold text-slate-700">{title}</p><p className="mt-1 text-sm text-slate-500">{description}</p></div>; }
-const inputClass = "h-10 w-full rounded-lg border border-wiser-border bg-white px-3 text-sm text-slate-800 outline-none focus:border-wiser-500 focus:ring-2 focus:ring-wiser-100";
+const inputClass = "h-10 w-full rounded-lg border border-MojaSchoolr-border bg-white px-3 text-sm text-slate-800 outline-none focus:border-MojaSchoolr-500 focus:ring-2 focus:ring-MojaSchoolr-100";
 function FormRow({ label, children }: { label: string; children: ReactNode }) { return <label className="block"><span className="mb-1.5 block text-xs font-semibold text-slate-600">{label}</span>{children}</label>; }
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) { return <div className="fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/30 p-0 sm:items-center sm:p-6"><div className="w-full max-w-2xl rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl"><div className="flex items-center justify-between border-b border-slate-200 px-5 py-4"><h2 className="text-base font-semibold text-slate-900">{title}</h2><button type="button" onClick={onClose} className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"><X size={17} /></button></div><div className="max-h-[82vh] overflow-y-auto p-5">{children}</div></div></div>; }

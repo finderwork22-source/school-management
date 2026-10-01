@@ -378,7 +378,7 @@ function TrendChart({ points }: { points: AttendanceTrendPoint[] }) {
           strokeWidth="3"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="text-wiser-600"
+          className="text-MojaSchoolr-600"
         />
 
         {pointCoordinates.map((point, index) => (
@@ -390,7 +390,7 @@ function TrendChart({ points }: { points: AttendanceTrendPoint[] }) {
               fill="white"
               stroke="currentColor"
               strokeWidth="3"
-              className="text-wiser-600"
+              className="text-MojaSchoolr-600"
             />
             <text
               x={point.x}
@@ -425,7 +425,7 @@ function SectionMessage({
   if (status === "loading") {
     return (
       <div className="flex min-h-36 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500">
-        <Loader2 size={17} className="animate-spin text-wiser-600" />
+        <Loader2 size={17} className="animate-spin text-MojaSchoolr-600" />
         {loadingLabel}
       </div>
     );
@@ -507,7 +507,7 @@ function StatusBars({
                 </div>
                 <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-100">
                   <div
-                    className="h-full rounded-full bg-wiser-600 transition-all duration-500"
+                    className="h-full rounded-full bg-MojaSchoolr-600 transition-all duration-500"
                     style={{ width: `${Math.min(100, Math.max(0, percent))}%` }}
                   />
                 </div>
@@ -537,7 +537,7 @@ function CoverageRow({
       </div>
       <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
         <div
-          className="h-full rounded-full bg-wiser-600 transition-all duration-500"
+          className="h-full rounded-full bg-MojaSchoolr-600 transition-all duration-500"
           style={{ width: `${Math.min(100, Math.max(0, percent))}%` }}
         />
       </div>
@@ -558,10 +558,10 @@ function ActionButton({
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex min-h-10 items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-left text-sm font-medium text-slate-700 transition hover:border-wiser-200 hover:bg-wiser-50 hover:text-wiser-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wiser-500 focus-visible:ring-offset-2"
+      className="inline-flex min-h-10 items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-left text-sm font-medium text-slate-700 transition hover:border-MojaSchoolr-200 hover:bg-MojaSchoolr-50 hover:text-MojaSchoolr-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-MojaSchoolr-500 focus-visible:ring-offset-2"
     >
       <span className="inline-flex min-w-0 items-center gap-2">
-        <span className="text-wiser-600">{icon}</span>
+        <span className="text-MojaSchoolr-600">{icon}</span>
         <span className="truncate">{label}</span>
       </span>
       <ArrowUpRight size={14} className="shrink-0 text-slate-400" />
@@ -1418,7 +1418,7 @@ export default function PrincipalDashboard() {
                   key={item.id}
                   type="button"
                   onClick={item.onClick}
-                  className="group min-w-0 rounded-xl border border-amber-200 bg-white p-4 text-left transition hover:border-wiser-300 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wiser-500 focus-visible:ring-offset-2"
+                  className="group min-w-0 rounded-xl border border-amber-200 bg-white p-4 text-left transition hover:border-MojaSchoolr-300 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-MojaSchoolr-500 focus-visible:ring-offset-2"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
@@ -1426,7 +1426,7 @@ export default function PrincipalDashboard() {
                     </div>
                     <ArrowUpRight
                       size={15}
-                      className="text-slate-300 transition group-hover:text-wiser-600"
+                      className="text-slate-300 transition group-hover:text-MojaSchoolr-600"
                     />
                   </div>
 
@@ -1436,7 +1436,7 @@ export default function PrincipalDashboard() {
                   <p className="mt-1 break-words text-xs leading-5 text-slate-500">
                     {item.description}
                   </p>
-                  <span className="mt-3 inline-flex text-xs font-medium text-wiser-600">
+                  <span className="mt-3 inline-flex text-xs font-medium text-MojaSchoolr-600">
                     {item.action}
                   </span>
                 </button>
@@ -1484,7 +1484,7 @@ export default function PrincipalDashboard() {
             <button
               type="button"
               onClick={() => navigate("/attendance")}
-              className="inline-flex shrink-0 items-center gap-1 self-start text-sm font-medium text-wiser-600 hover:text-wiser-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wiser-500 focus-visible:ring-offset-2"
+              className="inline-flex shrink-0 items-center gap-1 self-start text-sm font-medium text-MojaSchoolr-600 hover:text-MojaSchoolr-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-MojaSchoolr-500 focus-visible:ring-offset-2"
             >
               Open attendance
               <ArrowUpRight size={14} />
@@ -1583,7 +1583,7 @@ export default function PrincipalDashboard() {
                 assignments.
               </p>
             </div>
-            <UserRoundCheck size={20} className="shrink-0 text-wiser-600" />
+            <UserRoundCheck size={20} className="shrink-0 text-MojaSchoolr-600" />
           </div>
 
           <div className="mt-6">
@@ -1654,7 +1654,7 @@ export default function PrincipalDashboard() {
                 Assessment workload for the current academic year.
               </p>
             </div>
-            <BookOpen size={20} className="shrink-0 text-wiser-600" />
+            <BookOpen size={20} className="shrink-0 text-MojaSchoolr-600" />
           </div>
 
           <div className="mt-6 grid grid-cols-3 gap-3">
@@ -1721,7 +1721,7 @@ export default function PrincipalDashboard() {
               <button
                 type="button"
                 onClick={() => navigate("/assessments")}
-                className="inline-flex items-center gap-1 text-xs font-medium text-wiser-600 hover:text-wiser-700"
+                className="inline-flex items-center gap-1 text-xs font-medium text-MojaSchoolr-600 hover:text-MojaSchoolr-700"
               >
                 View all
                 <ArrowUpRight size={13} />
@@ -1794,7 +1794,7 @@ export default function PrincipalDashboard() {
                 Admissions and day-to-day activity needing attention.
               </p>
             </div>
-            <School size={20} className="shrink-0 text-wiser-600" />
+            <School size={20} className="shrink-0 text-MojaSchoolr-600" />
           </div>
 
           {sectionStatus.admissions !== "error" && (
@@ -1895,7 +1895,7 @@ export default function PrincipalDashboard() {
                 The latest updates visible to school leadership.
               </p>
             </div>
-            <UserCheck size={20} className="shrink-0 text-wiser-600" />
+            <UserCheck size={20} className="shrink-0 text-MojaSchoolr-600" />
           </div>
 
           <div className="mt-5 space-y-4">
@@ -1907,7 +1907,7 @@ export default function PrincipalDashboard() {
             ) : activities.length > 0 ? (
               activities.map((activity) => (
                 <div key={activity.id} className="flex min-w-0 gap-3">
-                  <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-wiser-600" />
+                  <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-MojaSchoolr-600" />
                   <div className="min-w-0">
                     <p className="break-words text-sm font-medium text-slate-900">
                       {activity.title}
@@ -1939,7 +1939,7 @@ export default function PrincipalDashboard() {
                 Recent announcements for the school community.
               </p>
             </div>
-            <Megaphone size={20} className="shrink-0 text-wiser-600" />
+            <Megaphone size={20} className="shrink-0 text-MojaSchoolr-600" />
           </div>
 
           <div className="mt-5 space-y-4">
@@ -1954,7 +1954,7 @@ export default function PrincipalDashboard() {
                   key={announcement.id}
                   type="button"
                   onClick={() => navigate("/announcements")}
-                  className="block w-full border-b border-slate-100 pb-4 text-left last:border-0 last:pb-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wiser-500 focus-visible:ring-offset-2"
+                  className="block w-full border-b border-slate-100 pb-4 text-left last:border-0 last:pb-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-MojaSchoolr-500 focus-visible:ring-offset-2"
                 >
                   <p className="break-words text-sm font-medium text-slate-900">
                     {announcement.title}
@@ -1974,7 +1974,7 @@ export default function PrincipalDashboard() {
           <button
             type="button"
             onClick={() => navigate("/announcements")}
-            className="mt-5 inline-flex items-center gap-1 text-sm font-medium text-wiser-600 hover:text-wiser-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wiser-500 focus-visible:ring-offset-2"
+            className="mt-5 inline-flex items-center gap-1 text-sm font-medium text-MojaSchoolr-600 hover:text-MojaSchoolr-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-MojaSchoolr-500 focus-visible:ring-offset-2"
           >
             Open announcements
             <ArrowUpRight size={14} />
@@ -1992,7 +1992,7 @@ export default function PrincipalDashboard() {
               Common areas for daily school leadership work.
             </p>
           </div>
-          <CheckCircle2 size={20} className="shrink-0 text-wiser-600" />
+          <CheckCircle2 size={20} className="shrink-0 text-MojaSchoolr-600" />
         </div>
 
         <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">

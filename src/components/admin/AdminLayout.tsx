@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 
-import WiserLogo from "../../assets/wiser-logo-cropped.png";
 import { signOut } from "../../lib/auth";
 import { getPlatformAdminIdentity } from "../../lib/platformAuth";
 
@@ -59,7 +58,11 @@ const navigation = [
   },
 ];
 
-function getInitials(firstName: string, lastName: string, email: string | null) {
+function getInitials(
+  firstName: string,
+  lastName: string,
+  email: string | null,
+) {
   const initials = [firstName, lastName]
     .map((value) => value.trim().charAt(0))
     .filter(Boolean)
@@ -108,10 +111,10 @@ export default function AdminLayout() {
   const displayName =
     [firstName, lastName].filter(Boolean).join(" ") ||
     email ||
-    "WISE Admin";
+    "MojaSchool Admin";
 
   return (
-    <div className="min-h-screen bg-wiser-background text-wiser-text">
+    <div className="min-h-screen bg-MojaSchoolr-background text-MojaSchoolr-text">
       {sidebarOpen && (
         <button
           type="button"
@@ -123,49 +126,49 @@ export default function AdminLayout() {
 
       <aside
         className={[
-          "fixed inset-y-0 left-0 z-40 flex flex-col border-r border-wiser-border bg-white transition-all duration-200 lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-40 flex flex-col border-r border-MojaSchoolr-border bg-white transition-all duration-200 lg:translate-x-0",
           collapsed ? "w-[78px]" : "w-[260px]",
           sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         ].join(" ")}
       >
-        <div className="flex h-16 items-center justify-between border-b border-wiser-border px-4">
+        <div className="flex h-16 items-center justify-between border-b border-MojaSchoolr-border px-4">
           <div className={collapsed ? "mx-auto" : ""}>
             <img
-              src={WiserLogo}
-              alt="WISE"
-              className={collapsed ? "h-9 w-auto" : "h-10 w-auto"}
+              src="/MojaSchool.svg"
+              alt="MojaSchool"
+              className="h-auto w-[180px]"
             />
           </div>
 
           <button
             type="button"
             onClick={() => setSidebarOpen(false)}
-            className="rounded-lg p-2 text-wiser-text-muted hover:bg-wiser-50 hover:text-wiser-text lg:hidden"
+            className="rounded-lg p-2 text-MojaSchoolr-text-muted hover:bg-MojaSchoolr-50 hover:text-MojaSchoolr-text lg:hidden"
             aria-label="Close navigation"
           >
             <X size={18} />
           </button>
         </div>
 
-        <div className="border-b border-wiser-border px-3 py-4">
+        <div className="border-b border-MojaSchoolr-border px-3 py-4">
           <div
             className={[
-              "flex items-center rounded-xl bg-wiser-50/70",
+              "flex items-center rounded-xl bg-MojaSchoolr-50/70",
               collapsed ? "justify-center p-2" : "gap-3 px-3 py-2.5",
             ].join(" ")}
           >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-wiser-600 text-xs font-semibold text-white">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-MojaSchoolr-600 text-xs font-semibold text-white">
               {initials}
             </div>
 
             {!collapsed && (
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-wiser-text">
+                <p className="truncate text-sm font-semibold text-MojaSchoolr-text">
                   {displayName}
                 </p>
-                <div className="mt-0.5 inline-flex items-center gap-1 text-[11px] font-medium text-wiser-600">
+                <div className="mt-0.5 inline-flex items-center gap-1 text-[11px] font-medium text-MojaSchoolr-600">
                   <ShieldCheck size={12} />
-                  WISE Admin
+                  MojaSchool Admin
                 </div>
               </div>
             )}
@@ -174,7 +177,7 @@ export default function AdminLayout() {
 
         <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
           {!collapsed && (
-            <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-wiser-text-muted">
+            <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-MojaSchoolr-text-muted">
               Platform
             </p>
           )}
@@ -196,8 +199,8 @@ export default function AdminLayout() {
                       ? "justify-center px-2 py-3"
                       : "gap-3 px-3 py-2.5",
                     isActive
-                      ? "bg-wiser-50 text-wiser-700"
-                      : "text-wiser-text-secondary hover:bg-slate-50 hover:text-wiser-text",
+                      ? "bg-MojaSchoolr-50 text-MojaSchoolr-700"
+                      : "text-MojaSchoolr-text-secondary hover:bg-slate-50 hover:text-MojaSchoolr-text",
                   ].join(" ")
                 }
               >
@@ -208,13 +211,13 @@ export default function AdminLayout() {
           })}
         </nav>
 
-        <div className="border-t border-wiser-border p-3">
+        <div className="border-t border-MojaSchoolr-border p-3">
           <button
             type="button"
             onClick={() => void handleSignOut()}
             title={collapsed ? "Sign out" : undefined}
             className={[
-              "flex w-full items-center rounded-lg text-sm font-medium text-wiser-text-secondary transition hover:bg-red-50 hover:text-red-700",
+              "flex w-full items-center rounded-lg text-sm font-medium text-MojaSchoolr-text-secondary transition hover:bg-red-50 hover:text-red-700",
               collapsed ? "justify-center px-2 py-3" : "gap-3 px-3 py-2.5",
             ].join(" ")}
           >
@@ -226,7 +229,7 @@ export default function AdminLayout() {
         <button
           type="button"
           onClick={() => setCollapsed((value) => !value)}
-          className="absolute -right-3 top-[76px] hidden h-6 w-6 items-center justify-center rounded-full border border-wiser-border bg-white text-wiser-text-muted shadow-sm hover:text-wiser-text lg:flex"
+          className="absolute -right-3 top-[76px] hidden h-6 w-6 items-center justify-center rounded-full border border-MojaSchoolr-border bg-white text-MojaSchoolr-text-muted shadow-sm hover:text-MojaSchoolr-text lg:flex"
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
@@ -239,24 +242,28 @@ export default function AdminLayout() {
           collapsed ? "lg:ml-[78px]" : "lg:ml-[260px]",
         ].join(" ")}
       >
-        <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-wiser-border bg-white/95 px-4 backdrop-blur sm:px-6 lg:px-8">
+        <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-MojaSchoolr-border bg-white/95 px-4 backdrop-blur sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => setSidebarOpen(true)}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-wiser-text-secondary hover:bg-wiser-50 hover:text-wiser-text lg:hidden"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-MojaSchoolr-text-secondary hover:bg-MojaSchoolr-50 hover:text-MojaSchoolr-text lg:hidden"
               aria-label="Open navigation"
             >
               <Menu size={20} />
             </button>
 
             <div className="lg:hidden">
-              <img src={WiserLogo} alt="WISE" className="h-9 w-auto" />
+              <img
+                src="/MojaSchool.svg"
+                alt="MojaSchool"
+                className="h-9 w-auto"
+              />
             </div>
           </div>
 
           <div className="hidden items-center gap-2 sm:flex">
-            <span className="rounded-full bg-wiser-50 px-3 py-1.5 text-xs font-semibold text-wiser-700">
+            <span className="rounded-full bg-MojaSchoolr-50 px-3 py-1.5 text-xs font-semibold text-MojaSchoolr-700">
               Platform console
             </span>
           </div>

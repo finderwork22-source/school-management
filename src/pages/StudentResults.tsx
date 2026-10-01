@@ -953,7 +953,7 @@ export default function StudentResults() {
 
     // The printable report is rendered through a portal. Make sure
     // every image has finished loading/decoding before opening the
-    // browser print dialog; otherwise Chrome can capture the report
+    // browser print dialog; otherMojaSchool Chrome can capture the report
     // before the logo is painted.
     await new Promise<void>((resolve) => {
       window.requestAnimationFrame(() => {

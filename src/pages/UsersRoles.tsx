@@ -406,7 +406,7 @@ export default function UsersRoles() {
 
             <p className="mx-auto mt-1 max-w-sm text-sm text-slate-500">
               {users.length === 0
-                ? "Invite school staff members to give them access to WISE."
+                ? "Invite school staff members to give them access to MojaSchool."
                 : "Try a different search or role filter."}
             </p>
           </div>
@@ -510,7 +510,7 @@ export default function UsersRoles() {
             </h2>
 
             <p className="mt-1 text-xs text-slate-500">
-              WISE school roles and their access levels.
+              MojaSchool school roles and their access levels.
             </p>
           </div>
 

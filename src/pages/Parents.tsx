@@ -976,7 +976,7 @@ function EditParentModal({
 
     if (hasAccount && email.trim().toLowerCase() !== (parent.email ?? "").trim().toLowerCase()) {
       setError(
-        "This parent already has an active WISE account. The email cannot be changed here because it must remain synchronized with the login account.",
+        "This parent already has an active MojaSchool account. The email cannot be changed here because it must remain synchronized with the login account.",
       );
       return;
     }
@@ -1081,7 +1081,7 @@ function EditParentModal({
 
             {hasAccount ? (
               <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-xs leading-5 text-emerald-700">
-                This parent already has a WISE account. Their email is kept
+                This parent already has a MojaSchool account. Their email is kept
                 locked here so the parent record stays synchronized with the
                 login account.
               </div>
@@ -1089,7 +1089,7 @@ function EditParentModal({
               <div className="mt-4 rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-xs leading-5 text-indigo-700">
                 Add the parent's email address here, save it, then use
                 <strong> Invite Parent</strong> from the parents list to send
-                the WISE invitation.
+                the MojaSchool invitation.
               </div>
             )}
           </section>

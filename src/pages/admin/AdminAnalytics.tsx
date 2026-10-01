@@ -463,11 +463,11 @@ export default function AdminAnalytics() {
         auditLogs: (auditLogsResult.data ?? []) as AuditLogRecord[],
       });
     } catch (loadError) {
-      console.error("Failed to load WISE analytics:", loadError);
+      console.error("Failed to load MojaSchool analytics:", loadError);
       setError(
         loadError instanceof Error
           ? loadError.message
-          : "Could not load WISE platform analytics.",
+          : "Could not load MojaSchool platform analytics.",
       );
     } finally {
       setLoading(false);
@@ -741,14 +741,14 @@ export default function AdminAnalytics() {
     <div className="mx-auto w-full max-w-[1440px]">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-wiser-600">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-MojaSchoolr-600">
             <BarChart3 size={14} />
-            WISE platform analytics
+            MojaSchool platform analytics
           </div>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-wiser-text sm:text-3xl">
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-MojaSchoolr-text sm:text-3xl">
             Analytics
           </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-wiser-text-secondary">
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-MojaSchoolr-text-secondary">
             Track school growth, onboarding, subscriptions, platform billing and recorded platform activity.
           </p>
         </div>
@@ -761,7 +761,7 @@ export default function AdminAnalytics() {
             id="analytics-range"
             value={range}
             onChange={(event) => setRange(Number(event.target.value) as AnalyticsRange)}
-            className="h-10 rounded-lg border border-wiser-border bg-white px-3 text-sm font-semibold text-wiser-text-secondary outline-none focus:border-wiser-600 focus:ring-2 focus:ring-wiser-100"
+            className="h-10 rounded-lg border border-MojaSchoolr-border bg-white px-3 text-sm font-semibold text-MojaSchoolr-text-secondary outline-none focus:border-MojaSchoolr-600 focus:ring-2 focus:ring-MojaSchoolr-100"
           >
             {RANGE_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -773,7 +773,7 @@ export default function AdminAnalytics() {
             type="button"
             onClick={() => void loadAnalytics(true)}
             disabled={refreshing}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-wiser-border bg-white px-4 text-sm font-semibold text-wiser-text-secondary shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-MojaSchoolr-border bg-white px-4 text-sm font-semibold text-MojaSchoolr-text-secondary shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
             {refreshing ? "Refreshing..." : "Refresh"}
@@ -865,7 +865,7 @@ export default function AdminAnalytics() {
 
         <ChartCard
           title="Platform activity"
-          description="Recorded WISE Admin actions in the platform audit log."
+          description="Recorded MojaSchool Admin actions in the platform audit log."
           icon={Activity}
           trailing={`${metrics.activityEvents} events`}
         >
@@ -888,21 +888,21 @@ export default function AdminAnalytics() {
           </div>
         </ChartCard>
 
-        <section className="min-w-0 overflow-hidden rounded-xl border border-wiser-border bg-white shadow-sm">
-          <div className="flex flex-col gap-3 border-b border-wiser-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <section className="min-w-0 overflow-hidden rounded-xl border border-MojaSchoolr-border bg-white shadow-sm">
+          <div className="flex flex-col gap-3 border-b border-MojaSchoolr-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <div className="flex items-center gap-2">
-                <Building2 size={16} className="text-wiser-600" />
-                <h2 className="text-base font-semibold text-wiser-text">School portfolio</h2>
+                <Building2 size={16} className="text-MojaSchoolr-600" />
+                <h2 className="text-base font-semibold text-MojaSchoolr-text">School portfolio</h2>
               </div>
-              <p className="mt-1 text-xs text-wiser-text-secondary">
+              <p className="mt-1 text-xs text-MojaSchoolr-text-secondary">
                 Subscription status and platform billing activity for the selected period.
               </p>
             </div>
             <button
               type="button"
               onClick={() => navigate("/admin/schools")}
-              className="inline-flex items-center gap-1 self-start text-xs font-semibold text-wiser-600 hover:text-wiser-700 sm:self-auto"
+              className="inline-flex items-center gap-1 self-start text-xs font-semibold text-MojaSchoolr-600 hover:text-MojaSchoolr-700 sm:self-auto"
             >
               View schools
               <ArrowRight size={13} />
@@ -922,7 +922,7 @@ export default function AdminAnalytics() {
                   ].map((label) => (
                     <th
                       key={label}
-                      className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-wiser-text-muted"
+                      className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-MojaSchoolr-text-muted"
                     >
                       {label}
                     </th>
@@ -940,9 +940,9 @@ export default function AdminAnalytics() {
                   <tr>
                     <td colSpan={5} className="px-5 py-12 text-center">
                       <Building2 size={22} className="mx-auto text-slate-300" />
-                      <p className="mt-3 text-sm font-medium text-wiser-text">No school data yet</p>
-                      <p className="mt-1 text-xs text-wiser-text-secondary">
-                        Schools will appear here after they are registered on WISE.
+                      <p className="mt-3 text-sm font-medium text-MojaSchoolr-text">No school data yet</p>
+                      <p className="mt-1 text-xs text-MojaSchoolr-text-secondary">
+                        Schools will appear here after they are registered on MojaSchool.
                       </p>
                     </td>
                   </tr>
@@ -950,8 +950,8 @@ export default function AdminAnalytics() {
                   portfolioRows.slice(0, 8).map((row) => (
                     <tr key={row.schoolId} className="hover:bg-slate-50/70">
                       <td className="px-5 py-4">
-                        <p className="text-sm font-semibold text-wiser-text">{row.schoolName}</p>
-                        <p className="mt-1 text-xs text-wiser-text-secondary">
+                        <p className="text-sm font-semibold text-MojaSchoolr-text">{row.schoolName}</p>
+                        <p className="mt-1 text-xs text-MojaSchoolr-text-secondary">
                           {schoolById.get(row.schoolId)?.name === row.schoolName ? "Registered school" : "School record"}
                         </p>
                       </td>
@@ -1027,7 +1027,7 @@ export default function AdminAnalytics() {
       )}
 
       <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs leading-5 text-slate-500">
-        Platform activity reflects records available in WISE's platform audit log. Usage metrics that are not stored at platform level are intentionally not estimated from school-side tables.
+        Platform activity reflects records available in MojaSchool's platform audit log. Usage metrics that are not stored at platform level are intentionally not estimated from school-side tables.
       </div>
     </div>
   );
@@ -1045,13 +1045,13 @@ function MetricCard({
   icon: LucideIcon;
 }) {
   return (
-    <div className="rounded-xl border border-wiser-border bg-white p-5 shadow-sm">
-      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-wiser-50 text-wiser-600">
+    <div className="rounded-xl border border-MojaSchoolr-border bg-white p-5 shadow-sm">
+      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-MojaSchoolr-50 text-MojaSchoolr-600">
         <Icon size={19} />
       </div>
-      <p className="mt-5 text-xs font-medium text-wiser-text-muted">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tracking-tight text-wiser-text">{value}</p>
-      <p className="mt-1 text-xs text-wiser-text-secondary">{caption}</p>
+      <p className="mt-5 text-xs font-medium text-MojaSchoolr-text-muted">{label}</p>
+      <p className="mt-1 text-2xl font-semibold tracking-tight text-MojaSchoolr-text">{value}</p>
+      <p className="mt-1 text-xs text-MojaSchoolr-text-secondary">{caption}</p>
     </div>
   );
 }
@@ -1070,15 +1070,15 @@ function ChartCard({
   children: ReactNode;
 }) {
   return (
-    <section className="min-w-0 overflow-hidden rounded-xl border border-wiser-border bg-white shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-wiser-border px-5 py-4">
+    <section className="min-w-0 overflow-hidden rounded-xl border border-MojaSchoolr-border bg-white shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-MojaSchoolr-border px-5 py-4">
         <div className="flex min-w-0 items-start gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-wiser-50 text-wiser-600">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-MojaSchoolr-50 text-MojaSchoolr-600">
             <Icon size={17} />
           </div>
           <div className="min-w-0">
-            <h2 className="text-base font-semibold text-wiser-text">{title}</h2>
-            <p className="mt-1 max-w-2xl text-xs leading-5 text-wiser-text-secondary">{description}</p>
+            <h2 className="text-base font-semibold text-MojaSchoolr-text">{title}</h2>
+            <p className="mt-1 max-w-2xl text-xs leading-5 text-MojaSchoolr-text-secondary">{description}</p>
           </div>
         </div>
         {trailing && (
@@ -1152,7 +1152,7 @@ function LineChart({
             strokeLinecap="round"
             strokeLinejoin="round"
             points={points.join(" ")}
-            className="text-wiser-600"
+            className="text-MojaSchoolr-600"
           />
 
           {data.map((point, index) => {
@@ -1161,7 +1161,7 @@ function LineChart({
             const y = paddingTop + chartHeight - (point.value / Math.max(max, 1)) * chartHeight;
             return (
               <g key={point.key}>
-                <circle cx={x} cy={y} r="3.5" className="fill-white stroke-wiser-600" strokeWidth="2" />
+                <circle cx={x} cy={y} r="3.5" className="fill-white stroke-MojaSchoolr-600" strokeWidth="2" />
                 <text
                   x={x}
                   y={height - 15}
@@ -1221,7 +1221,7 @@ function DualLineChart({
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-4 text-[11px] font-medium text-slate-500">
           <span className="inline-flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-wiser-600" />
+            <span className="h-2 w-2 rounded-full bg-MojaSchoolr-600" />
             {primaryLabel}
           </span>
           <span className="inline-flex items-center gap-1.5">
@@ -1267,7 +1267,7 @@ function DualLineChart({
             strokeLinecap="round"
             strokeLinejoin="round"
             points={primaryPoints.join(" ")}
-            className="text-wiser-600"
+            className="text-MojaSchoolr-600"
           />
 
           {primary.map((point, index) => {
@@ -1280,7 +1280,7 @@ function DualLineChart({
             return (
               <g key={point.key}>
                 <circle cx={x} cy={secondaryY} r="3" className="fill-white stroke-slate-400" strokeWidth="1.8" />
-                <circle cx={x} cy={primaryY} r="3.5" className="fill-white stroke-wiser-600" strokeWidth="2" />
+                <circle cx={x} cy={primaryY} r="3.5" className="fill-white stroke-MojaSchoolr-600" strokeWidth="2" />
                 <text x={x} y={height - 15} textAnchor="middle" className="fill-slate-400 text-[10px]">
                   {point.label}
                 </text>
@@ -1316,7 +1316,7 @@ function HorizontalBars({
             </div>
             <div className="h-2 overflow-hidden rounded-full bg-slate-100">
               <div
-                className="h-full rounded-full bg-wiser-500 transition-all"
+                className="h-full rounded-full bg-MojaSchoolr-500 transition-all"
                 style={{ width: `${percentage}%` }}
               />
             </div>
@@ -1331,8 +1331,8 @@ function HorizontalBars({
 function InsightMiniCard({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-lg bg-slate-50 p-3">
-      <p className="text-[11px] text-wiser-text-muted">{label}</p>
-      <p className="mt-1 text-sm font-semibold text-wiser-text">{value}</p>
+      <p className="text-[11px] text-MojaSchoolr-text-muted">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-MojaSchoolr-text">{value}</p>
     </div>
   );
 }
@@ -1351,20 +1351,20 @@ function InsightCard({
   tone: "indigo" | "amber" | "red" | "emerald";
 }) {
   const toneClasses = {
-    indigo: "bg-wiser-50 text-wiser-600",
+    indigo: "bg-MojaSchoolr-50 text-MojaSchoolr-600",
     amber: "bg-amber-50 text-amber-600",
     red: "bg-red-50 text-red-600",
     emerald: "bg-emerald-50 text-emerald-600",
   } as const;
 
   return (
-    <div className="rounded-xl border border-wiser-border bg-white p-5 shadow-sm">
+    <div className="rounded-xl border border-MojaSchoolr-border bg-white p-5 shadow-sm">
       <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${toneClasses[tone]}`}>
         <Icon size={19} />
       </div>
-      <p className="mt-4 text-xs font-medium text-wiser-text-muted">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tracking-tight text-wiser-text">{value}</p>
-      <p className="mt-1 text-xs leading-5 text-wiser-text-secondary">{caption}</p>
+      <p className="mt-4 text-xs font-medium text-MojaSchoolr-text-muted">{label}</p>
+      <p className="mt-1 text-2xl font-semibold tracking-tight text-MojaSchoolr-text">{value}</p>
+      <p className="mt-1 text-xs leading-5 text-MojaSchoolr-text-secondary">{caption}</p>
     </div>
   );
 }

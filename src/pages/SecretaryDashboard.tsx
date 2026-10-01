@@ -168,7 +168,7 @@ function SectionStateView({
     return (
       <div className="flex min-h-[170px] items-center justify-center px-5 py-8">
         <div className="inline-flex items-center gap-2 text-sm text-slate-500">
-          <Loader2 size={17} className="animate-spin text-wiser-600" />
+          <Loader2 size={17} className="animate-spin text-MojaSchoolr-600" />
           Loading data...
         </div>
       </div>
@@ -189,7 +189,7 @@ function SectionStateView({
           <button
             type="button"
             onClick={onRetry}
-            className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition hover:border-wiser-200 hover:bg-wiser-50 hover:text-wiser-700"
+            className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition hover:border-MojaSchoolr-200 hover:bg-MojaSchoolr-50 hover:text-MojaSchoolr-700"
           >
             <RefreshCw size={15} />
             Try again
@@ -239,7 +239,7 @@ function KpiCard({
           </p>
           <p className="mt-2 max-w-[220px] text-xs leading-5 text-slate-500">{helper}</p>
         </div>
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-wiser-50 text-wiser-600">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-MojaSchoolr-50 text-MojaSchoolr-600">
           {icon}
         </div>
       </div>
@@ -262,9 +262,9 @@ function QuickAction({
     <button
       type="button"
       onClick={onClick}
-      className="group flex min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-white p-3.5 text-left transition hover:border-wiser-200 hover:bg-wiser-50/50"
+      className="group flex min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-white p-3.5 text-left transition hover:border-MojaSchoolr-200 hover:bg-MojaSchoolr-50/50"
     >
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-wiser-50 text-wiser-600 group-hover:bg-wiser-100">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-MojaSchoolr-50 text-MojaSchoolr-600 group-hover:bg-MojaSchoolr-100">
         {icon}
       </span>
       <span className="min-w-0 flex-1">
@@ -603,7 +603,7 @@ export default function SecretaryDashboard() {
     <div className="mx-auto w-full min-w-0 max-w-[1400px] space-y-6 lg:space-y-7">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-wiser-600">Secretary Dashboard</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-MojaSchoolr-600">Secretary Dashboard</p>
           <h1 className="mt-2 text-[1.75rem] font-semibold tracking-tight text-slate-900 sm:text-3xl">
             {getGreeting()}, {firstName}
           </h1>
@@ -622,7 +622,7 @@ export default function SecretaryDashboard() {
             type="button"
             onClick={() => void loadDashboard()}
             disabled={refreshing}
-            className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 text-sm font-medium text-slate-700 transition hover:border-wiser-200 hover:bg-wiser-50 hover:text-wiser-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 text-sm font-medium text-slate-700 transition hover:border-MojaSchoolr-200 hover:bg-MojaSchoolr-50 hover:text-MojaSchoolr-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <RefreshCw size={15} className={refreshing ? "animate-spin" : ""} />
             Refresh
@@ -690,7 +690,7 @@ export default function SecretaryDashboard() {
             <button
               type="button"
               onClick={() => navigate("/pickup-desk")}
-              className="inline-flex items-center gap-1.5 self-start text-xs font-semibold text-wiser-700 hover:text-wiser-800 sm:self-auto"
+              className="inline-flex items-center gap-1.5 self-start text-xs font-semibold text-MojaSchoolr-700 hover:text-MojaSchoolr-800 sm:self-auto"
             >
               Open pickup desk
               <ArrowUpRight size={14} />
@@ -729,7 +729,7 @@ export default function SecretaryDashboard() {
               <h2 className="text-sm font-semibold text-slate-900">Fee collection</h2>
               <p className="mt-1 text-xs text-slate-500">Current-year balances requiring attention.</p>
             </div>
-            <CreditCard size={18} className="text-wiser-600" />
+            <CreditCard size={18} className="text-MojaSchoolr-600" />
           </div>
 
           <SectionStateView
@@ -740,8 +740,8 @@ export default function SecretaryDashboard() {
             onRetry={() => void loadDashboard()}
           >
             <div className="space-y-4 p-5">
-              <div className="rounded-xl border border-wiser-100 bg-wiser-50/60 p-4 sm:p-5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-wiser-700">Outstanding balance</p>
+              <div className="rounded-xl border border-MojaSchoolr-100 bg-MojaSchoolr-50/60 p-4 sm:p-5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-MojaSchoolr-700">Outstanding balance</p>
                 <p className="mt-2 text-2xl font-semibold tracking-tight text-slate-900 sm:text-[1.75rem]">
                   RWF {formatMoney(summary.outstandingAmount)}
                 </p>
@@ -758,7 +758,7 @@ export default function SecretaryDashboard() {
               <button
                 type="button"
                 onClick={() => navigate("/finance/payments")}
-                className="inline-flex w-full items-center justify-between rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:border-wiser-200 hover:bg-wiser-50 hover:text-wiser-700"
+                className="inline-flex w-full items-center justify-between rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:border-MojaSchoolr-200 hover:bg-MojaSchoolr-50 hover:text-MojaSchoolr-700"
               >
                 Open payment desk
                 <ArrowUpRight size={14} />
@@ -778,7 +778,7 @@ export default function SecretaryDashboard() {
             <button
               type="button"
               onClick={() => navigate("/finance/payments")}
-              className="text-xs font-semibold text-wiser-700 hover:text-wiser-800"
+              className="text-xs font-semibold text-MojaSchoolr-700 hover:text-MojaSchoolr-800"
             >
               View all
             </button>
@@ -794,7 +794,7 @@ export default function SecretaryDashboard() {
             <div className="divide-y divide-slate-100">
               {payments.map((payment) => (
                 <div key={payment.id} className="flex items-center gap-3 px-5 py-3.5">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-wiser-50 text-wiser-600">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-MojaSchoolr-50 text-MojaSchoolr-600">
                     <Wallet size={17} />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -821,7 +821,7 @@ export default function SecretaryDashboard() {
             <button
               type="button"
               onClick={() => navigate("/students")}
-              className="text-xs font-semibold text-wiser-700 hover:text-wiser-800"
+              className="text-xs font-semibold text-MojaSchoolr-700 hover:text-MojaSchoolr-800"
             >
               View students
             </button>

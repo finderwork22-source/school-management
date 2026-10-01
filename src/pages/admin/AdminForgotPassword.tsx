@@ -48,7 +48,7 @@ export default function AdminForgotPassword() {
     const normalizedEmail = email.trim().toLowerCase();
 
     if (!normalizedEmail) {
-      setError("Enter the email address used for your WISE Admin account.");
+      setError("Enter the email address used for your MojaSchool Admin account.");
       return;
     }
 
@@ -70,7 +70,7 @@ export default function AdminForgotPassword() {
       // account, so the UI keeps the confirmation message generic as well.
       setSent(true);
     } catch (resetError) {
-      console.error("Failed to send WISE Admin password reset email:", resetError);
+      console.error("Failed to send MojaSchool Admin password reset email:", resetError);
       setError(
         getReadableError(
           resetError,
@@ -85,20 +85,20 @@ export default function AdminForgotPassword() {
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6">
       <div className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-md items-center justify-center">
-        <div className="w-full rounded-2xl border border-wiser-border bg-white p-6 shadow-sm sm:p-8">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-wiser-50 text-wiser-600">
+        <div className="w-full rounded-2xl border border-MojaSchoolr-border bg-white p-6 shadow-sm sm:p-8">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-MojaSchoolr-50 text-MojaSchoolr-600">
             <KeyRound size={21} />
           </div>
 
           <div className="mt-5">
-            <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-wiser-600">
+            <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-MojaSchoolr-600">
               <ShieldCheck size={13} />
-              WISE Admin
+              MojaSchool Admin
             </div>
-            <h1 className="mt-2 text-2xl font-semibold tracking-tight text-wiser-text">
+            <h1 className="mt-2 text-2xl font-semibold tracking-tight text-MojaSchoolr-text">
               Forgot your password?
             </h1>
-            <p className="mt-2 text-sm leading-6 text-wiser-text-secondary">
+            <p className="mt-2 text-sm leading-6 text-MojaSchoolr-text-secondary">
               Enter the email address for your super admin account and we will
               send you a secure password reset link.
             </p>
@@ -120,7 +120,7 @@ export default function AdminForgotPassword() {
                 <div>
                   <p className="font-semibold">Check your email</p>
                   <p className="mt-1 leading-5">
-                    If a WISE Admin account exists for that address, a password
+                    If a MojaSchool Admin account exists for that address, a password
                     reset email has been sent. Check your inbox and spam folder.
                   </p>
                 </div>
@@ -145,7 +145,7 @@ export default function AdminForgotPassword() {
                   placeholder="admin@yourdomain.com"
                   autoComplete="email"
                   autoFocus
-                  className="h-11 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-700 outline-none placeholder:text-slate-400 focus:border-wiser-500 focus:ring-2 focus:ring-wiser-100"
+                  className="h-11 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-700 outline-none placeholder:text-slate-400 focus:border-MojaSchoolr-500 focus:ring-2 focus:ring-MojaSchoolr-100"
                 />
               </div>
             </label>
@@ -153,7 +153,7 @@ export default function AdminForgotPassword() {
             <button
               type="submit"
               disabled={sending}
-              className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-wiser-600 px-4 text-sm font-semibold text-white transition hover:bg-wiser-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-MojaSchoolr-600 px-4 text-sm font-semibold text-white transition hover:bg-MojaSchoolr-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {sending ? (
                 <Loader2 size={16} className="animate-spin" />
@@ -167,7 +167,7 @@ export default function AdminForgotPassword() {
           <div className="mt-6 border-t border-slate-100 pt-5">
             <Link
               to="/login"
-              className="inline-flex items-center gap-2 text-sm font-semibold text-wiser-600 transition hover:text-wiser-700"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-MojaSchoolr-600 transition hover:text-MojaSchoolr-700"
             >
               <ArrowLeft size={15} />
               Back to login

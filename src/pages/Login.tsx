@@ -10,8 +10,6 @@ import {
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
-import WiserLogo from "../assets/wiser-logo-cropped.png";
-
 import { signIn, getMySchoolMembership } from "../lib/auth";
 import { supabase } from "../lib/supabase";
 
@@ -100,7 +98,6 @@ export default function Login() {
     };
   }, [navigate]);
 
-
   function switchToSignIn() {
     setMode("signIn");
     setError("");
@@ -133,10 +130,12 @@ export default function Login() {
           return;
         }
 
-        const { error: resetError } =
-          await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+          normalizedEmail,
+          {
             redirectTo: `${window.location.origin}/login`,
-          });
+          },
+        );
 
         if (resetError) {
           setError(resetError.message);
@@ -184,10 +183,8 @@ export default function Login() {
         return;
       }
 
-      const {
-        membership,
-        error: membershipError,
-      } = await getMySchoolMembership();
+      const { membership, error: membershipError } =
+        await getMySchoolMembership();
 
       if (membershipError) {
         setError(membershipError.message);
@@ -209,22 +206,25 @@ export default function Login() {
   const isReset = mode === "reset";
 
   return (
-    <div className="min-h-screen bg-wiser-background lg:grid lg:grid-cols-[minmax(0,1fr)_520px]">
+    <div className="min-h-screen bg-MojaSchoolr-background lg:grid lg:grid-cols-[minmax(0,1fr)_520px]">
       {/* Brand panel */}
-      <section className="hidden min-h-screen bg-wiser-900 px-10 py-10 text-white lg:flex lg:items-center lg:justify-center xl:px-16">
+      <section className="hidden min-h-screen bg-MojaSchoolr-900 px-10 py-10 text-white lg:flex lg:items-center lg:justify-center xl:px-16">
         <div className="w-full max-w-xl">
-          <div className="inline-flex items-center rounded-2xl bg-white px-5 py-3 shadow-sm ring-1 ring-white/20">
-            <img src={WiserLogo} alt="Wiser" className="h-auto w-[180px]" />
-          </div>
+          
+            <img
+              src="/MojaSchool-white.svg"
+              alt="MojaSchool"
+              className="h-auto w-[180px]"
+            />
 
-          <div className="mt-14 max-w-lg">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-wiser-200">
+          <div className="mt-8 max-w-lg">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-MojaSchoolr-200">
               School management
             </p>
             <h1 className="mt-5 text-4xl font-semibold leading-tight tracking-tight xl:text-5xl">
               Everything your school needs, in one place.
             </h1>
-            <p className="mt-6 max-w-lg text-base leading-7 text-wiser-100">
+            <p className="mt-6 max-w-lg text-base leading-7 text-MojaSchoolr-100">
               Manage students, academics, attendance, communication and school
               operations from one platform.
             </p>
@@ -236,16 +236,18 @@ export default function Login() {
       <main className="flex min-h-screen w-full items-center justify-center px-5 py-8 sm:px-8 lg:px-10">
         <div className="w-full max-w-sm">
           <div className="mb-8 lg:hidden">
-            <div className="inline-flex items-center rounded-xl bg-white px-4 py-2.5 ring-1 ring-wiser-border">
-              <img src={WiserLogo} alt="Wiser" className="h-auto w-[150px]" />
+            <img
+              src="/MojaSchool-white.svg"
+              alt="MojaSchool"
+              className="h-auto w-[180px]"
+            />
             </div>
-          </div>
 
           {isForgot || isReset ? (
             <button
               type="button"
               onClick={switchToSignIn}
-              className="mb-6 inline-flex items-center gap-2 rounded-md text-sm font-medium text-wiser-text-secondary transition hover:text-wiser-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wiser-500 focus-visible:ring-offset-2"
+              className="mb-6 inline-flex items-center gap-2 rounded-md text-sm font-medium text-MojaSchoolr-text-secondary transition hover:text-MojaSchoolr-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-MojaSchoolr-500 focus-visible:ring-offset-2"
             >
               <ArrowLeft size={16} aria-hidden="true" />
               Back to sign in
@@ -253,19 +255,19 @@ export default function Login() {
           ) : null}
 
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-wiser-text">
+            <h1 className="text-2xl font-semibold tracking-tight text-MojaSchoolr-text">
               {isSignIn
                 ? "Welcome back"
                 : isForgot
                   ? "Forgot your password?"
                   : "Set a new password"}
             </h1>
-            <p className="mt-2 text-sm leading-6 text-wiser-text-secondary">
+            <p className="mt-2 text-sm leading-6 text-MojaSchoolr-text-secondary">
               {isSignIn
                 ? "Sign in to your school account."
                 : isForgot
                   ? "Enter your email and we'll send you a link to reset your password."
-                  : "Choose a new password for your Wiser account."}
+                  : "Choose a new password for your MojaSchool account."}
             </p>
           </div>
 
@@ -282,11 +284,11 @@ export default function Login() {
             {success && (
               <div
                 role="status"
-                className="flex gap-3 rounded-lg border border-wiser-200 bg-wiser-50 px-4 py-3 text-sm leading-6 text-wiser-800"
+                className="flex gap-3 rounded-lg border border-MojaSchoolr-200 bg-MojaSchoolr-50 px-4 py-3 text-sm leading-6 text-MojaSchoolr-800"
               >
                 <CheckCircle2
                   size={18}
-                  className="mt-0.5 shrink-0 text-wiser-600"
+                  className="mt-0.5 shrink-0 text-MojaSchoolr-600"
                   aria-hidden="true"
                 />
                 <span>{success}</span>
@@ -297,7 +299,7 @@ export default function Login() {
               <div>
                 <label
                   htmlFor="email"
-                  className="mb-1.5 block text-sm font-medium text-wiser-text-secondary"
+                  className="mb-1.5 block text-sm font-medium text-MojaSchoolr-text-secondary"
                 >
                   Email
                 </label>
@@ -306,7 +308,7 @@ export default function Login() {
                   <Mail
                     size={17}
                     aria-hidden="true"
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-wiser-text-muted"
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-MojaSchoolr-text-muted"
                   />
 
                   <input
@@ -317,7 +319,7 @@ export default function Login() {
                     placeholder="you@school.com"
                     autoComplete="email"
                     required
-                    className="h-11 w-full rounded-lg border border-wiser-border bg-white pl-10 pr-4 text-sm text-wiser-text outline-none transition placeholder:text-slate-400 focus:border-wiser-500 focus:ring-2 focus:ring-wiser-100"
+                    className="h-11 w-full rounded-lg border border-MojaSchoolr-border bg-white pl-10 pr-4 text-sm text-MojaSchoolr-text outline-none transition placeholder:text-slate-400 focus:border-MojaSchoolr-500 focus:ring-2 focus:ring-MojaSchoolr-100"
                   />
                 </div>
               </div>
@@ -328,7 +330,7 @@ export default function Login() {
                 <div>
                   <label
                     htmlFor="password"
-                    className="mb-1.5 block text-sm font-medium text-wiser-text-secondary"
+                    className="mb-1.5 block text-sm font-medium text-MojaSchoolr-text-secondary"
                   >
                     {isReset ? "New password" : "Password"}
                   </label>
@@ -337,7 +339,7 @@ export default function Login() {
                     <LockKeyhole
                       size={17}
                       aria-hidden="true"
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-wiser-text-muted"
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-MojaSchoolr-text-muted"
                     />
 
                     <input
@@ -346,18 +348,24 @@ export default function Login() {
                       value={password}
                       onChange={(event) => setPassword(event.target.value)}
                       placeholder={
-                        isReset ? "Enter your new password" : "Enter your password"
+                        isReset
+                          ? "Enter your new password"
+                          : "Enter your password"
                       }
-                      autoComplete={isReset ? "new-password" : "current-password"}
+                      autoComplete={
+                        isReset ? "new-password" : "current-password"
+                      }
                       required
-                      className="h-11 w-full rounded-lg border border-wiser-border bg-white pl-10 pr-11 text-sm text-wiser-text outline-none transition placeholder:text-slate-400 focus:border-wiser-500 focus:ring-2 focus:ring-wiser-100"
+                      className="h-11 w-full rounded-lg border border-MojaSchoolr-border bg-white pl-10 pr-11 text-sm text-MojaSchoolr-text outline-none transition placeholder:text-slate-400 focus:border-MojaSchoolr-500 focus:ring-2 focus:ring-MojaSchoolr-100"
                     />
 
                     <button
                       type="button"
                       onClick={() => setShowPassword((value) => !value)}
-                      aria-label={showPassword ? "Hide password" : "Show password"}
-                      className="absolute right-2.5 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-wiser-text-muted transition hover:bg-wiser-50 hover:text-wiser-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wiser-500 focus-visible:ring-offset-1"
+                      aria-label={
+                        showPassword ? "Hide password" : "Show password"
+                      }
+                      className="absolute right-2.5 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-MojaSchoolr-text-muted transition hover:bg-MojaSchoolr-50 hover:text-MojaSchoolr-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-MojaSchoolr-500 focus-visible:ring-offset-1"
                     >
                       {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
                     </button>
@@ -368,7 +376,7 @@ export default function Login() {
                   <div>
                     <label
                       htmlFor="confirm-password"
-                      className="mb-1.5 block text-sm font-medium text-wiser-text-secondary"
+                      className="mb-1.5 block text-sm font-medium text-MojaSchoolr-text-secondary"
                     >
                       Confirm new password
                     </label>
@@ -377,7 +385,7 @@ export default function Login() {
                       <LockKeyhole
                         size={17}
                         aria-hidden="true"
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-wiser-text-muted"
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-MojaSchoolr-text-muted"
                       />
 
                       <input
@@ -390,7 +398,7 @@ export default function Login() {
                         placeholder="Re-enter your new password"
                         autoComplete="new-password"
                         required
-                        className="h-11 w-full rounded-lg border border-wiser-border bg-white pl-10 pr-11 text-sm text-wiser-text outline-none transition placeholder:text-slate-400 focus:border-wiser-500 focus:ring-2 focus:ring-wiser-100"
+                        className="h-11 w-full rounded-lg border border-MojaSchoolr-border bg-white pl-10 pr-11 text-sm text-MojaSchoolr-text outline-none transition placeholder:text-slate-400 focus:border-MojaSchoolr-500 focus:ring-2 focus:ring-MojaSchoolr-100"
                       />
 
                       <button
@@ -403,7 +411,7 @@ export default function Login() {
                             ? "Hide confirmed password"
                             : "Show confirmed password"
                         }
-                        className="absolute right-2.5 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-wiser-text-muted transition hover:bg-wiser-50 hover:text-wiser-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wiser-500 focus-visible:ring-offset-1"
+                        className="absolute right-2.5 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-MojaSchoolr-text-muted transition hover:bg-MojaSchoolr-50 hover:text-MojaSchoolr-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-MojaSchoolr-500 focus-visible:ring-offset-1"
                       >
                         {showConfirmPassword ? (
                           <EyeOff size={17} />
@@ -422,7 +430,7 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={switchToForgotPassword}
-                  className="rounded-md text-sm font-medium text-wiser-600 transition hover:text-wiser-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wiser-500 focus-visible:ring-offset-2"
+                  className="rounded-md text-sm font-medium text-MojaSchoolr-600 transition hover:text-MojaSchoolr-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-MojaSchoolr-500 focus-visible:ring-offset-2"
                 >
                   Forgot password?
                 </button>
@@ -432,7 +440,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="flex h-11 w-full items-center justify-center rounded-lg bg-wiser-600 text-sm font-semibold text-white transition hover:bg-wiser-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wiser-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex h-11 w-full items-center justify-center rounded-lg bg-MojaSchoolr-600 text-sm font-semibold text-white transition hover:bg-MojaSchoolr-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-MojaSchoolr-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading
                 ? isForgot
@@ -448,11 +456,11 @@ export default function Login() {
             </button>
 
             {isSignIn && (
-              <p className="pt-1 text-center text-sm text-wiser-text-secondary">
+              <p className="pt-1 text-center text-sm text-MojaSchoolr-text-secondary">
                 Don't have an account?{" "}
                 <Link
                   to="/signup"
-                  className="font-medium text-wiser-600 transition hover:text-wiser-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wiser-500 focus-visible:ring-offset-2"
+                  className="font-medium text-MojaSchoolr-600 transition hover:text-MojaSchoolr-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-MojaSchoolr-500 focus-visible:ring-offset-2"
                 >
                   Create an account
                 </Link>

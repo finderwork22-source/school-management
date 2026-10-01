@@ -52,7 +52,7 @@ import AcademicSettings from "./pages/AcademicSettings";
 import UsersRoles from "./pages/UsersRoles";
 import MyProfile from "./pages/MyProfile";
 
-// WISE Admin
+// MojaSchool Admin
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminApplications from "./pages/admin/AdminApplications";
 import AdminBilling from "./pages/admin/AdminBilling";
@@ -78,13 +78,13 @@ export default function App() {
           can establish their password before signing in. */}
       <Route path="/accept-invitation" element={<AcceptInvitation />} />
 
-      {/* WISE Admin password recovery stays public so an administrator
+      {/* MojaSchool Admin password recovery stays public so an administrator
           can recover access without an active platform session. */}
       <Route path="/admin/forgot-password" element={<AdminForgotPassword />} />
       <Route path="/admin/reset-password" element={<AdminResetPassword />} />
 
       {/* =====================================================
-          WISE ADMIN — PLATFORM LEVEL
+          MojaSchool ADMIN — PLATFORM LEVEL
           This is intentionally separate from school AppLayout.
       ===================================================== */}
       <Route

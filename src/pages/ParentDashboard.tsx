@@ -723,7 +723,7 @@ export default function ParentDashboard() {
           <button
             type="button"
             onClick={() => void loadChildrenAndAuthorisations()}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-wiser-border bg-white px-3.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-MojaSchoolr-border bg-white px-3.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
             disabled={loading}
           >
             <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
@@ -748,7 +748,7 @@ export default function ParentDashboard() {
         </div>
       ) : children.length === 0 ? (
         <Card className="p-8 text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-wiser-50 text-wiser-700">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-MojaSchoolr-50 text-MojaSchoolr-700">
             <Users size={22} />
           </div>
           <h2 className="mt-4 text-lg font-semibold text-slate-900">
@@ -764,7 +764,7 @@ export default function ParentDashboard() {
             <div className="border-b border-slate-200 px-5 py-4 sm:px-6">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-wiser-600">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-MojaSchoolr-600">
                     My children
                   </p>
                   <h2 className="mt-1 text-base font-semibold text-slate-900">
@@ -787,13 +787,13 @@ export default function ParentDashboard() {
                     type="button"
                     onClick={() => selectChild(child.id)}
                     className={[
-                      "flex min-w-0 items-center gap-3 rounded-xl border px-4 py-3 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-wiser-500 focus-visible:ring-offset-2",
+                      "flex min-w-0 items-center gap-3 rounded-xl border px-4 py-3 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-MojaSchoolr-500 focus-visible:ring-offset-2",
                       selected
-                        ? "border-wiser-300 bg-wiser-50 shadow-sm"
-                        : "border-slate-200 bg-white hover:border-wiser-200 hover:bg-slate-50",
+                        ? "border-MojaSchoolr-300 bg-MojaSchoolr-50 shadow-sm"
+                        : "border-slate-200 bg-white hover:border-MojaSchoolr-200 hover:bg-slate-50",
                     ].join(" ")}
                   >
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-wiser-100 text-sm font-semibold text-wiser-700">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-MojaSchoolr-100 text-sm font-semibold text-MojaSchoolr-700">
                       {getChildInitials(child.name)}
                     </div>
                     <div className="min-w-0 flex-1">
@@ -806,7 +806,7 @@ export default function ParentDashboard() {
                     </div>
                     <ChevronRight
                       size={16}
-                      className={selected ? "text-wiser-600" : "text-slate-300"}
+                      className={selected ? "text-MojaSchoolr-600" : "text-slate-300"}
                     />
                   </button>
                 );
@@ -819,7 +819,7 @@ export default function ParentDashboard() {
               <Card className="overflow-hidden">
                 <div className="flex flex-col gap-4 border-b border-slate-200 px-5 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
                   <div className="flex min-w-0 items-center gap-3">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-wiser-100 text-base font-semibold text-wiser-700">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-MojaSchoolr-100 text-base font-semibold text-MojaSchoolr-700">
                       {getChildInitials(selectedChild.name)}
                     </div>
                     <div className="min-w-0">
@@ -846,7 +846,7 @@ export default function ParentDashboard() {
                         className={[
                           "inline-flex h-9 items-center gap-2 rounded-lg px-3.5 text-sm font-semibold transition",
                           childTab === value
-                            ? "bg-wiser-600 text-white shadow-sm"
+                            ? "bg-MojaSchoolr-600 text-white shadow-sm"
                             : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50",
                         ].join(" ")}
                       >
@@ -1070,7 +1070,7 @@ export default function ParentDashboard() {
                           <button
                             type="button"
                             onClick={() => navigate("/announcements")}
-                            className="mt-4 inline-flex items-center gap-2 rounded-lg border border-wiser-border px-3.5 py-2.5 text-sm font-semibold text-wiser-700 transition hover:bg-wiser-50"
+                            className="mt-4 inline-flex items-center gap-2 rounded-lg border border-MojaSchoolr-border px-3.5 py-2.5 text-sm font-semibold text-MojaSchoolr-700 transition hover:bg-MojaSchoolr-50"
                           >
                             Open announcements
                             <ArrowRight size={15} />
@@ -1159,7 +1159,7 @@ function SummaryCard({
           </p>
           <p className="mt-1 text-xs leading-5 text-slate-500">{helper}</p>
         </div>
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-wiser-700 ring-1 ring-slate-200">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-MojaSchoolr-700 ring-1 ring-slate-200">
           {icon}
         </div>
       </div>
@@ -1184,7 +1184,7 @@ function SectionHeader({
     <div className="flex flex-col gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
       <div className="min-w-0">
         <div className="flex items-center gap-2 text-slate-900">
-          <span className="text-wiser-700">{icon}</span>
+          <span className="text-MojaSchoolr-700">{icon}</span>
           <h3 className="text-sm font-semibold">{title}</h3>
         </div>
         <p className="mt-1 text-xs leading-5 text-slate-500">{description}</p>
@@ -1192,7 +1192,7 @@ function SectionHeader({
       <button
         type="button"
         onClick={onAction}
-        className="inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold text-wiser-700 transition hover:text-wiser-800"
+        className="inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold text-MojaSchoolr-700 transition hover:text-MojaSchoolr-800"
       >
         {actionLabel}
         <ArrowRight size={14} />
@@ -1488,7 +1488,7 @@ function FinancePanel({
                       <button
                         type="button"
                         onClick={() => onViewInvoice(invoice.id)}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-wiser-700 transition hover:bg-wiser-50"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-MojaSchoolr-700 transition hover:bg-MojaSchoolr-50"
                       >
                         View invoice
                         <ChevronRight size={13} />
@@ -1555,7 +1555,7 @@ function FinancePanel({
                 <button
                   type="button"
                   onClick={() => onViewReceipt(payment.id)}
-                  className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-wiser-700 transition hover:bg-wiser-50"
+                  className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-MojaSchoolr-700 transition hover:bg-MojaSchoolr-50"
                 >
                   <Receipt size={14} />
                   View receipt
@@ -1602,7 +1602,7 @@ function FinanceOverlay({
       <div className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl">
         <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 sm:px-6">
           <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-wiser-600">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-MojaSchoolr-600">
               {isInvoice ? "Invoice details" : "Payment receipt"}
             </p>
             <h3 className="mt-1 text-lg font-semibold text-slate-900">
@@ -1752,10 +1752,10 @@ function FinanceOverlay({
             </div>
           ) : payment ? (
             <div className="space-y-5">
-              <div className="rounded-2xl border border-wiser-100 bg-wiser-50 px-5 py-5">
+              <div className="rounded-2xl border border-MojaSchoolr-100 bg-MojaSchoolr-50 px-5 py-5">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-wiser-700">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-MojaSchoolr-700">
                       Payment receipt
                     </p>
                     <p className="mt-1 text-3xl font-bold tracking-tight text-slate-900">
@@ -1838,7 +1838,7 @@ function FinanceOverlay({
             <button
               type="button"
               onClick={onPrintReceipt}
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-wiser-600 px-4 text-sm font-semibold text-white transition hover:bg-wiser-700"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-MojaSchoolr-600 px-4 text-sm font-semibold text-white transition hover:bg-MojaSchoolr-700"
             >
               <Printer size={15} />
               Print receipt

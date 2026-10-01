@@ -324,7 +324,7 @@ export default function AdminSchools() {
         setSelectedRow(null);
       }
     } catch (loadError) {
-      console.error("Failed to load WISE schools:", loadError);
+      console.error("Failed to load MojaSchool schools:", loadError);
 
       const errorDetails =
         loadError && typeof loadError === "object"
@@ -351,7 +351,7 @@ export default function AdminSchools() {
               .join(" ")
           : loadError instanceof Error
             ? loadError.message
-            : "Could not load WISE schools.",
+            : "Could not load MojaSchool schools.",
       );
     } finally {
       setLoading(false);
@@ -527,15 +527,15 @@ export default function AdminSchools() {
     <div className="mx-auto w-full max-w-[1440px]">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-wiser-600">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-MojaSchoolr-600">
             <Building2 size={14} />
-            WISE platform
+            MojaSchool platform
           </div>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-wiser-text sm:text-3xl">
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-MojaSchoolr-text sm:text-3xl">
             Schools
           </h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-wiser-text-secondary">
-            Manage schools registered on WISE, their platform status and current subscription information.
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-MojaSchoolr-text-secondary">
+            Manage schools registered on MojaSchool, their platform status and current subscription information.
           </p>
         </div>
 
@@ -543,7 +543,7 @@ export default function AdminSchools() {
           type="button"
           onClick={() => void loadSchools(true)}
           disabled={refreshing}
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-wiser-border bg-white px-4 text-sm font-semibold text-wiser-text-secondary shadow-sm transition hover:bg-slate-50 hover:text-wiser-text disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-MojaSchoolr-border bg-white px-4 text-sm font-semibold text-MojaSchoolr-text-secondary shadow-sm transition hover:bg-slate-50 hover:text-MojaSchoolr-text disabled:cursor-not-allowed disabled:opacity-60"
         >
           <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
           {refreshing ? "Refreshing..." : "Refresh"}
@@ -565,8 +565,8 @@ export default function AdminSchools() {
         <SummaryCard label="Archived" value={summary.archived} icon={Archive} />
       </div>
 
-      <div className="mt-6 overflow-hidden rounded-xl border border-wiser-border bg-white shadow-sm">
-        <div className="border-b border-wiser-border px-4 py-4 sm:px-5">
+      <div className="mt-6 overflow-hidden rounded-xl border border-MojaSchoolr-border bg-white shadow-sm">
+        <div className="border-b border-MojaSchoolr-border px-4 py-4 sm:px-5">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex flex-wrap gap-2">
               {STATUS_FILTERS.map((filter) => (
@@ -577,7 +577,7 @@ export default function AdminSchools() {
                   className={[
                     "rounded-lg px-3 py-2 text-xs font-semibold transition",
                     statusFilter === filter.value
-                      ? "bg-wiser-600 text-white"
+                      ? "bg-MojaSchoolr-600 text-white"
                       : "bg-slate-100 text-slate-600 hover:bg-slate-200",
                   ].join(" ")}
                 >
@@ -595,34 +595,34 @@ export default function AdminSchools() {
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search school, city, subscription..."
-                className="h-10 w-full rounded-lg border border-wiser-border bg-white pl-10 pr-4 text-sm text-wiser-text outline-none placeholder:text-slate-400 focus:border-wiser-500 focus:ring-2 focus:ring-wiser-100"
+                className="h-10 w-full rounded-lg border border-MojaSchoolr-border bg-white pl-10 pr-4 text-sm text-MojaSchoolr-text outline-none placeholder:text-slate-400 focus:border-MojaSchoolr-500 focus:ring-2 focus:ring-MojaSchoolr-100"
               />
             </div>
           </div>
         </div>
 
-        <div className="border-b border-wiser-border px-4 py-3 sm:px-5">
-          <p className="text-sm text-wiser-text-secondary">
-            Showing <span className="font-semibold text-wiser-text">{filteredRows.length}</span> school{filteredRows.length === 1 ? "" : "s"}
+        <div className="border-b border-MojaSchoolr-border px-4 py-3 sm:px-5">
+          <p className="text-sm text-MojaSchoolr-text-secondary">
+            Showing <span className="font-semibold text-MojaSchoolr-text">{filteredRows.length}</span> school{filteredRows.length === 1 ? "" : "s"}
           </p>
         </div>
 
         {loading ? (
           <div className="flex min-h-[320px] items-center justify-center">
-            <div className="flex items-center gap-2 text-sm text-wiser-text-secondary">
+            <div className="flex items-center gap-2 text-sm text-MojaSchoolr-text-secondary">
               <Loader2 size={17} className="animate-spin" />
               Loading schools...
             </div>
           </div>
         ) : filteredRows.length === 0 ? (
           <div className="flex min-h-[320px] flex-col items-center justify-center px-6 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-wiser-50 text-wiser-600">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-MojaSchoolr-50 text-MojaSchoolr-600">
               <Building2 size={22} />
             </div>
-            <h2 className="mt-4 text-sm font-semibold text-wiser-text">
+            <h2 className="mt-4 text-sm font-semibold text-MojaSchoolr-text">
               No schools found
             </h2>
-            <p className="mt-1 max-w-md text-sm text-wiser-text-secondary">
+            <p className="mt-1 max-w-md text-sm text-MojaSchoolr-text-secondary">
               No schools match the selected status or search criteria.
             </p>
           </div>
@@ -640,7 +640,7 @@ export default function AdminSchools() {
 
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="truncate text-sm font-semibold text-wiser-text">
+                      <p className="truncate text-sm font-semibold text-MojaSchoolr-text">
                         {row.school.name}
                       </p>
                       <span
@@ -650,7 +650,7 @@ export default function AdminSchools() {
                       </span>
                     </div>
 
-                    <p className="mt-1 text-xs text-wiser-text-secondary">
+                    <p className="mt-1 text-xs text-MojaSchoolr-text-secondary">
                       {row.school.type || "School"} · {row.school.city || "—"}, {row.school.country || "—"}
                     </p>
 
@@ -708,7 +708,7 @@ function SchoolDetail({
       <button
         type="button"
         onClick={onBack}
-        className="inline-flex items-center gap-2 text-sm font-semibold text-wiser-600 hover:text-wiser-700"
+        className="inline-flex items-center gap-2 text-sm font-semibold text-MojaSchoolr-600 hover:text-MojaSchoolr-700"
       >
         <ArrowLeft size={16} />
         Back to schools
@@ -719,7 +719,7 @@ function SchoolDetail({
           <SchoolAvatar school={school} large />
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-semibold tracking-tight text-wiser-text sm:text-3xl">
+              <h1 className="text-2xl font-semibold tracking-tight text-MojaSchoolr-text sm:text-3xl">
                 {school.name}
               </h1>
               <span
@@ -728,11 +728,11 @@ function SchoolDetail({
                 {formatStatus(account.status)}
               </span>
             </div>
-            <p className="mt-2 text-sm text-wiser-text-secondary">
+            <p className="mt-2 text-sm text-MojaSchoolr-text-secondary">
               {school.type || "School"} · {school.city || "—"}, {school.country || "—"}
             </p>
             <p className="mt-1 text-xs text-slate-400">
-              Joined WISE {formatDate(account.joined_at || account.created_at)}
+              Joined MojaSchool {formatDate(account.joined_at || account.created_at)}
             </p>
           </div>
         </div>
@@ -773,10 +773,10 @@ function SchoolDetail({
               <div className="space-y-4">
                 <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p className="text-sm font-semibold text-wiser-text">
+                    <p className="text-sm font-semibold text-MojaSchoolr-text">
                       {plan?.name || "Subscription"}
                     </p>
-                    <p className="mt-1 text-xs text-wiser-text-secondary">
+                    <p className="mt-1 text-xs text-MojaSchoolr-text-secondary">
                       {subscription.billing_cycle.replaceAll("_", " ")} billing · Started {formatDate(subscription.start_date)}
                     </p>
                   </div>
@@ -786,7 +786,7 @@ function SchoolDetail({
                     >
                       {formatSubscriptionStatus(subscription.status)}
                     </span>
-                    <span className="text-sm font-semibold text-wiser-text">
+                    <span className="text-sm font-semibold text-MojaSchoolr-text">
                       {formatMoney(subscription.price, subscription.currency)}
                     </span>
                   </div>
@@ -802,7 +802,7 @@ function SchoolDetail({
             ) : (
               <EmptyState
                 title="No subscription"
-                description="This school does not currently have a WISE subscription record."
+                description="This school does not currently have a MojaSchool subscription record."
               />
             )}
           </InfoCard>
@@ -825,16 +825,16 @@ function SchoolDetail({
         </div>
 
         <div className="h-fit xl:sticky xl:top-24">
-          <section className="rounded-xl border border-wiser-border bg-white shadow-sm">
-            <div className="border-b border-wiser-border px-5 py-4">
+          <section className="rounded-xl border border-MojaSchoolr-border bg-white shadow-sm">
+            <div className="border-b border-MojaSchoolr-border px-5 py-4">
               <div className="flex items-center gap-2">
-                <ShieldCheck size={17} className="text-wiser-600" />
-                <h2 className="text-base font-semibold text-wiser-text">
+                <ShieldCheck size={17} className="text-MojaSchoolr-600" />
+                <h2 className="text-base font-semibold text-MojaSchoolr-text">
                   Platform controls
                 </h2>
               </div>
-              <p className="mt-1 text-xs leading-5 text-wiser-text-secondary">
-                These controls change the WISE platform lifecycle status for this school. School operational data remains unchanged.
+              <p className="mt-1 text-xs leading-5 text-MojaSchoolr-text-secondary">
+                These controls change the MojaSchool platform lifecycle status for this school. School operational data remains unchanged.
               </p>
             </div>
 
@@ -844,7 +844,7 @@ function SchoolDetail({
                   type="button"
                   onClick={() => onStatusChange("active")}
                   disabled={processing}
-                  className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-wiser-600 px-4 text-sm font-semibold text-white transition hover:bg-wiser-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-MojaSchoolr-600 px-4 text-sm font-semibold text-white transition hover:bg-MojaSchoolr-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {processing ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
                   Activate school
@@ -877,7 +877,7 @@ function SchoolDetail({
 
               {account.status === "archived" && (
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-                  This school is archived. Activating it again will return its WISE platform account to active status.
+                  This school is archived. Activating it again will return its MojaSchool platform account to active status.
                 </div>
               )}
             </div>
@@ -904,15 +904,15 @@ function SummaryCard({
   icon: typeof Building2;
 }) {
   return (
-    <div className="rounded-xl border border-wiser-border bg-white p-4 shadow-sm">
+    <div className="rounded-xl border border-MojaSchoolr-border bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <p className="text-xs font-medium text-wiser-text-secondary">{label}</p>
-          <p className="mt-2 text-2xl font-semibold tracking-tight text-wiser-text">
+          <p className="text-xs font-medium text-MojaSchoolr-text-secondary">{label}</p>
+          <p className="mt-2 text-2xl font-semibold tracking-tight text-MojaSchoolr-text">
             {value}
           </p>
         </div>
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-wiser-50 text-wiser-600">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-MojaSchoolr-50 text-MojaSchoolr-600">
           <Icon size={18} />
         </div>
       </div>
@@ -950,7 +950,7 @@ function SchoolAvatar({
   return (
     <div
       className={[
-        "flex shrink-0 items-center justify-center rounded-xl bg-wiser-50 font-semibold text-wiser-600",
+        "flex shrink-0 items-center justify-center rounded-xl bg-MojaSchoolr-50 font-semibold text-MojaSchoolr-600",
         large ? "h-16 w-16 text-lg" : "h-10 w-10 text-xs",
       ].join(" ")}
     >
@@ -996,10 +996,10 @@ function InfoCard({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-xl border border-wiser-border bg-white shadow-sm">
-      <div className="flex items-center gap-2 border-b border-wiser-border px-5 py-4">
-        <Icon size={17} className="text-wiser-600" />
-        <h2 className="text-base font-semibold text-wiser-text">{title}</h2>
+    <section className="rounded-xl border border-MojaSchoolr-border bg-white shadow-sm">
+      <div className="flex items-center gap-2 border-b border-MojaSchoolr-border px-5 py-4">
+        <Icon size={17} className="text-MojaSchoolr-600" />
+        <h2 className="text-base font-semibold text-MojaSchoolr-text">{title}</h2>
       </div>
       <div className="p-5">{children}</div>
     </section>

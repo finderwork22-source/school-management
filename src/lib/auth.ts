@@ -64,7 +64,7 @@ export async function signOut() {
 }
 
 /**
- * Resolve the authenticated WISE school role.
+ * Resolve the authenticated MojaSchool school role.
  *
  * Parents are linked through parents.user_id and are resolved through the
  * SECURITY DEFINER get_my_parent_membership() RPC.

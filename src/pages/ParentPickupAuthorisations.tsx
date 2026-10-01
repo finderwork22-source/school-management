@@ -337,7 +337,7 @@ export default function ParentPickupAuthorisations() {
           <button
             type="button"
             onClick={openAdd}
-            className="inline-flex items-center gap-2 rounded-lg bg-wiser-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-wiser-700"
+            className="inline-flex items-center gap-2 rounded-lg bg-MojaSchoolr-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-MojaSchoolr-700"
           >
             <Plus size={16} />
             Add pickup person
@@ -348,7 +348,7 @@ export default function ParentPickupAuthorisations() {
       <button
         type="button"
         onClick={() => navigate("/")}
-        className="mb-5 text-sm font-medium text-wiser-700 hover:text-wiser-800"
+        className="mb-5 text-sm font-medium text-MojaSchoolr-700 hover:text-MojaSchoolr-800"
       >
         ← Back to parent dashboard
       </button>
@@ -369,7 +369,7 @@ export default function ParentPickupAuthorisations() {
       <Card className="overflow-hidden">
         <div className="border-b border-slate-200 px-5 py-4">
           <div className="flex items-center gap-2">
-            <ShieldCheck size={18} className="text-wiser-700" />
+            <ShieldCheck size={18} className="text-MojaSchoolr-700" />
             <h2 className="text-sm font-semibold text-slate-900">Active authorisations</h2>
           </div>
           <p className="mt-1 text-xs text-slate-500">
@@ -379,7 +379,7 @@ export default function ParentPickupAuthorisations() {
 
         {loading ? (
           <div className="flex min-h-48 items-center justify-center">
-            <Loader2 className="animate-spin text-wiser-600" size={22} />
+            <Loader2 className="animate-spin text-MojaSchoolr-600" size={22} />
           </div>
         ) : active.length === 0 ? (
           <div className="px-5 py-12 text-center">
@@ -391,7 +391,7 @@ export default function ParentPickupAuthorisations() {
             <button
               type="button"
               onClick={openAdd}
-              className="mt-5 inline-flex items-center gap-2 rounded-lg bg-wiser-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-wiser-700"
+              className="mt-5 inline-flex items-center gap-2 rounded-lg bg-MojaSchoolr-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-MojaSchoolr-700"
             >
               <Plus size={16} />
               Add pickup person
@@ -504,7 +504,7 @@ export default function ParentPickupAuthorisations() {
                 <select
                   value={form.studentId}
                   onChange={(event) => setForm((current) => ({ ...current, studentId: event.target.value }))}
-                  className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-wiser-500 focus:ring-2 focus:ring-wiser-100"
+                  className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-MojaSchoolr-500 focus:ring-2 focus:ring-MojaSchoolr-100"
                   required
                 >
                   <option value="">Select child</option>
@@ -522,7 +522,7 @@ export default function ParentPickupAuthorisations() {
                   <input
                     value={form.firstName}
                     onChange={(event) => setForm((current) => ({ ...current, firstName: event.target.value }))}
-                    className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-wiser-500 focus:ring-2 focus:ring-wiser-100"
+                    className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-MojaSchoolr-500 focus:ring-2 focus:ring-MojaSchoolr-100"
                     required
                   />
                 </div>
@@ -531,7 +531,7 @@ export default function ParentPickupAuthorisations() {
                   <input
                     value={form.lastName}
                     onChange={(event) => setForm((current) => ({ ...current, lastName: event.target.value }))}
-                    className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-wiser-500 focus:ring-2 focus:ring-wiser-100"
+                    className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-MojaSchoolr-500 focus:ring-2 focus:ring-MojaSchoolr-100"
                     required
                   />
                 </div>
@@ -545,7 +545,7 @@ export default function ParentPickupAuthorisations() {
                     <input
                       value={form.phone}
                       onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))}
-                      className="h-11 w-full rounded-lg border border-slate-200 pl-9 pr-3 text-sm outline-none focus:border-wiser-500 focus:ring-2 focus:ring-wiser-100"
+                      className="h-11 w-full rounded-lg border border-slate-200 pl-9 pr-3 text-sm outline-none focus:border-MojaSchoolr-500 focus:ring-2 focus:ring-MojaSchoolr-100"
                       placeholder="+250 78..."
                       required
                     />
@@ -556,7 +556,7 @@ export default function ParentPickupAuthorisations() {
                   <select
                     value={form.relationship}
                     onChange={(event) => setForm((current) => ({ ...current, relationship: event.target.value }))}
-                    className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-wiser-500 focus:ring-2 focus:ring-wiser-100"
+                    className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-MojaSchoolr-500 focus:ring-2 focus:ring-MojaSchoolr-100"
                   >
                     {RELATIONSHIPS.map((relationship) => (
                       <option key={relationship} value={relationship}>{relationship}</option>
@@ -581,7 +581,7 @@ export default function ParentPickupAuthorisations() {
                       className={[
                         "rounded-lg border px-3 py-2.5 text-xs font-semibold transition",
                         form.validity === value
-                          ? "border-wiser-300 bg-wiser-50 text-wiser-700"
+                          ? "border-MojaSchoolr-300 bg-MojaSchoolr-50 text-MojaSchoolr-700"
                           : "border-slate-200 text-slate-600 hover:bg-slate-50",
                       ].join(" ")}
                     >
@@ -598,7 +598,7 @@ export default function ParentPickupAuthorisations() {
                     type="date"
                     value={form.validFrom}
                     onChange={(event) => handleFromDateChange(event.target.value)}
-                    className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-wiser-500 focus:ring-2 focus:ring-wiser-100"
+                    className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-MojaSchoolr-500 focus:ring-2 focus:ring-MojaSchoolr-100"
                     required
                   />
                 </div>
@@ -609,13 +609,13 @@ export default function ParentPickupAuthorisations() {
                     value={form.validUntil}
                     onChange={(event) => setForm((current) => ({ ...current, validUntil: event.target.value, validity: "custom" }))}
                     min={form.validFrom}
-                    className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-wiser-500 focus:ring-2 focus:ring-wiser-100"
+                    className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-MojaSchoolr-500 focus:ring-2 focus:ring-MojaSchoolr-100"
                     required
                   />
                 </div>
               </div>
 
-              <div className="rounded-xl border border-wiser-100 bg-wiser-50 p-3.5 text-xs leading-5 text-wiser-800">
+              <div className="rounded-xl border border-MojaSchoolr-100 bg-MojaSchoolr-50 p-3.5 text-xs leading-5 text-MojaSchoolr-800">
                 The authorised person will only be visible to the school while this authorisation is active and within these dates. You can cancel access at any time.
               </div>
 
@@ -630,7 +630,7 @@ export default function ParentPickupAuthorisations() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-wiser-600 px-5 text-sm font-semibold text-white hover:bg-wiser-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-MojaSchoolr-600 px-5 text-sm font-semibold text-white hover:bg-MojaSchoolr-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {saving && <Loader2 size={16} className="animate-spin" />}
                   {saving ? "Saving..." : "Confirm authorisation"}

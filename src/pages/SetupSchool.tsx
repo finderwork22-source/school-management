@@ -219,10 +219,10 @@ export default function SetupSchool() {
 
   if (loadingApplication) {
     return (
-      <div className="min-h-screen bg-wiser-background px-4 py-10">
+      <div className="min-h-screen bg-MojaSchoolr-background px-4 py-10">
         <div className="mx-auto flex min-h-[70vh] max-w-xl items-center justify-center">
-          <div className="flex items-center gap-3 text-sm text-wiser-text-secondary">
-            <span className="h-5 w-5 animate-spin rounded-full border-2 border-wiser-200 border-t-wiser-600" />
+          <div className="flex items-center gap-3 text-sm text-MojaSchoolr-text-secondary">
+            <span className="h-5 w-5 animate-spin rounded-full border-2 border-MojaSchoolr-200 border-t-MojaSchoolr-600" />
             Checking your school request...
           </div>
         </div>
@@ -246,39 +246,39 @@ export default function SetupSchool() {
   }
 
   return (
-    <div className="min-h-screen bg-wiser-background px-4 py-8 sm:px-6 sm:py-10">
+    <div className="min-h-screen bg-MojaSchoolr-background px-4 py-8 sm:px-6 sm:py-10">
       <div className="mx-auto w-full max-w-2xl">
         <div className="mb-5">
           <button
             type="button"
             onClick={() => navigate("/login")}
-            className="inline-flex items-center gap-2 text-sm font-medium text-wiser-text-secondary transition hover:text-wiser-700"
+            className="inline-flex items-center gap-2 text-sm font-medium text-MojaSchoolr-text-secondary transition hover:text-MojaSchoolr-700"
           >
             <ArrowLeft size={15} />
             Back to sign in
           </button>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-wiser-border bg-white shadow-sm">
+        <div className="overflow-hidden rounded-2xl border border-MojaSchoolr-border bg-white shadow-sm">
           {/* Header */}
-          <div className="border-b border-wiser-border px-6 py-6 sm:px-8">
+          <div className="border-b border-MojaSchoolr-border px-6 py-6 sm:px-8">
             <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-wiser-50 text-wiser-600">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-MojaSchoolr-50 text-MojaSchoolr-600">
                 <Building2 size={22} />
               </div>
 
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-wiser-500">
-                  WISE school onboarding
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-MojaSchoolr-500">
+                  MojaSchool school onboarding
                 </p>
 
-                <h1 className="mt-2 text-xl font-semibold tracking-tight text-wiser-text sm:text-2xl">
+                <h1 className="mt-2 text-xl font-semibold tracking-tight text-MojaSchoolr-text sm:text-2xl">
                   Request access for your school
                 </h1>
 
-                <p className="mt-2 max-w-xl text-sm leading-6 text-wiser-text-secondary">
+                <p className="mt-2 max-w-xl text-sm leading-6 text-MojaSchoolr-text-secondary">
                   Tell us about your school. Your request will be reviewed by
-                  a WISE administrator before the school workspace is
+                  a MojaSchool administrator before the school workspace is
                   activated.
                 </p>
               </div>
@@ -323,11 +323,11 @@ export default function SetupSchool() {
             {/* School information */}
             <section>
               <div className="mb-4">
-                <h2 className="text-sm font-semibold text-wiser-text">
+                <h2 className="text-sm font-semibold text-MojaSchoolr-text">
                   School information
                 </h2>
 
-                <p className="mt-1 text-xs text-wiser-text-muted">
+                <p className="mt-1 text-xs text-MojaSchoolr-text-muted">
                   Basic information about the school you want to register.
                 </p>
               </div>
@@ -353,9 +353,9 @@ export default function SetupSchool() {
             </section>
 
             {/* Location */}
-            <section className="border-t border-wiser-border pt-6">
+            <section className="border-t border-MojaSchoolr-border pt-6">
               <div className="mb-4">
-                <h2 className="text-sm font-semibold text-wiser-text">
+                <h2 className="text-sm font-semibold text-MojaSchoolr-text">
                   Location
                 </h2>
               </div>
@@ -381,7 +381,7 @@ export default function SetupSchool() {
               </div>
 
               <div className="mt-5">
-                <label className="mb-1.5 block text-sm font-medium text-wiser-text-secondary">
+                <label className="mb-1.5 block text-sm font-medium text-MojaSchoolr-text-secondary">
                   Address
                 </label>
 
@@ -393,15 +393,15 @@ export default function SetupSchool() {
                   rows={3}
                   placeholder="School address"
                   disabled={loading}
-                  className="w-full rounded-lg border border-wiser-border bg-white px-3 py-2.5 text-sm text-wiser-text outline-none transition placeholder:text-slate-400 focus:border-wiser-500 focus:ring-2 focus:ring-wiser-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+                  className="w-full rounded-lg border border-MojaSchoolr-border bg-white px-3 py-2.5 text-sm text-MojaSchoolr-text outline-none transition placeholder:text-slate-400 focus:border-MojaSchoolr-500 focus:ring-2 focus:ring-MojaSchoolr-100 disabled:cursor-not-allowed disabled:bg-slate-50"
                 />
               </div>
             </section>
 
             {/* Contact */}
-            <section className="border-t border-wiser-border pt-6">
+            <section className="border-t border-MojaSchoolr-border pt-6">
               <div className="mb-4">
-                <h2 className="text-sm font-semibold text-wiser-text">
+                <h2 className="text-sm font-semibold text-MojaSchoolr-text">
                   School contact
                 </h2>
               </div>
@@ -430,14 +430,14 @@ export default function SetupSchool() {
             </section>
 
             {/* Applicant role */}
-            <section className="border-t border-wiser-border pt-6">
+            <section className="border-t border-MojaSchoolr-border pt-6">
               <div className="mb-4">
-                <h2 className="text-sm font-semibold text-wiser-text">
+                <h2 className="text-sm font-semibold text-MojaSchoolr-text">
                   Your role
                 </h2>
 
-                <p className="mt-1 text-xs leading-5 text-wiser-text-muted">
-                  Tell WISE which school role you are requesting. WISE will
+                <p className="mt-1 text-xs leading-5 text-MojaSchoolr-text-muted">
+                  Tell MojaSchool which school role you are requesting. MojaSchool will
                   review and assign the final role.
                 </p>
               </div>
@@ -452,20 +452,20 @@ export default function SetupSchool() {
             </section>
 
             {/* Process */}
-            <div className="rounded-xl border border-wiser-border bg-wiser-50/60 px-4 py-4">
+            <div className="rounded-xl border border-MojaSchoolr-border bg-MojaSchoolr-50/60 px-4 py-4">
               <div className="flex items-start gap-3">
                 <CheckCircle2
                   size={17}
-                  className="mt-0.5 shrink-0 text-wiser-600"
+                  className="mt-0.5 shrink-0 text-MojaSchoolr-600"
                 />
 
                 <div>
-                  <p className="text-sm font-semibold text-wiser-text">
+                  <p className="text-sm font-semibold text-MojaSchoolr-text">
                     What happens after you submit?
                   </p>
 
-                  <p className="mt-1 text-sm leading-6 text-wiser-text-secondary">
-                    Your request is sent to WISE for review. Once approved,
+                  <p className="mt-1 text-sm leading-6 text-MojaSchoolr-text-secondary">
+                    Your request is sent to MojaSchool for review. Once approved,
                     your school workspace will be activated and your assigned
                     role will determine your access.
                   </p>
@@ -476,7 +476,7 @@ export default function SetupSchool() {
             <button
               type="submit"
               disabled={loading}
-              className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-wiser-600 px-4 text-sm font-semibold text-white transition hover:bg-wiser-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wiser-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-MojaSchoolr-600 px-4 text-sm font-semibold text-white transition hover:bg-MojaSchoolr-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-MojaSchoolr-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? (
                 <>
@@ -509,30 +509,30 @@ function PendingApplicationView({
   onReturnToLogin: () => void;
 }) {
   return (
-    <div className="min-h-screen bg-wiser-background px-4 py-8 sm:px-6 sm:py-10">
+    <div className="min-h-screen bg-MojaSchoolr-background px-4 py-8 sm:px-6 sm:py-10">
       <div className="mx-auto w-full max-w-2xl">
-        <div className="overflow-hidden rounded-2xl border border-wiser-border bg-white shadow-sm">
-          <div className="border-b border-wiser-border px-6 py-7 sm:px-8">
+        <div className="overflow-hidden rounded-2xl border border-MojaSchoolr-border bg-white shadow-sm">
+          <div className="border-b border-MojaSchoolr-border px-6 py-7 sm:px-8">
             <div className="flex items-start gap-4">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
                 <CheckCircle2 size={22} />
               </div>
 
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-wiser-500">
-                  WISE school onboarding
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-MojaSchoolr-500">
+                  MojaSchool school onboarding
                 </p>
 
-                <h1 className="mt-2 text-xl font-semibold tracking-tight text-wiser-text sm:text-2xl">
+                <h1 className="mt-2 text-xl font-semibold tracking-tight text-MojaSchoolr-text sm:text-2xl">
                   {justSubmitted
                     ? "Your request has been submitted"
                     : "Your school request is being reviewed"}
                 </h1>
 
-                <p className="mt-2 text-sm leading-6 text-wiser-text-secondary">
+                <p className="mt-2 text-sm leading-6 text-MojaSchoolr-text-secondary">
                   {justSubmitted
-                    ? "WISE has received your school information. A WISE administrator will review your request before your workspace is activated."
-                    : "WISE has received your request. A WISE administrator is reviewing the school information and requested role."}
+                    ? "MojaSchool has received your school information. A MojaSchool administrator will review your request before your workspace is activated."
+                    : "MojaSchool has received your request. A MojaSchool administrator is reviewing the school information and requested role."}
                 </p>
               </div>
             </div>
@@ -548,14 +548,14 @@ function PendingApplicationView({
               </div>
             )}
 
-            <div className="rounded-xl border border-wiser-border bg-wiser-50/60 p-5">
+            <div className="rounded-xl border border-MojaSchoolr-border bg-MojaSchoolr-50/60 p-5">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-wiser-text-muted">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-MojaSchoolr-text-muted">
                     Application status
                   </p>
 
-                  <p className="mt-1 text-sm font-semibold text-wiser-text">
+                  <p className="mt-1 text-sm font-semibold text-MojaSchoolr-text">
                     {APPLICATION_STATUS_LABELS[
                       application.status
                     ] ?? application.status}
@@ -599,13 +599,13 @@ function PendingApplicationView({
               />
             </div>
 
-            <div className="rounded-xl border border-dashed border-wiser-border px-4 py-4">
-              <p className="text-sm font-medium text-wiser-text">
+            <div className="rounded-xl border border-dashed border-MojaSchoolr-border px-4 py-4">
+              <p className="text-sm font-medium text-MojaSchoolr-text">
                 What happens next?
               </p>
 
-              <p className="mt-1 text-sm leading-6 text-wiser-text-secondary">
-                WISE will review the request. Once approved, the school will
+              <p className="mt-1 text-sm leading-6 text-MojaSchoolr-text-secondary">
+                MojaSchool will review the request. Once approved, the school will
                 be activated and your assigned school role will determine
                 which features you can access.
               </p>
@@ -614,7 +614,7 @@ function PendingApplicationView({
             <button
               type="button"
               onClick={onReturnToLogin}
-              className="h-11 w-full rounded-lg border border-wiser-border bg-white px-4 text-sm font-semibold text-wiser-text transition hover:bg-wiser-50"
+              className="h-11 w-full rounded-lg border border-MojaSchoolr-border bg-white px-4 text-sm font-semibold text-MojaSchoolr-text transition hover:bg-MojaSchoolr-50"
             >
               Return to sign in
             </button>
@@ -646,7 +646,7 @@ function Field({
 }) {
   return (
     <div>
-      <label className="mb-1.5 block text-sm font-medium text-wiser-text-secondary">
+      <label className="mb-1.5 block text-sm font-medium text-MojaSchoolr-text-secondary">
         {label}
         {required && <span className="ml-1 text-red-500">*</span>}
       </label>
@@ -656,7 +656,7 @@ function Field({
           <Icon
             size={16}
             aria-hidden="true"
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-wiser-text-muted"
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-MojaSchoolr-text-muted"
           />
         )}
 
@@ -670,8 +670,8 @@ function Field({
           required={required}
           disabled={disabled}
           className={[
-            "h-11 w-full rounded-lg border border-wiser-border bg-white pr-3 text-sm text-wiser-text outline-none transition",
-            "placeholder:text-slate-400 focus:border-wiser-500 focus:ring-2 focus:ring-wiser-100",
+            "h-11 w-full rounded-lg border border-MojaSchoolr-border bg-white pr-3 text-sm text-MojaSchoolr-text outline-none transition",
+            "placeholder:text-slate-400 focus:border-MojaSchoolr-500 focus:ring-2 focus:ring-MojaSchoolr-100",
             "disabled:cursor-not-allowed disabled:bg-slate-50",
             Icon ? "pl-9" : "pl-3",
           ].join(" ")}
@@ -699,7 +699,7 @@ function SelectField({
 }) {
   return (
     <div>
-      <label className="mb-1.5 block text-sm font-medium text-wiser-text-secondary">
+      <label className="mb-1.5 block text-sm font-medium text-MojaSchoolr-text-secondary">
         {label}
       </label>
 
@@ -707,7 +707,7 @@ function SelectField({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         disabled={disabled}
-        className="h-11 w-full rounded-lg border border-wiser-border bg-white px-3 text-sm text-wiser-text outline-none transition focus:border-wiser-500 focus:ring-2 focus:ring-wiser-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+        className="h-11 w-full rounded-lg border border-MojaSchoolr-border bg-white px-3 text-sm text-MojaSchoolr-text outline-none transition focus:border-MojaSchoolr-500 focus:ring-2 focus:ring-MojaSchoolr-100 disabled:cursor-not-allowed disabled:bg-slate-50"
       >
         {options.map((option) => (
           <option
@@ -732,13 +732,13 @@ function InfoItem({
   value: string | null;
 }) {
   return (
-    <div className="rounded-xl border border-wiser-border bg-white p-4">
-      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-wiser-text-muted">
+    <div className="rounded-xl border border-MojaSchoolr-border bg-white p-4">
+      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-MojaSchoolr-text-muted">
         <Icon size={14} />
         {label}
       </div>
 
-      <p className="mt-2 break-words text-sm font-medium text-wiser-text">
+      <p className="mt-2 break-words text-sm font-medium text-MojaSchoolr-text">
         {value || "—"}
       </p>
     </div>

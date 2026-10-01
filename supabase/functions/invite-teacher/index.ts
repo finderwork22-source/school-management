@@ -87,7 +87,7 @@ async function findAuthUserByEmail(
     }
 
     const match = data.users.find(
-      (candidate) =>
+      (candidate: { email?: string }) =>
         (candidate.email ?? "").trim().toLowerCase() === email,
     );
 

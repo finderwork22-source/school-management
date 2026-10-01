@@ -56,8 +56,8 @@ export default function PostAuthRedirect() {
     return (
       <div className="flex min-h-[60vh] items-center justify-center px-6">
         <div className="text-center">
-          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-wiser-200 border-t-wiser-600" />
-          <p className="mt-3 text-sm text-wiser-text-secondary">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-MojaSchoolr-200 border-t-MojaSchoolr-600" />
+          <p className="mt-3 text-sm text-MojaSchoolr-text-secondary">
             Checking your school access...
           </p>
         </div>
@@ -73,16 +73,16 @@ export default function PostAuthRedirect() {
     return (
       <div className="flex min-h-[60vh] items-center justify-center px-6">
         <div className="w-full max-w-md rounded-2xl border border-red-200 bg-white p-6 text-center shadow-sm">
-          <h1 className="text-lg font-semibold text-wiser-text">
+          <h1 className="text-lg font-semibold text-MojaSchoolr-text">
             We could not verify your school access
           </h1>
-          <p className="mt-2 text-sm leading-6 text-wiser-text-secondary">
+          <p className="mt-2 text-sm leading-6 text-MojaSchoolr-text-secondary">
             {error}
           </p>
           <button
             type="button"
             onClick={() => window.location.reload()}
-            className="mt-5 inline-flex h-10 items-center justify-center rounded-lg bg-wiser-600 px-4 text-sm font-semibold text-white transition hover:bg-wiser-700"
+            className="mt-5 inline-flex h-10 items-center justify-center rounded-lg bg-MojaSchoolr-600 px-4 text-sm font-semibold text-white transition hover:bg-MojaSchoolr-700"
           >
             Try again
           </button>

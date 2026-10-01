@@ -3,7 +3,7 @@ import type { FormEvent } from "react";
 import { Eye, EyeOff, LockKeyhole, Mail, User } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
-import WiserLogo from "../assets/wiser-logo-cropped.png";
+
 import { signUp } from "../lib/auth";
 
 export default function SignUp() {
@@ -56,20 +56,18 @@ export default function SignUp() {
   }
 
   return (
-    <div className="min-h-screen bg-wiser-background lg:grid lg:grid-cols-[minmax(0,1fr)_520px]">
+    <div className="min-h-screen bg-MojaSchoolr-background lg:grid lg:grid-cols-[minmax(0,1fr)_520px]">
       {/* Brand panel */}
-      <section className="hidden min-h-screen bg-wiser-900 px-10 py-10 text-white lg:flex lg:items-center lg:justify-center xl:px-16">
+      <section className="hidden min-h-screen bg-MojaSchoolr-900 px-10 py-10 text-white lg:flex lg:items-center lg:justify-center xl:px-16">
         <div className="w-full max-w-xl">
-          <div className="inline-flex h-16 w-60 items-center overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-white/20">
-            <img
-              src={WiserLogo}
-              alt="WISE"
-              className="h-auto w-[180px]"
-            />
-          </div>
+          <img
+            src="/MojaSchool-white.svg"
+            alt="MojaSchool"
+            className="h-auto w-[180px]"
+          />
 
-          <div className="mt-14 max-w-lg">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-wiser-200">
+          <div className="mt-8 max-w-lg">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-MojaSchoolr-200">
               School management
             </p>
 
@@ -77,8 +75,8 @@ export default function SignUp() {
               Start managing your school smarter.
             </h1>
 
-            <p className="mt-6 max-w-lg text-base leading-7 text-wiser-100">
-              Create your WISE school workspace and bring students, teachers,
+            <p className="mt-6 max-w-lg text-base leading-7 text-MojaSchoolr-100">
+              Create your MojaSchool workspace and bring students, teachers,
               academics and administration together in one place.
             </p>
           </div>
@@ -90,21 +88,19 @@ export default function SignUp() {
         <div className="w-full max-w-sm">
           {/* Mobile logo */}
           <div className="mb-8 lg:hidden">
-            <div className="h-14 w-52 overflow-hidden rounded-xl bg-white ring-1 ring-wiser-border">
-              <img
-                src={WiserLogo}
-                alt="WISE"
-                className="h-auto w-[170px]"
-              />
-            </div>
+            <img
+              src="/MojaSchool-white.svg"
+              alt="MojaSchool"
+              className="h-auto w-[180px]"
+            />
           </div>
 
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-wiser-text">
-              Create your WISE account
+            <h1 className="text-2xl font-semibold tracking-tight text-MojaSchoolr-text">
+              Create your MojaSchool account
             </h1>
 
-            <p className="mt-2 text-sm text-wiser-text-secondary">
+            <p className="mt-2 text-sm text-MojaSchoolr-text-secondary">
               Set up your administrator account to get started.
             </p>
           </div>
@@ -137,7 +133,7 @@ export default function SignUp() {
             <div>
               <label
                 htmlFor="signup-email"
-                className="mb-1.5 block text-sm font-medium text-wiser-text"
+                className="mb-1.5 block text-sm font-medium text-MojaSchoolr-text"
               >
                 Email
               </label>
@@ -146,7 +142,7 @@ export default function SignUp() {
                 <Mail
                   size={17}
                   aria-hidden="true"
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-wiser-text-muted"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-MojaSchoolr-text-muted"
                 />
 
                 <input
@@ -157,7 +153,7 @@ export default function SignUp() {
                   placeholder="you@school.com"
                   autoComplete="email"
                   required
-                  className="h-11 w-full rounded-lg border border-wiser-border bg-white pl-10 pr-4 text-sm text-wiser-text outline-none transition placeholder:text-slate-400 focus:border-wiser-500 focus:ring-2 focus:ring-wiser-100"
+                  className="h-11 w-full rounded-lg border border-MojaSchoolr-border bg-white pl-10 pr-4 text-sm text-MojaSchoolr-text outline-none transition placeholder:text-slate-400 focus:border-MojaSchoolr-500 focus:ring-2 focus:ring-MojaSchoolr-100"
                 />
               </div>
             </div>
@@ -165,7 +161,7 @@ export default function SignUp() {
             <div>
               <label
                 htmlFor="signup-password"
-                className="mb-1.5 block text-sm font-medium text-wiser-text"
+                className="mb-1.5 block text-sm font-medium text-MojaSchoolr-text"
               >
                 Password
               </label>
@@ -174,7 +170,7 @@ export default function SignUp() {
                 <LockKeyhole
                   size={17}
                   aria-hidden="true"
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-wiser-text-muted"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-MojaSchoolr-text-muted"
                 />
 
                 <input
@@ -186,14 +182,14 @@ export default function SignUp() {
                   autoComplete="new-password"
                   minLength={6}
                   required
-                  className="h-11 w-full rounded-lg border border-wiser-border bg-white pl-10 pr-11 text-sm text-wiser-text outline-none transition placeholder:text-slate-400 focus:border-wiser-500 focus:ring-2 focus:ring-wiser-100"
+                  className="h-11 w-full rounded-lg border border-MojaSchoolr-border bg-white pl-10 pr-11 text-sm text-MojaSchoolr-text outline-none transition placeholder:text-slate-400 focus:border-MojaSchoolr-500 focus:ring-2 focus:ring-MojaSchoolr-100"
                 />
 
                 <button
                   type="button"
                   onClick={() => setShowPassword((value) => !value)}
                   aria-label={showPassword ? "Hide password" : "Show password"}
-                  className="absolute right-2.5 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-wiser-text-muted transition hover:bg-wiser-50 hover:text-wiser-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wiser-500 focus-visible:ring-offset-1"
+                  className="absolute right-2.5 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-MojaSchoolr-text-muted transition hover:bg-MojaSchoolr-50 hover:text-MojaSchoolr-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-MojaSchoolr-500 focus-visible:ring-offset-1"
                 >
                   {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
                 </button>
@@ -203,17 +199,17 @@ export default function SignUp() {
             <button
               type="submit"
               disabled={loading}
-              className="flex h-11 w-full items-center justify-center rounded-lg bg-wiser-600 text-sm font-semibold text-white transition hover:bg-wiser-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wiser-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex h-11 w-full items-center justify-center rounded-lg bg-MojaSchoolr-600 text-sm font-semibold text-white transition hover:bg-MojaSchoolr-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-MojaSchoolr-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? "Creating account..." : "Create account"}
             </button>
           </form>
 
-          <p className="pt-1 mt-6 text-center text-sm text-wiser-text-secondary">
+          <p className="pt-1 mt-6 text-center text-sm text-MojaSchoolr-text-secondary">
             Already have an account?{" "}
             <Link
               to="/login"
-              className="font-medium text-wiser-600 transition hover:text-wiser-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wiser-500 focus-visible:ring-offset-2"
+              className="font-medium text-MojaSchoolr-600 transition hover:text-MojaSchoolr-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-MojaSchoolr-500 focus-visible:ring-offset-2"
             >
               Sign in
             </Link>
@@ -239,7 +235,7 @@ function Field({
 }) {
   return (
     <div>
-      <label className="mb-1.5 block text-sm font-medium text-wiser-text">
+      <label className="mb-1.5 block text-sm font-medium text-MojaSchoolr-text">
         {label}
       </label>
 
@@ -247,7 +243,7 @@ function Field({
         <User
           size={16}
           aria-hidden="true"
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-wiser-text-muted"
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-MojaSchoolr-text-muted"
         />
 
         <input
@@ -256,7 +252,7 @@ function Field({
           placeholder={placeholder}
           autoComplete={label === "First name" ? "given-name" : "family-name"}
           required={required}
-          className="h-11 w-full rounded-lg border border-wiser-border bg-white pl-10 pr-3 text-sm text-wiser-text outline-none transition placeholder:text-slate-400 focus:border-wiser-500 focus:ring-2 focus:ring-wiser-100"
+          className="h-11 w-full rounded-lg border border-MojaSchoolr-border bg-white pl-10 pr-3 text-sm text-MojaSchoolr-text outline-none transition placeholder:text-slate-400 focus:border-MojaSchoolr-500 focus:ring-2 focus:ring-MojaSchoolr-100"
         />
       </div>
     </div>
