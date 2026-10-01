@@ -5,6 +5,7 @@ import {
   Bell,
   CalendarDays,
   ChevronDown,
+  Clock3,
   Edit3,
   Eye,
   FileText,
@@ -77,6 +78,7 @@ interface AnnouncementForm {
   class_id: string;
   publish_date: string;
   expiry_date: string;
+  publish_mode: "now" | "schedule";
 }
 
 const emptyForm: AnnouncementForm = {
@@ -90,6 +92,7 @@ const emptyForm: AnnouncementForm = {
   class_id: "",
   publish_date: "",
   expiry_date: "",
+  publish_mode: "now",
 };
 
 function formatDate(value: string | null) {
@@ -142,12 +145,32 @@ function toLocalInputValue(value: string | null) {
   return local.toISOString().slice(0, 16);
 }
 
+type AnnouncementDisplayStatus =
+  | Announcement["status"]
+  | "Scheduled";
+
+function isAnnouncementScheduled(announcement: Announcement) {
+  return (
+    announcement.status === "Published" &&
+    Boolean(announcement.publish_date) &&
+    new Date(announcement.publish_date as string).getTime() > Date.now()
+  );
+}
+
+function getAnnouncementDisplayStatus(announcement: Announcement) {
+  return isAnnouncementScheduled(announcement)
+    ? "Scheduled"
+    : announcement.status;
+}
+
 function getStatusClasses(
-  status: Announcement["status"],
+  status: AnnouncementDisplayStatus,
 ) {
   switch (status) {
     case "Published":
       return "bg-green-50 text-green-700 border-green-200";
+    case "Scheduled":
+      return "bg-indigo-50 text-indigo-700 border-indigo-200";
     case "Archived":
       return "bg-gray-100 text-gray-600 border-gray-200";
     default:
@@ -279,6 +302,55 @@ export default function Announcements() {
       setError(null);
 
       const schoolId = school.id;
+
+      // Parent accounts only need the announcement feed. Avoid querying
+      // academic setup tables that are not required by the parent portal.
+      if (role === "Parent") {
+        const {
+          data,
+          error: parentAnnouncementsError,
+        } = await supabase.rpc("get_my_parent_announcements");
+
+        if (parentAnnouncementsError) {
+          throw parentAnnouncementsError;
+        }
+
+        const parentAnnouncements = (
+          (data ?? []) as Announcement[]
+        ).filter((announcement) => {
+          if (
+            !["All School", "Parents"].includes(
+              announcement.audience_type,
+            )
+          ) {
+            return false;
+          }
+
+          return true;
+        });
+
+        setAnnouncements(parentAnnouncements);
+
+        const requestedAnnouncementId =
+          searchParams.get("id");
+
+        if (requestedAnnouncementId) {
+          const requestedAnnouncement =
+            parentAnnouncements.find(
+              (announcement) =>
+                announcement.id === requestedAnnouncementId,
+            );
+
+          if (requestedAnnouncement) {
+            setViewingAnnouncement(
+              requestedAnnouncement,
+            );
+          }
+        }
+
+        setLoading(false);
+        return;
+      }
 
       let announcementsQuery = supabase
         .from("announcements")
@@ -526,7 +598,12 @@ export default function Announcements() {
     return {
       total: announcements.length,
       published: announcements.filter(
-        (item) => item.status === "Published",
+        (item) =>
+          item.status === "Published" &&
+          !isAnnouncementScheduled(item),
+      ).length,
+      scheduled: announcements.filter(
+        (item) => isAnnouncementScheduled(item),
       ).length,
       drafts: announcements.filter(
         (item) => item.status === "Draft",
@@ -579,6 +656,9 @@ export default function Announcements() {
       expiry_date: toLocalInputValue(
         announcement.expiry_date,
       ),
+      publish_mode: isAnnouncementScheduled(announcement)
+        ? "schedule"
+        : "now",
     });
 
     setShowModal(true);
@@ -627,6 +707,18 @@ export default function Announcements() {
     });
   }
 
+  function handlePublishModeChange(
+    mode: "now" | "schedule",
+  ) {
+    updateForm({
+      publish_mode: mode,
+      publish_date:
+        mode === "schedule"
+          ? form.publish_date
+          : "",
+    });
+  }
+
   async function saveAnnouncement(
     publishOverride?: boolean,
   ) {
@@ -667,11 +759,51 @@ export default function Announcements() {
       return;
     }
 
+    const status =
+      publishOverride === true
+        ? "Published"
+        : form.status;
+
     if (
+      status === "Published" &&
+      form.publish_mode === "schedule" &&
+      !form.publish_date
+    ) {
+      setError(
+        "Please choose a date and time for the scheduled announcement.",
+      );
+      return;
+    }
+
+    const scheduledPublishDate =
+      status === "Published" &&
+      form.publish_mode === "schedule" &&
+      form.publish_date
+        ? new Date(form.publish_date)
+        : null;
+
+    if (scheduledPublishDate) {
+      if (Number.isNaN(scheduledPublishDate.getTime())) {
+        setError("Please choose a valid scheduled publish date and time.");
+        return;
+      }
+
+      if (scheduledPublishDate.getTime() <= Date.now()) {
+        setError(
+          "Scheduled publish time must be in the future. Choose Publish Now for immediate visibility.",
+        );
+        return;
+      }
+    }
+
+    const publishDateForValidation =
+      scheduledPublishDate ?? new Date();
+
+    if (
+      status === "Published" &&
       form.expiry_date &&
-      form.publish_date &&
       new Date(form.expiry_date) <
-        new Date(form.publish_date)
+        publishDateForValidation
     ) {
       setError(
         "Expiry date cannot be earlier than the publish date.",
@@ -682,11 +814,6 @@ export default function Announcements() {
     try {
       setSaving(true);
       setError(null);
-
-      const status =
-        publishOverride === true
-          ? "Published"
-          : form.status;
 
       const payload = {
         school_id: school.id,
@@ -706,13 +833,11 @@ export default function Announcements() {
             ? form.class_id || null
             : null,
         publish_date:
-          form.publish_date
-            ? new Date(
-                form.publish_date,
-              ).toISOString()
-            : status === "Published"
-              ? new Date().toISOString()
-              : null,
+          status === "Published"
+            ? form.publish_mode === "schedule"
+              ? new Date(form.publish_date).toISOString()
+              : new Date().toISOString()
+            : null,
         expiry_date:
           form.expiry_date
             ? new Date(
@@ -735,6 +860,7 @@ export default function Announcements() {
         if (updateError) {
           throw updateError;
         }
+
       } else {
         const { data, error: insertError } =
           await supabase
@@ -811,8 +937,7 @@ export default function Announcements() {
             status,
             publish_date:
               status === "Published"
-                ? announcement.publish_date ??
-                  new Date().toISOString()
+                ? new Date().toISOString()
                 : announcement.publish_date,
           })
           .eq("id", announcement.id)
@@ -830,13 +955,13 @@ export default function Announcements() {
                 status,
                 publish_date:
                   status === "Published"
-                    ? item.publish_date ??
-                      new Date().toISOString()
+                    ? new Date().toISOString()
                     : item.publish_date,
               }
             : item,
         ),
       );
+
     } catch (err) {
       console.error(
         "Error updating announcement:",
@@ -962,7 +1087,7 @@ export default function Announcements() {
       )}
 
       {canManageAnnouncements && (
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
           <div className="rounded-xl border border-gray-200 bg-white p-5">
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-500">
@@ -1008,12 +1133,26 @@ export default function Announcements() {
           <div className="rounded-xl border border-gray-200 bg-white p-5">
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-500">
+                Scheduled
+              </span>
+
+              <Clock3 className="h-5 w-5 text-gray-400" />
+            </div>
+
+            <div className="mt-2 text-2xl font-bold text-gray-900">
+              {summary.scheduled}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-gray-200 bg-white p-5">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-500">
                 Urgent
               </span>
-  
+
               <Bell className="h-5 w-5 text-gray-400" />
             </div>
-  
+
             <div className="mt-2 text-2xl font-bold text-gray-900">
               {summary.urgent}
             </div>
@@ -1204,10 +1343,10 @@ export default function Announcements() {
 
                         <span
                           className={`rounded-full border px-2.5 py-1 text-xs font-medium ${getStatusClasses(
-                            announcement.status,
+                            getAnnouncementDisplayStatus(announcement),
                           )}`}
                         >
-                          {announcement.status}
+                          {getAnnouncementDisplayStatus(announcement)}
                         </span>
 
                         <span
@@ -1239,7 +1378,9 @@ export default function Announcements() {
                         <div className="flex items-center gap-1.5">
                           <CalendarDays className="h-3.5 w-3.5" />
 
-                          Published:{" "}
+                          {isAnnouncementScheduled(announcement)
+                            ? "Scheduled for: "
+                            : "Published: "}
                           {formatDate(
                             announcement.publish_date,
                           )}
@@ -1594,7 +1735,7 @@ export default function Announcements() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div>
                     <label className="mb-2 block text-sm font-medium text-gray-700">
                       Priority
@@ -1627,26 +1768,6 @@ export default function Announcements() {
 
                   <div>
                     <label className="mb-2 block text-sm font-medium text-gray-700">
-                      Publish Date
-                    </label>
-
-                    <input
-                      type="datetime-local"
-                      value={
-                        form.publish_date
-                      }
-                      onChange={(event) =>
-                        updateForm({
-                          publish_date:
-                            event.target.value,
-                        })
-                      }
-                      className="h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm outline-none focus:border-gray-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-gray-700">
                       Expiry Date
                     </label>
 
@@ -1663,8 +1784,94 @@ export default function Announcements() {
                       }
                       className="h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm outline-none focus:border-gray-500"
                     />
+
+                    <p className="mt-1 text-xs text-gray-500">
+                      Optional. Leave blank if the announcement should not expire.
+                    </p>
                   </div>
                 </div>
+
+                {form.status === "Published" && (
+                  <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                    <div className="flex items-start gap-3">
+                      <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-gray-500" />
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Publish Timing
+                        </label>
+                        <p className="mt-1 text-xs text-gray-500">
+                          Choose whether parents and staff can see this announcement immediately or at a specific time.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handlePublishModeChange("now")
+                        }
+                        className={`rounded-lg border px-4 py-3 text-left transition ${
+                          form.publish_mode === "now"
+                            ? "border-gray-900 bg-white shadow-sm"
+                            : "border-gray-200 bg-white hover:bg-gray-50"
+                        }`}
+                      >
+                        <div className="font-medium text-gray-900">
+                          Publish Now
+                        </div>
+                        <div className="mt-1 text-xs text-gray-500">
+                          Make it visible as soon as you save it.
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handlePublishModeChange("schedule")
+                        }
+                        className={`rounded-lg border px-4 py-3 text-left transition ${
+                          form.publish_mode === "schedule"
+                            ? "border-gray-900 bg-white shadow-sm"
+                            : "border-gray-200 bg-white hover:bg-gray-50"
+                        }`}
+                      >
+                        <div className="font-medium text-gray-900">
+                          Schedule for Later
+                        </div>
+                        <div className="mt-1 text-xs text-gray-500">
+                          Keep it hidden until the selected date and time.
+                        </div>
+                      </button>
+                    </div>
+
+                    {form.publish_mode === "schedule" && (
+                      <div className="mt-4">
+                        <label className="mb-2 block text-sm font-medium text-gray-700">
+                          Scheduled Publish Date & Time
+                        </label>
+                        <input
+                          type="datetime-local"
+                          value={form.publish_date}
+                          min={toLocalInputValue(
+                            new Date(
+                              Date.now() + 60 * 1000,
+                            ).toISOString(),
+                          )}
+                          onChange={(event) =>
+                            updateForm({
+                              publish_date: event.target.value,
+                            })
+                          }
+                          className="h-11 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm outline-none focus:border-gray-500"
+                        />
+                        <p className="mt-1 text-xs text-gray-500">
+                          The announcement will automatically become visible at this time.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div>
                   <label className="mb-2 block text-sm font-medium text-gray-700">
@@ -1769,9 +1976,13 @@ export default function Announcements() {
 
                 {form.status ===
                 "Published"
-                  ? editingAnnouncement
-                    ? "Update & Publish"
-                    : "Publish Announcement"
+                  ? form.publish_mode === "schedule"
+                    ? editingAnnouncement
+                      ? "Update & Schedule"
+                      : "Schedule Announcement"
+                    : editingAnnouncement
+                      ? "Update & Publish"
+                      : "Publish Announcement"
                   : "Save Announcement"}
               </button>
             </div>
@@ -1787,10 +1998,10 @@ export default function Announcements() {
                 <div className="flex flex-wrap items-center gap-2">
                   <span
                     className={`rounded-full border px-2.5 py-1 text-xs font-medium ${getStatusClasses(
-                      viewingAnnouncement.status,
+                      getAnnouncementDisplayStatus(viewingAnnouncement),
                     )}`}
                   >
-                    {viewingAnnouncement.status}
+                    {getAnnouncementDisplayStatus(viewingAnnouncement)}
                   </span>
 
                   <span
