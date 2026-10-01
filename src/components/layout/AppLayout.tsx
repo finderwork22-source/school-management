@@ -19,6 +19,8 @@ import {
   FileBarChart,
   Megaphone,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Bell,
   ShieldCheck,
   History,
@@ -264,9 +266,13 @@ const navigation: NavigationSection[] = [
 function Sidebar({
   mobileOpen,
   onClose,
+  collapsed,
+  onToggleCollapse,
 }: {
   mobileOpen: boolean;
   onClose: () => void;
+  collapsed: boolean;
+  onToggleCollapse: () => void;
 }) {
   const navigate = useNavigate();
   const { membership } = useSchool();
@@ -280,9 +286,9 @@ function Sidebar({
 
   const sidebarContent = (
     <>
-      <div className="flex h-16 shrink-0 items-center border-b border-slate-200 px-4 sm:px-5">
-        <div className="min-w-0">
-          <div className="w-[180px] shrink-0">
+      <div className="flex h-16 shrink-0 items-center border-b border-slate-200 px-3 sm:px-4">
+        <div className={collapsed ? "mx-auto w-10 shrink-0 overflow-hidden" : "min-w-0"}>
+          <div className={collapsed ? "w-[180px] shrink-0" : "w-[180px] shrink-0"}>
             <img
               src="/MojaSchool.svg"
               alt="MojaSchool"
@@ -301,7 +307,7 @@ function Sidebar({
         </button>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-5">
+      <div className={"min-h-0 flex-1 overflow-y-auto overscroll-contain py-5 " + (collapsed ? "px-2" : "px-3")}>
         {navigation.map((section) => {
           if (section.allowedRoles && !section.allowedRoles.includes(role)) {
             return null;
@@ -333,15 +339,39 @@ function Sidebar({
 
           return (
             <div key={section.label} className="mb-6 last:mb-2">
-              <div className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-MojaSchool-text-muted">
-                {section.label}
-              </div>
+              {!collapsed && (
+                <div className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-MojaSchool-text-muted">
+                  {section.label}
+                </div>
+              )}
 
               <nav className="space-y-1">
                 {visibleItems.map((item) => {
                   const Icon = item.icon;
 
                   if (item.children && item.children.length > 0) {
+                    if (collapsed) {
+                      return (
+                        <NavLink
+                          key={item.path}
+                          to={item.path}
+                          end={item.path === "/"}
+                          onClick={onClose}
+                          title={item.label}
+                          className={({ isActive }) =>
+                            [
+                              "flex min-h-11 items-center justify-center rounded-lg px-2 py-2.5 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-MojaSchool-500 focus-visible:ring-offset-1",
+                              isActive
+                                ? "bg-MojaSchool-50 text-MojaSchool-700"
+                                : "text-slate-600 hover:bg-slate-50 hover:text-slate-900",
+                            ].join(" ")
+                          }
+                        >
+                          <Icon size={18} strokeWidth={1.8} />
+                        </NavLink>
+                      );
+                    }
+
                     return (
                       <div key={item.path}>
                         <NavLink
@@ -405,9 +435,11 @@ function Sidebar({
                       to={item.path}
                       end={item.path === "/"}
                       onClick={onClose}
+                      title={collapsed ? item.label : undefined}
                       className={({ isActive }) =>
                         [
-                          "flex min-h-11 items-center gap-3 rounded-lg border-l-2 border-transparent px-3 py-2.5 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-MojaSchool-500 focus-visible:ring-offset-1",
+                          "flex min-h-11 items-center rounded-lg border-l-2 border-transparent py-2.5 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-MojaSchool-500 focus-visible:ring-offset-1",
+                          collapsed ? "justify-center px-2" : "gap-3 px-3",
                           isActive
                             ? "border-MojaSchool-600 bg-MojaSchool-50 text-MojaSchool-700 shadow-sm"
                             : "text-slate-600 hover:border-MojaSchool-200 hover:bg-slate-50 hover:text-slate-900",
@@ -415,7 +447,9 @@ function Sidebar({
                       }
                     >
                       <Icon size={18} strokeWidth={1.8} />
-                      <span className="min-w-0 truncate">{item.label}</span>
+                      {!collapsed && (
+                        <span className="min-w-0 truncate">{item.label}</span>
+                      )}
                     </NavLink>
                   );
                 })}
@@ -425,23 +459,39 @@ function Sidebar({
         })}
       </div>
 
-      <div className="shrink-0 border-t border-slate-200 p-3">
+      <div className={"shrink-0 border-t border-slate-200 p-3 " + (collapsed ? "px-2" : "")}>
         <button
           type="button"
           onClick={() => void handleLogout()}
-          className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-red-50 hover:text-red-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1"
+          title={collapsed ? "Logout" : undefined}
+          className={"flex min-h-11 w-full items-center rounded-lg py-2.5 text-sm font-medium text-slate-600 transition hover:bg-red-50 hover:text-red-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1 " + (collapsed ? "justify-center px-2" : "gap-3 px-3")}
         >
           <LogOut size={18} strokeWidth={1.8} />
-          <span>Logout</span>
+          {!collapsed && <span>Logout</span>}
         </button>
       </div>
+
+      <button
+        type="button"
+        onClick={onToggleCollapse}
+        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        className="absolute -right-3 top-[76px] z-10 hidden h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:text-slate-800 lg:flex"
+      >
+        {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+      </button>
     </>
   );
 
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden h-screen w-64 shrink-0 border-r border-slate-200 bg-white lg:flex lg:flex-col">
+      <aside
+        className={[
+          "relative hidden h-screen shrink-0 border-r border-slate-200 bg-white transition-[width] duration-200 lg:flex lg:flex-col",
+          collapsed ? "w-[78px]" : "w-64",
+        ].join(" ")}
+      >
         {sidebarContent}
       </aside>
 
@@ -1122,6 +1172,7 @@ export default function AppLayout() {
   const allowed = !hasLoadedRole || canAccessPath(role, location.pathname);
 
   const [mobileNavigationOpen, setMobileNavigationOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     setMobileNavigationOpen(false);
@@ -1143,6 +1194,8 @@ export default function AppLayout() {
       <Sidebar
         mobileOpen={mobileNavigationOpen}
         onClose={() => setMobileNavigationOpen(false)}
+        collapsed={sidebarCollapsed}
+        onToggleCollapse={() => setSidebarCollapsed((value) => !value)}
       />
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
