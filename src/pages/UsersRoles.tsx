@@ -26,7 +26,7 @@ type Role =
   | "Principal"
   | "Head of Academics"
   | "Secretary"
-  | "Teacher";
+  | "Librarian";
 
 type MemberStatus = "Active" | "Pending" | "Suspended";
 
@@ -82,9 +82,9 @@ const ROLE_DEFINITIONS: RoleDefinition[] = [
     finance: "Full",
   },
   {
-    role: "Teacher",
-    description: "Teaching, attendance, assessments and student support.",
-    access: ["Students", "Academics", "Attendance", "Assessments"],
+    role: "Librarian",
+    description: "Manages library-related school records and resources.",
+    access: ["Students"],
     finance: "None",
   },
 ];
@@ -94,7 +94,7 @@ const ROLE_OPTIONS: Role[] = [
   "Principal",
   "Head of Academics",
   "Secretary",
-  "Teacher",
+  "Librarian",
 ];
 
 function normalizeRole(value: string): Role {
@@ -106,9 +106,9 @@ function normalizeRole(value: string): Role {
     return "Head of Academics";
   }
   if (normalized === "secretary") return "Secretary";
-  if (normalized === "teacher") return "Teacher";
+  if (normalized === "librarian") return "Librarian";
 
-  return "Teacher";
+  return "Secretary";
 }
 
 function formatDate(value: string) {
@@ -212,7 +212,11 @@ export default function UsersRoles() {
       return;
     }
 
-    setMembers((data ?? []) as SchoolMember[]);
+    setMembers(
+      (data ?? []).filter(
+        (member) => member.role.trim().toLowerCase() !== "teacher",
+      ) as SchoolMember[],
+    );
     setLoading(false);
   }
 
@@ -260,7 +264,7 @@ export default function UsersRoles() {
       Principal: 0,
       "Head of Academics": 0,
       Secretary: 0,
-      Teacher: 0,
+      Librarian: 0,
     };
 
     users.forEach((user) => {
@@ -289,7 +293,7 @@ export default function UsersRoles() {
               </h1>
 
               <p className="mt-1 text-sm text-slate-500">
-                Manage school users and control what each role can access.
+                Manage school staff and control what each role can access.
               </p>
             </div>
           </div>
@@ -324,8 +328,8 @@ export default function UsersRoles() {
         />
 
         <SummaryCard
-          label="Teachers"
-          value={roleCounts.Teacher}
+          label="Librarians"
+          value={roleCounts.Librarian}
           icon={<UserRound size={18} />}
         />
 
@@ -350,7 +354,7 @@ export default function UsersRoles() {
         <div className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h2 className="text-sm font-semibold text-slate-900">
-              School users
+              School staff
             </h2>
 
             <p className="mt-1 text-xs text-slate-500">
@@ -402,7 +406,7 @@ export default function UsersRoles() {
 
             <p className="mx-auto mt-1 max-w-sm text-sm text-slate-500">
               {users.length === 0
-                ? "Invite staff members to give them access to SchoolOS."
+                ? "Invite school staff members to give them access to WISE."
                 : "Try a different search or role filter."}
             </p>
           </div>
@@ -735,7 +739,7 @@ function InviteUserModal({
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<Role>("Teacher");
+  const [role, setRole] = useState<Role>("Librarian");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 

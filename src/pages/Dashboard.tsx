@@ -2782,6 +2782,76 @@ function ActionButton({
 }
 
 
+function LibrarianDashboard() {
+  const navigate = useNavigate();
+
+  return (
+    <div className="mx-auto w-full min-w-0 max-w-[1400px]">
+      <PageHeader
+        eyebrow="Staff dashboard"
+        title="Librarian dashboard"
+        description="Access student information and school communications from one place."
+      />
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="p-5">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+            <Users size={19} />
+          </div>
+          <h2 className="mt-4 text-sm font-semibold text-slate-900">Students</h2>
+          <p className="mt-1 text-sm leading-6 text-slate-500">View student records available to your role.</p>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="mt-4"
+            onClick={() => navigate("/students")}
+          >
+            View students
+            <ArrowUpRight size={15} />
+          </Button>
+        </Card>
+
+        <Card className="p-5">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+            <Megaphone size={19} />
+          </div>
+          <h2 className="mt-4 text-sm font-semibold text-slate-900">Announcements</h2>
+          <p className="mt-1 text-sm leading-6 text-slate-500">Stay up to date with school communications.</p>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="mt-4"
+            onClick={() => navigate("/announcements")}
+          >
+            View announcements
+            <ArrowUpRight size={15} />
+          </Button>
+        </Card>
+
+        <Card className="p-5">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+            <BookOpen size={19} />
+          </div>
+          <h2 className="mt-4 text-sm font-semibold text-slate-900">Profile</h2>
+          <p className="mt-1 text-sm leading-6 text-slate-500">Manage your WISE account information.</p>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="mt-4"
+            onClick={() => navigate("/profile")}
+          >
+            Open profile
+            <ArrowUpRight size={15} />
+          </Button>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const { membership } = useSchool();
   const role = normalizeRole(membership?.role);
@@ -2808,6 +2878,10 @@ export default function Dashboard() {
 
   if (role === "Secretary") {
     return <SecretaryDashboard />;
+  }
+
+  if (role === "Librarian") {
+    return <LibrarianDashboard />;
   }
 
   return <AdminDashboard />;

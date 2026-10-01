@@ -61,6 +61,7 @@ const navigation: NavigationSection[] = [
       "Head of Academics",
       "Secretary",
       "Teacher",
+      "Librarian",
     ],
     items: [
       {
@@ -229,6 +230,7 @@ const navigation: NavigationSection[] = [
       "Head of Academics",
       "Secretary",
       "Teacher",
+      "Librarian",
     ],
     items: [
       {

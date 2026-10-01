@@ -66,7 +66,7 @@ function normalizeRole(value: string) {
     principal: "principal",
     "head of academics": "head_of_academics",
     secretary: "secretary",
-    teacher: "teacher",
+    librarian: "librarian",
   };
 
   return roleMap[normalized] ?? "";
