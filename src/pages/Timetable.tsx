@@ -1133,12 +1133,44 @@ export default function Timetable() {
           setLoading(false);
           return;
         }
-        const { data: teacher, error: teacherError } = await supabase
+        // Resolve the teacher through the Auth-linked user_id first.
+        // Email-only matching can return multiple legacy rows and make
+        // maybeSingle() fail, which previously left the teacher timetable
+        // with no academic year/class options.
+        let teacher: { id: string } | null = null;
+        let teacherError: any = null;
+
+        const teacherByUser = await supabase
           .from("teachers")
           .select("id")
           .eq("school_id", membership.school_id)
-          .ilike("email", user.email)
+          .eq("user_id", user.id)
+          .limit(1)
           .maybeSingle();
+
+        if (teacherByUser.error) {
+          teacherError = teacherByUser.error;
+        } else {
+          teacher = teacherByUser.data;
+        }
+
+        // Legacy-safe fallback for teacher records that have not yet been
+        // linked to Auth. Limit the email match to one row so duplicate
+        // legacy records cannot break the whole timetable page.
+        if (!teacherError && !teacher?.id) {
+          const teacherByEmail = await supabase
+            .from("teachers")
+            .select("id")
+            .eq("school_id", membership.school_id)
+            .ilike("email", user.email)
+            .order("id", { ascending: true })
+            .limit(1)
+            .maybeSingle();
+
+          teacher = teacherByEmail.data;
+          teacherError = teacherByEmail.error;
+        }
+
         if (teacherError) {
           setError(getErrorMessage(teacherError));
           setLoading(false);

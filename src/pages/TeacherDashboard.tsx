@@ -20,6 +20,23 @@ import StatCard from "../components/ui/StatCard";
 import { useSchool } from "../context/SchoolContext";
 import { supabase } from "../lib/supabase";
 
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  if (error && typeof error === "object") {
+    const value = error as { message?: unknown; details?: unknown; hint?: unknown };
+    if (typeof value.message === "string" && value.message.trim()) return value.message;
+    if (typeof value.details === "string" && value.details.trim()) return value.details;
+    if (typeof value.hint === "string" && value.hint.trim()) return value.hint;
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return "An unexpected error occurred.";
+    }
+  }
+  return "An unexpected error occurred.";
+}
+
 interface Teacher {
   id: string;
   teacher_id: string;
@@ -160,11 +177,6 @@ export default function TeacherDashboard() {
   const [error, setError] = useState("");
 
   async function loadDashboard() {
-    if (!school?.id) {
-      setLoading(false);
-      return;
-    }
-
     setLoading(true);
     setError("");
 
@@ -175,26 +187,69 @@ export default function TeacherDashboard() {
       } = await supabase.auth.getUser();
 
       if (userError) throw userError;
-      if (!user?.email) {
-        throw new Error("Your account does not have an email address.");
+      if (!user) throw new Error("You must be signed in to open the teacher dashboard.");
+      if (!user.email) throw new Error("Your account does not have an email address.");
+
+      // Use the authenticated school membership as the source of truth.
+      // This is the same school-membership flow used by the timetable page
+      // and avoids depending only on the AppLayout school context.
+      const { data: membership, error: membershipError } = await supabase
+        .from("school_members")
+        .select("school_id, role")
+        .eq("user_id", user.id)
+        .limit(1)
+        .maybeSingle();
+
+      if (membershipError) throw membershipError;
+      if (!membership?.school_id) {
+        throw new Error("No school is associated with your account.");
       }
 
-      // A teacher email should normally identify one teacher, but duplicate
-      // teacher rows can exist during invitation/re-import workflows. Do not let
-      // PostgREST PGRST116 (multiple rows returned) break the dashboard.
-      // We only need one matching teacher profile for the authenticated account.
-      const { data: teacherRows, error: teacherError } = await supabase
+      const schoolId = membership.school_id;
+
+      // Prefer the direct Auth -> teacher link. Matching by email alone is
+      // unsafe because a school can contain duplicate/legacy teacher emails,
+      // which makes maybeSingle() fail with:
+      // "JSON object requested, multiple (or no) rows returned".
+      let teacherData: any = null;
+      let teacherError: any = null;
+
+      const teacherByUser = await supabase
         .from("teachers")
         .select(
           "id, teacher_id, first_name, middle_name, last_name, email, photo_url, status",
         )
-        .eq("school_id", school.id)
-        .ilike("email", user.email)
-        .limit(1);
+        .eq("school_id", schoolId)
+        .eq("user_id", user.id)
+        .limit(1)
+        .maybeSingle();
+
+      if (teacherByUser.error) {
+        teacherError = teacherByUser.error;
+      } else {
+        teacherData = teacherByUser.data;
+      }
+
+      // Legacy-safe fallback: if the teacher record has not been linked to
+      // Auth yet, use the school email, but never allow duplicate rows to
+      // break the dashboard.
+      if (!teacherError && !teacherData) {
+        const teacherByEmail = await supabase
+          .from("teachers")
+          .select(
+            "id, teacher_id, first_name, middle_name, last_name, email, photo_url, status",
+          )
+          .eq("school_id", schoolId)
+          .ilike("email", user.email)
+          .order("id", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+
+        teacherData = teacherByEmail.data;
+        teacherError = teacherByEmail.error;
+      }
 
       if (teacherError) throw teacherError;
-
-      const teacherData = teacherRows?.[0] ?? null;
 
       if (!teacherData) {
         setTeacher(null);
@@ -203,38 +258,83 @@ export default function TeacherDashboard() {
         setAttendance([]);
         setAssessments([]);
         setStats(initialStats);
-        setError(
-          "Your account is not linked to a teacher profile yet. Please ask the school administrator to make sure your school email matches your teacher record.",
+        throw new Error(
+          `Your account is signed in as ${user.email}, but no teacher profile in this school uses that email. ` +
+            "Make sure the teacher record email matches the invited account email.",
         );
-        setLoading(false);
-        return;
       }
 
       const teacherRecord = teacherData as Teacher;
       setTeacher(teacherRecord);
 
-      const { data: assignmentData, error: assignmentError } = await supabase
+      // Query teacher assignments without embedded PostgREST relationships.
+      // The previous dashboard depended on three relationship joins here;
+      // if one relationship is missing/ambiguous, the whole dashboard failed.
+      const { data: rawAssignments, error: assignmentError } = await supabase
         .from("teacher_assignments")
-        .select(
-          `
-            id,
-            academic_year_id,
-            class_id,
-            subject_id,
-            academic_years ( name ),
-            classes ( name ),
-            subjects ( name )
-          `,
-        )
-        .eq("school_id", school.id)
+        .select("id, academic_year_id, class_id, subject_id")
+        .eq("school_id", schoolId)
         .eq("teacher_id", teacherRecord.id);
 
       if (assignmentError) throw assignmentError;
 
-      const mappedAssignments: Assignment[] = (assignmentData ?? []).map((item: any) => {
-        const year = Array.isArray(item.academic_years) ? item.academic_years[0] : item.academic_years;
-        const schoolClass = Array.isArray(item.classes) ? item.classes[0] : item.classes;
-        const subject = Array.isArray(item.subjects) ? item.subjects[0] : item.subjects;
+      const assignmentRows = rawAssignments ?? [];
+      const classIds = Array.from(
+        new Set(assignmentRows.map((item: any) => item.class_id).filter(Boolean)),
+      );
+      const subjectIds = Array.from(
+        new Set(assignmentRows.map((item: any) => item.subject_id).filter(Boolean)),
+      );
+      const academicYearIds = Array.from(
+        new Set(
+          assignmentRows
+            .map((item: any) => item.academic_year_id)
+            .filter(Boolean),
+        ),
+      );
+
+      const [classesResult, subjectsResult, yearsResult] = await Promise.all([
+        classIds.length > 0
+          ? supabase
+              .from("classes")
+              .select("id, name, academic_year_id")
+              .eq("school_id", schoolId)
+              .in("id", classIds)
+          : Promise.resolve({ data: [], error: null }),
+        subjectIds.length > 0
+          ? supabase
+              .from("subjects")
+              .select("id, name")
+              .eq("school_id", schoolId)
+              .in("id", subjectIds)
+          : Promise.resolve({ data: [], error: null }),
+        academicYearIds.length > 0
+          ? supabase
+              .from("academic_years")
+              .select("id, name, is_active")
+              .eq("school_id", schoolId)
+              .in("id", academicYearIds)
+          : Promise.resolve({ data: [], error: null }),
+      ]);
+
+      if (classesResult.error) throw classesResult.error;
+      if (subjectsResult.error) throw subjectsResult.error;
+      if (yearsResult.error) throw yearsResult.error;
+
+      const classMap = new Map(
+        (classesResult.data ?? []).map((item: any) => [item.id, item]),
+      );
+      const subjectMap = new Map(
+        (subjectsResult.data ?? []).map((item: any) => [item.id, item]),
+      );
+      const yearMap = new Map(
+        (yearsResult.data ?? []).map((item: any) => [item.id, item]),
+      );
+
+      const mappedAssignments: Assignment[] = assignmentRows.map((item: any) => {
+        const schoolClass = classMap.get(item.class_id);
+        const subject = subjectMap.get(item.subject_id);
+        const year = yearMap.get(item.academic_year_id);
 
         return {
           id: item.id,
@@ -249,12 +349,14 @@ export default function TeacherDashboard() {
 
       setAssignments(mappedAssignments);
 
-      const activeYearId =
-        mappedAssignments.find((assignment) => assignment.academic_year_id)?.academic_year_id ?? null;
+      const activeYear =
+        (yearsResult.data ?? []).find((year: any) => year.is_active) ??
+        (yearsResult.data ?? [])[0] ??
+        null;
+      const activeYearId = activeYear?.id ?? null;
 
-      const classIds = Array.from(new Set(mappedAssignments.map((assignment) => assignment.class_id)));
-      const subjectIds = Array.from(new Set(mappedAssignments.map((assignment) => assignment.subject_id)));
-
+      // These are intentionally loaded independently. A problem in an optional
+      // dashboard section should not make the whole teacher dashboard unusable.
       const [
         timetableResult,
         attendanceResult,
@@ -265,17 +367,10 @@ export default function TeacherDashboard() {
         activeYearId
           ? supabase
               .from("timetable_entries")
-              .select(`
-                id,
-                class_id,
-                subject_id,
-                day_of_week,
-                start_time,
-                end_time,
-                classes ( name ),
-                subjects ( name )
-              `)
-              .eq("school_id", school.id)
+              .select(
+                "id, class_id, subject_id, day_of_week, start_time, end_time",
+              )
+              .eq("school_id", schoolId)
               .eq("academic_year_id", activeYearId)
               .eq("teacher_id", teacherRecord.id)
               .order("start_time", { ascending: true })
@@ -285,7 +380,7 @@ export default function TeacherDashboard() {
           ? supabase
               .from("attendance_records")
               .select("id, student_id, class_id, status")
-              .eq("school_id", school.id)
+              .eq("school_id", schoolId)
               .eq("attendance_date", getToday())
               .in("class_id", classIds)
           : Promise.resolve({ data: [], error: null }),
@@ -293,7 +388,7 @@ export default function TeacherDashboard() {
         supabase
           .from("announcements")
           .select("id, title, created_at")
-          .eq("school_id", school.id)
+          .eq("school_id", schoolId)
           .order("created_at", { ascending: false })
           .limit(4),
 
@@ -303,7 +398,7 @@ export default function TeacherDashboard() {
               .select(
                 "id, title, assessment_type, assessment_date, max_marks, subject_id, class_id, status",
               )
-              .eq("school_id", school.id)
+              .eq("school_id", schoolId)
               .eq("academic_year_id", activeYearId)
               .in("class_id", classIds)
               .in("subject_id", subjectIds)
@@ -315,37 +410,48 @@ export default function TeacherDashboard() {
           ? supabase
               .from("enrollments")
               .select("id, student_id, class_id, status")
-              .eq("school_id", school.id)
+              .eq("school_id", schoolId)
               .eq("academic_year_id", activeYearId)
               .eq("status", "Active")
               .in("class_id", classIds)
           : Promise.resolve({ data: [], error: null }),
       ]);
 
-      const firstError =
-        timetableResult.error ??
-        attendanceResult.error ??
-        announcementsResult.error ??
-        assessmentsResult.error ??
-        enrollmentResult.error;
+      // Keep the dashboard useful even when an optional section is denied by
+      // RLS or is temporarily unavailable. Surface the exact section instead
+      // of replacing the entire dashboard with a generic error.
+      const optionalWarnings: string[] = [];
 
-      if (firstError) throw firstError;
+      if (timetableResult.error) {
+        optionalWarnings.push(`Timetable: ${getErrorMessage(timetableResult.error)}`);
+      }
+      if (attendanceResult.error) {
+        optionalWarnings.push(`Attendance: ${getErrorMessage(attendanceResult.error)}`);
+      }
+      if (announcementsResult.error) {
+        optionalWarnings.push(
+          `Announcements: ${getErrorMessage(announcementsResult.error)}`,
+        );
+      }
+      if (assessmentsResult.error) {
+        optionalWarnings.push(`Assessments: ${getErrorMessage(assessmentsResult.error)}`);
+      }
+      if (enrollmentResult.error) {
+        optionalWarnings.push(`Students: ${getErrorMessage(enrollmentResult.error)}`);
+      }
 
-      const mappedTimetable: TimetableEntry[] = (timetableResult.data ?? []).map((item: any) => {
-        const schoolClass = Array.isArray(item.classes) ? item.classes[0] : item.classes;
-        const subject = Array.isArray(item.subjects) ? item.subjects[0] : item.subjects;
-
-        return {
+      const mappedTimetable: TimetableEntry[] = (timetableResult.data ?? []).map(
+        (item: any) => ({
           id: item.id,
           class_id: item.class_id,
           subject_id: item.subject_id,
           day_of_week: item.day_of_week,
           start_time: item.start_time,
           end_time: item.end_time,
-          className: schoolClass?.name ?? "Unknown class",
-          subjectName: subject?.name ?? "Unknown subject",
-        };
-      });
+          className: classMap.get(item.class_id)?.name ?? "Unknown class",
+          subjectName: subjectMap.get(item.subject_id)?.name ?? "Unknown subject",
+        }),
+      );
 
       setTimetable(mappedTimetable);
       setAttendance((attendanceResult.data ?? []) as AttendanceRecord[]);
@@ -358,21 +464,26 @@ export default function TeacherDashboard() {
         ]),
       );
 
-      const mappedAssessments: Assessment[] = (assessmentsResult.data ?? []).map((item: any) => {
-        const assignment = assignmentMap.get(`${item.class_id}:${item.subject_id}`);
-        return {
-          id: item.id,
-          title: item.title,
-          assessment_type: item.assessment_type,
-          assessment_date: item.assessment_date,
-          max_marks: Number(item.max_marks ?? 0),
-          subject_id: item.subject_id,
-          class_id: item.class_id,
-          status: item.status,
-          className: assignment?.className ?? "Unknown class",
-          subjectName: assignment?.subjectName ?? "Unknown subject",
-        };
-      });
+      const mappedAssessments: Assessment[] = (assessmentsResult.data ?? []).map(
+        (item: any) => {
+          const assignment = assignmentMap.get(`${item.class_id}:${item.subject_id}`);
+          return {
+            id: item.id,
+            title: item.title,
+            assessment_type: item.assessment_type,
+            assessment_date: item.assessment_date,
+            max_marks: Number(item.max_marks ?? 0),
+            subject_id: item.subject_id,
+            class_id: item.class_id,
+            status: item.status,
+            className: assignment?.className ?? classMap.get(item.class_id)?.name ?? "Unknown class",
+            subjectName:
+              assignment?.subjectName ??
+              subjectMap.get(item.subject_id)?.name ??
+              "Unknown subject",
+          };
+        },
+      );
 
       setAssessments(mappedAssessments);
 
@@ -382,19 +493,30 @@ export default function TeacherDashboard() {
         (enrollmentResult.data ?? []).map((enrollment: any) => enrollment.student_id),
       );
       const attendanceRecords = (attendanceResult.data ?? []) as AttendanceRecord[];
-      const recordedStudents = new Set(attendanceRecords.map((record) => record.student_id));
-      const present = attendanceRecords.filter((record) => record.status === "present").length;
+      const recordedStudents = new Set(
+        attendanceRecords.map((record) => record.student_id),
+      );
+      const present = attendanceRecords.filter(
+        (record) => record.status?.toLowerCase() === "present",
+      ).length;
 
       setStats({
         classes: uniqueClassIds.size,
         subjects: uniqueSubjectIds.size,
         students: uniqueStudentIds.size,
         attendanceRecorded: recordedStudents.size,
-        attendanceRate: recordedStudents.size > 0 ? (present / recordedStudents.size) * 100 : 0,
+        attendanceRate:
+          recordedStudents.size > 0
+            ? (present / recordedStudents.size) * 100
+            : 0,
       });
+
+      if (optionalWarnings.length > 0) {
+        setError(`Some dashboard sections could not be loaded: ${optionalWarnings.join(" • ")}`);
+      }
     } catch (err) {
       console.error("Failed to load teacher dashboard:", err);
-      setError(err instanceof Error ? err.message : "Unable to load teacher dashboard data.");
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
