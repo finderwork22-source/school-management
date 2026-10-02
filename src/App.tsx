@@ -12,7 +12,7 @@ import AcceptInvitation from "./pages/AcceptInvitation";
 import SetupSchool from "./pages/SetupSchool";
 
 // Overview
-
+import Dashboard from "./pages/Dashboard";
 
 // School
 import Admissions from "./pages/Admissions";
@@ -52,7 +52,7 @@ import AcademicSettings from "./pages/AcademicSettings";
 import UsersRoles from "./pages/UsersRoles";
 import MyProfile from "./pages/MyProfile";
 
-// MojaSchool Admin
+// WISE Admin
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminApplications from "./pages/admin/AdminApplications";
 import AdminBilling from "./pages/admin/AdminBilling";
@@ -62,7 +62,6 @@ import AdminAuditLogs from "./pages/admin/AdminAuditLogs";
 import AdminPlatformSettings from "./pages/admin/AdminPlatformSettings";
 import AdminForgotPassword from "./pages/admin/AdminForgotPassword";
 import AdminResetPassword from "./pages/admin/AdminResetPassword";
-import PostAuthRedirect from "./components/auth/PostAuthRedirect";
 
 export default function App() {
   return (
@@ -78,13 +77,13 @@ export default function App() {
           can establish their password before signing in. */}
       <Route path="/accept-invitation" element={<AcceptInvitation />} />
 
-      {/* MojaSchool Admin password recovery stays public so an administrator
+      {/* WISE Admin password recovery stays public so an administrator
           can recover access without an active platform session. */}
       <Route path="/admin/forgot-password" element={<AdminForgotPassword />} />
       <Route path="/admin/reset-password" element={<AdminResetPassword />} />
 
       {/* =====================================================
-          MojaSchool ADMIN — PLATFORM LEVEL
+          WISE ADMIN — PLATFORM LEVEL
           This is intentionally separate from school AppLayout.
       ===================================================== */}
       <Route
@@ -113,7 +112,7 @@ export default function App() {
 
         <Route element={<AppLayout />}>
           {/* Overview */}
-          <Route index element={<PostAuthRedirect />} />
+          <Route index element={<Dashboard />} />
 
           {/* Personal profile */}
           <Route path="profile" element={<MyProfile />} />
