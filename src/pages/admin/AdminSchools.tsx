@@ -208,80 +208,37 @@ export default function AdminSchools() {
   async function loadSchools(showRefreshState = false) {
     if (showRefreshState) setRefreshing(true);
     else setLoading(true);
-
-    setError("");
+    setError('');
 
     try {
-      const [accountsResult, schoolsResult, subscriptionsResult, plansResult, invoicesResult] =
-        await Promise.all([
-          supabase
-            .from("platform_school_accounts")
-            .select(
-              "school_id, status, onboarding_application_id, joined_at, activated_at, suspended_at, archived_at, created_at, updated_at",
-            )
-            .order("created_at", { ascending: false }),
+      // Schools and platform accounts are critical. Billing/enrichment data is optional.
+      const [accountsResult, schoolsResult] = await Promise.all([
+        supabase.from("platform_school_accounts").select("school_id, status, onboarding_application_id, joined_at, activated_at, suspended_at, archived_at, created_at, updated_at").order("created_at", { ascending: false }),
+        supabase.from("schools").select("id, name, slug, email, phone, address, city, country, logo_url").order("name", { ascending: true }),
+      ]);
 
-          supabase
-            .from("schools")
-            .select(
-              "id, name, slug, email, phone, address, city, country, logo_url",
-            )
-            .order("name", { ascending: true }),
-
-          supabase
-            .from("platform_school_subscriptions")
-            .select(
-              "id, school_id, plan_id, status, billing_cycle, price, currency, start_date, end_date, trial_start, trial_end",
-            )
-            .order("start_date", { ascending: false }),
-
-          supabase
-            .from("platform_subscription_plans")
-            .select(
-              "id, name, description, billing_cycle, amount, currency, is_active",
-            )
-            .order("name", { ascending: true }),
-
-          supabase
-            .from("platform_invoices")
-            .select("id, school_id, total, currency, status, due_date, issue_date")
-            .in("status", ["issued", "partially_paid", "overdue"]),
-        ]);
-
-      const firstError =
-        accountsResult.error ??
-        schoolsResult.error ??
-        subscriptionsResult.error ??
-        plansResult.error ??
-        invoicesResult.error;
-
-      if (firstError) throw firstError;
+      if (accountsResult.error) throw accountsResult.error;
+      if (schoolsResult.error) throw schoolsResult.error;
 
       const accounts = (accountsResult.data ?? []) as PlatformSchoolAccount[];
-      const schools = (schoolsResult.data ?? []).map((school) => ({
-        ...(school as Omit<SchoolRecord, "type">),
-        type: null,
-      })) as SchoolRecord[];
+      const schools = (schoolsResult.data ?? []).map((school) => ({ ...school, type: null })) as SchoolRecord[];
+      const accountBySchoolId = new Map(accounts.map((account) => [account.school_id, account]));
+
+      // Optional enrichment must never hide a valid school.
+      const [subscriptionsResult, plansResult, invoicesResult] = await Promise.all([
+        supabase.from("platform_school_subscriptions").select("id, school_id, plan_id, status, billing_cycle, price, currency, start_date, end_date, trial_start, trial_end").order("start_date", { ascending: false }),
+        supabase.from("platform_subscription_plans").select("id, name, description, billing_cycle, amount, currency, is_active").order("name", { ascending: true }),
+        supabase.from("platform_invoices").select("id, school_id, total, currency, status, due_date, issue_date").in("status", ["issued", "partially_paid", "overdue"]),
+      ]);
+
       const subscriptions = (subscriptionsResult.data ?? []) as SubscriptionRecord[];
       const plans = (plansResult.data ?? []) as PlanRecord[];
       const invoices = (invoicesResult.data ?? []) as InvoiceRecord[];
       const plansById = mapPlans(plans);
-
-      const accountBySchoolId = new Map(
-        accounts.map((account) => [account.school_id, account]),
-      );
-
-      const invoicesBySchoolId = new Map<
-        string,
-        { count: number; amount: number }
-      >();
+      const invoicesBySchoolId = new Map<string, { count: number; amount: number }>();
 
       for (const invoice of invoices) {
-        const previous = invoicesBySchoolId.get(invoice.school_id) ?? {
-          count: 0,
-          amount: 0,
-        };
-
+        const previous = invoicesBySchoolId.get(invoice.school_id) ?? { count: 0, amount: 0 };
         previous.count += 1;
         previous.amount += Number(invoice.total ?? 0);
         invoicesBySchoolId.set(invoice.school_id, previous);
@@ -290,69 +247,37 @@ export default function AdminSchools() {
       const nextRows = schools
         .map((school) => {
           const account = accountBySchoolId.get(school.id);
-
           if (!account) return null;
-
           const subscription = pickSubscription(subscriptions, school.id);
-          const plan = subscription?.plan_id
-            ? plansById.get(subscription.plan_id) ?? null
-            : null;
-          const invoiceSummary = invoicesBySchoolId.get(school.id) ?? {
-            count: 0,
-            amount: 0,
-          };
-
-          return {
-            school,
-            account,
-            subscription,
-            plan,
-            outstandingInvoices: invoiceSummary.count,
-            outstandingAmount: invoiceSummary.amount,
-          };
+          const plan = subscription?.plan_id ? plansById.get(subscription.plan_id) ?? null : null;
+          const invoiceSummary = invoicesBySchoolId.get(school.id) ?? { count: 0, amount: 0 };
+          return { school, account, subscription, plan, outstandingInvoices: invoiceSummary.count, outstandingAmount: invoiceSummary.amount };
         })
         .filter(Boolean) as SchoolListRow[];
 
       setRows(nextRows);
-
       if (selectedSchoolId) {
-        const selected = nextRows.find(
-          (row) => row.school.id === selectedSchoolId,
-        );
-        setSelectedRow(selected ?? null);
+        setSelectedRow(nextRows.find((row) => row.school.id === selectedSchoolId) ?? null);
       } else {
         setSelectedRow(null);
       }
+
+      const optionalErrors = [subscriptionsResult.error, plansResult.error, invoicesResult.error].filter(Boolean);
+      if (optionalErrors.length > 0) {
+        const failedParts = [
+          subscriptionsResult.error ? "subscriptions" : "",
+          plansResult.error ? "plans" : "",
+          invoicesResult.error ? "invoices" : "",
+        ].filter(Boolean);
+        setError(`Schools loaded successfully, but optional data could not be loaded: ${failedParts.join(", " )}.`);
+        console.warn("Optional MojaSchool platform data failed to load:", optionalErrors);
+      }
     } catch (loadError) {
       console.error("Failed to load MojaSchool schools:", loadError);
-
-      const errorDetails =
-        loadError && typeof loadError === "object"
-          ? (loadError as {
-              message?: unknown;
-              details?: unknown;
-              hint?: unknown;
-              code?: unknown;
-            })
-          : null;
-
-      setError(
-        typeof errorDetails?.message === "string"
-          ? [
-              errorDetails.message,
-              typeof errorDetails.details === "string"
-                ? errorDetails.details
-                : "",
-              typeof errorDetails.hint === "string"
-                ? errorDetails.hint
-                : "",
-            ]
-              .filter(Boolean)
-              .join(" ")
-          : loadError instanceof Error
-            ? loadError.message
-            : "Could not load MojaSchool schools.",
-      );
+      const errorDetails = loadError && typeof loadError === "object" ? (loadError as { message?: unknown; details?: unknown; hint?: unknown }) : null;
+      setRows([]);
+      setSelectedRow(null);
+      setError(typeof errorDetails?.message === "string" ? [errorDetails.message, typeof errorDetails.details === "string" ? errorDetails.details : "", typeof errorDetails.hint === "string" ? errorDetails.hint : ""].filter(Boolean).join(" " ) : loadError instanceof Error ? loadError.message : "Could not load MojaSchool schools.");
     } finally {
       setLoading(false);
       setRefreshing(false);
