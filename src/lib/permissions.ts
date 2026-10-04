@@ -15,6 +15,7 @@ export const ROLE_ACCESS: Record<UserRole, string[]> = {
     "/profile",
     "/students",
     "/students/:id",
+    "/parents",
     "/teachers",
     "/teachers/:id",
     "/academics",

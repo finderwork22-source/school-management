@@ -3,6 +3,7 @@ import { Route, Routes } from "react-router-dom";
 import AppLayout from "./components/layout/AppLayout";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import PlatformAdminRoute from "./components/auth/PlatformAdminRoute";
+import SchoolRoleGuard from "./components/auth/SchoolRoleGuard";
 import AdminLayout from "./components/admin/AdminLayout";
 
 // Public
@@ -73,19 +74,27 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<SignUp />} />
 
-      {/* Invitation links must remain public so an invited user
+      {/* Invitation links must remain public so invited users
           can establish their password before signing in. */}
       <Route path="/accept-invitation" element={<AcceptInvitation />} />
 
-      {/* WISE Admin password recovery stays public so an administrator
-          can recover access without an active platform session. */}
-      <Route path="/admin/forgot-password" element={<AdminForgotPassword />} />
-      <Route path="/admin/reset-password" element={<AdminResetPassword />} />
+      {/* WISE Admin password recovery */}
+      <Route
+        path="/admin/forgot-password"
+        element={<AdminForgotPassword />}
+      />
+
+      <Route
+        path="/admin/reset-password"
+        element={<AdminResetPassword />}
+      />
 
       {/* =====================================================
           WISE ADMIN — PLATFORM LEVEL
-          This is intentionally separate from school AppLayout.
+
+          Separate from school-level authorization.
       ===================================================== */}
+
       <Route
         path="/admin"
         element={
@@ -95,11 +104,17 @@ export default function App() {
         }
       >
         <Route index element={<AdminDashboard />} />
+
         <Route path="schools" element={<AdminSchools />} />
+
         <Route path="applications" element={<AdminApplications />} />
+
         <Route path="billing" element={<AdminBilling />} />
+
         <Route path="analytics" element={<AdminAnalytics />} />
+
         <Route path="audit" element={<AdminAuditLogs />} />
+
         <Route path="settings" element={<AdminPlatformSettings />} />
       </Route>
 
@@ -111,62 +126,199 @@ export default function App() {
         <Route path="/setup-school" element={<SetupSchool />} />
 
         <Route element={<AppLayout />}>
-          {/* Overview */}
+          {/* =================================================
+              OVERVIEW
+          ================================================= */}
+
           <Route index element={<Dashboard />} />
 
-          {/* Personal profile */}
+          {/* =================================================
+              PERSONAL PROFILE
+          ================================================= */}
+
           <Route path="profile" element={<MyProfile />} />
 
-          {/* School */}
+          {/* =================================================
+              SCHOOL
+          ================================================= */}
+
           <Route path="admissions" element={<Admissions />} />
+
           <Route path="students" element={<Students />} />
-          <Route path="students/:id" element={<StudentProfile />} />
+
+          <Route
+            path="students/:id"
+            element={<StudentProfile />}
+          />
+
           <Route path="parents" element={<Parents />} />
+
           <Route path="teachers" element={<Teachers />} />
-          <Route path="teachers/:id" element={<TeacherProfile />} />
+
+          <Route
+            path="teachers/:id"
+            element={<TeacherProfile />}
+          />
+
           <Route path="pickup-desk" element={<PickupDesk />} />
-          <Route path="pickup-history" element={<PickupHistory />} />
 
-          {/* Academics */}
-          <Route path="academic-years" element={<AcademicYears />} />
-          <Route path="academics" element={<ClassesSubjects />} />
-          <Route path="timetable" element={<Timetable />} />
+          <Route
+            path="pickup-history"
+            element={<PickupHistory />}
+          />
 
-          {/* Attendance */}
-          <Route path="attendance" element={<Attendance />} />
-          <Route path="attendance/history" element={<AttendanceHistory />} />
-          <Route path="attendance/reports" element={<AttendanceReports />} />
+          {/* =================================================
+              ACADEMICS
+              
+              These remain available to the existing school
+              roles according to the current RLS/permissions.
+          ================================================= */}
 
-          {/* Assessments */}
-          <Route path="assessments" element={<Assessments />} />
+          <Route
+            path="academic-years"
+            element={<AcademicYears />}
+          />
+
+          <Route
+            path="academics"
+            element={<ClassesSubjects />}
+          />
+
+          <Route
+            path="timetable"
+            element={<Timetable />}
+          />
+
+          {/* =================================================
+              ATTENDANCE
+          ================================================= */}
+
+          <Route
+            path="attendance"
+            element={<Attendance />}
+          />
+
+          <Route
+            path="attendance/history"
+            element={<AttendanceHistory />}
+          />
+
+          <Route
+            path="attendance/reports"
+            element={<AttendanceReports />}
+          />
+
+          {/* =================================================
+              ASSESSMENTS
+          ================================================= */}
+
+          <Route
+            path="assessments"
+            element={<Assessments />}
+          />
+
           <Route
             path="assessments/:id/marks"
             element={<AssessmentMarks />}
           />
+
           <Route
             path="assessments/:id/results"
             element={<AssessmentResults />}
           />
 
-          {/* Student results */}
-          <Route path="student-results" element={<StudentResults />} />
+          {/* =================================================
+              STUDENT RESULTS
+          ================================================= */}
 
-          {/* Finance */}
-          <Route path="finance" element={<FeeStructure />} />
-          <Route path="finance/billing" element={<StudentBilling />} />
-          <Route path="finance/payments" element={<Payments />} />
-          <Route path="finance/receipts" element={<Receipts />} />
-          <Route path="finance/reports" element={<FinanceReports />} />
+          <Route
+            path="student-results"
+            element={<StudentResults />}
+          />
 
-          {/* Communication */}
-          <Route path="announcements" element={<Announcements />} />
-          <Route path="communications" element={<Announcements />} />
+          {/* =================================================
+              FINANCE
+              
+              IMPORTANT:
+              Only Owner and Principal may access school
+              financial pages.
 
-          {/* Settings */}
-          <Route path="settings/school-profile" element={<SchoolProfile />} />
-          <Route path="settings/academic" element={<AcademicSettings />} />
-          <Route path="settings/users" element={<UsersRoles />} />
-          <Route path="settings" element={<AcademicSettings />} />
+              Head of Academics is deliberately excluded.
+              
+              This protects direct URL navigation as well as
+              normal sidebar navigation.
+          ================================================= */}
+
+          <Route
+            element={
+              <SchoolRoleGuard
+                allowedRoles={["Owner", "Principal"]}
+              />
+            }
+          >
+            <Route
+              path="finance"
+              element={<FeeStructure />}
+            />
+
+            <Route
+              path="finance/billing"
+              element={<StudentBilling />}
+            />
+
+            <Route
+              path="finance/payments"
+              element={<Payments />}
+            />
+
+            <Route
+              path="finance/receipts"
+              element={<Receipts />}
+            />
+
+            <Route
+              path="finance/reports"
+              element={<FinanceReports />}
+            />
+          </Route>
+
+          {/* =================================================
+              COMMUNICATION
+          ================================================= */}
+
+          <Route
+            path="announcements"
+            element={<Announcements />}
+          />
+
+          <Route
+            path="communications"
+            element={<Announcements />}
+          />
+
+          {/* =================================================
+              SETTINGS
+          ================================================= */}
+
+          <Route
+            path="settings/school-profile"
+            element={<SchoolProfile />}
+          />
+
+          <Route
+            path="settings/academic"
+            element={<AcademicSettings />}
+          />
+
+          <Route
+            path="settings/users"
+            element={<UsersRoles />}
+          />
+
+          <Route
+            path="settings"
+            element={<AcademicSettings />}
+          />
         </Route>
       </Route>
     </Routes>
