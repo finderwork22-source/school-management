@@ -1526,8 +1526,8 @@ export default function Payments() {
       {/* Payment Modal */}
       {showPaymentModal &&
         selectedInvoice && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-[1px]">
-            <div className="w-full max-w-lg overflow-hidden rounded-xl bg-white shadow-2xl">
+          <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-3 backdrop-blur-[1px] sm:items-center sm:p-4">
+            <div className="my-3 flex max-h-[calc(100vh-1.5rem)] w-full max-w-lg flex-col overflow-hidden rounded-xl bg-white shadow-2xl sm:my-4 sm:max-h-[calc(100vh-2rem)]">
               {/* Header */}
               <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
                 <div>
@@ -1556,7 +1556,8 @@ export default function Payments() {
               </div>
 
               {/* Body */}
-              <div className="space-y-5 px-6 py-6">
+              <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
+                <div className="space-y-5">
                 {/* Student */}
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                   <div className="flex items-center gap-3">
@@ -1817,9 +1818,10 @@ export default function Payments() {
                   </div>
                 </div>
               </div>
+              </div>
 
               {/* Footer */}
-              <div className="flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50/50 px-6 py-4">
+              <div className="flex shrink-0 items-center justify-end gap-3 border-t border-slate-200 bg-slate-50/50 px-4 py-4 sm:px-6">
                 <button
                   type="button"
                   onClick={() =>

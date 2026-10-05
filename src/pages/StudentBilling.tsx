@@ -660,6 +660,58 @@ export default function StudentBilling() {
       );
     }, [activeStructureItems]);
 
+  const eligibleStudentCount = useMemo(() => {
+    if (!selectedAcademicYearId || !selectedClassId) {
+      return 0;
+    }
+
+    return students.filter((student) =>
+      student.status === "Active" &&
+      enrollments.some(
+        (enrollment) =>
+          enrollment.student_id === student.id &&
+          enrollment.academic_year_id === selectedAcademicYearId &&
+          enrollment.class_id === selectedClassId &&
+          enrollment.status === "Active",
+      ),
+    ).length;
+  }, [
+    students,
+    enrollments,
+    selectedAcademicYearId,
+    selectedClassId,
+  ]);
+
+  const billingSetupMessage = useMemo(() => {
+    if (!selectedAcademicYearId) {
+      return "Select an academic year before creating an invoice.";
+    }
+
+    if (!selectedClassId) {
+      return "Select a class before creating an invoice.";
+    }
+
+    if (!activeStructure) {
+      return "No active fee structure exists for this class and term. Configure one in Fee Structure first.";
+    }
+
+    if (activeStructureItems.length === 0) {
+      return "The active fee structure has no fee items. Add at least one fee item before creating an invoice.";
+    }
+
+    if (eligibleStudentCount === 0) {
+      return "No active students are enrolled in this class for the selected academic year.";
+    }
+
+    return null;
+  }, [
+    selectedAcademicYearId,
+    selectedClassId,
+    activeStructure,
+    activeStructureItems.length,
+    eligibleStudentCount,
+  ]);
+
   const summary = useMemo(() => {
     const totalBilled =
       visibleInvoices.reduce(
@@ -728,24 +780,8 @@ export default function StudentBilling() {
   }
 
   function openGenerateModal() {
-    if (!selectedAcademicYearId) {
-      setError(
-        "Please select an academic year.",
-      );
-      return;
-    }
-
-    if (!selectedClassId) {
-      setError(
-        "Please select a class before generating a bill.",
-      );
-      return;
-    }
-
-    if (!activeStructure) {
-      setError(
-        "No active fee structure exists for the selected class and term.",
-      );
+    if (billingSetupMessage) {
+      setError(billingSetupMessage);
       return;
     }
 
@@ -1039,18 +1075,17 @@ export default function StudentBilling() {
         </div>
 
         <Button
-          onClick={
-            openGenerateModal
-          }
-          disabled={
-            !selectedClassId ||
-            !activeStructure
-          }
+          onClick={openGenerateModal}
           className="h-10 shrink-0 px-5"
         >
           <Plus className="mr-2 h-4 w-4" />
           Create Invoice
         </Button>
+        {billingSetupMessage && (
+          <p className="max-w-[360px] text-xs leading-5 text-slate-500 sm:text-right">
+            {billingSetupMessage}
+          </p>
+        )}
       </div>
 
       {/* ERROR */}
@@ -1189,9 +1224,8 @@ export default function StudentBilling() {
                 selectedAcademicYearId
               }
               onChange={(event) => {
-                setSelectedAcademicYearId(
-                  event.target.value,
-                );
+                setSelectedAcademicYearId(event.target.value);
+                setError(null);
 
                 /*
                  * Important:
@@ -1234,14 +1268,9 @@ export default function StudentBilling() {
             <select
               value={selectedTerm}
               onChange={(event) => {
-                setSelectedTerm(
-                  event.target
-                    .value as Term,
-                );
-
-                setExpandedInvoiceId(
-                  null,
-                );
+                setSelectedTerm(event.target.value as Term);
+                setExpandedInvoiceId(null);
+                setError(null);
               }}
               className="h-10 w-full min-w-0 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
             >
@@ -1269,13 +1298,9 @@ export default function StudentBilling() {
                 selectedClassId
               }
               onChange={(event) => {
-                setSelectedClassId(
-                  event.target.value,
-                );
-
-                setExpandedInvoiceId(
-                  null,
-                );
+                setSelectedClassId(event.target.value);
+                setExpandedInvoiceId(null);
+                setError(null);
               }}
               disabled={
                 !selectedAcademicYearId
@@ -1367,12 +1392,12 @@ export default function StudentBilling() {
             </div>
 
             <p className="mt-1 text-sm text-slate-500">
-              {activeStructure
-                ? activeStructure.name
-                : selectedClassId
-                  ? "No active fee structure for this class and term."
-                  : "Select a class to view its fee structure."}
-            </p>
+            {activeStructure
+              ? activeStructure.name
+              : selectedClassId
+                ? "No active fee structure for this class and term."
+                : "Select a class to view its fee structure."}
+          </p>
           </div>
 
           <div className="sm:text-right">

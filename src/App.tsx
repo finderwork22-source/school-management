@@ -5,6 +5,7 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 import PlatformAdminRoute from "./components/auth/PlatformAdminRoute";
 import SchoolRoleGuard from "./components/auth/SchoolRoleGuard";
 import AdminLayout from "./components/admin/AdminLayout";
+import ParentPickupAuthorisations from "./pages/ParentPickupAuthorisations";
 
 // Public
 import Login from "./pages/Login";
@@ -79,15 +80,9 @@ export default function App() {
       <Route path="/accept-invitation" element={<AcceptInvitation />} />
 
       {/* WISE Admin password recovery */}
-      <Route
-        path="/admin/forgot-password"
-        element={<AdminForgotPassword />}
-      />
+      <Route path="/admin/forgot-password" element={<AdminForgotPassword />} />
 
-      <Route
-        path="/admin/reset-password"
-        element={<AdminResetPassword />}
-      />
+      <Route path="/admin/reset-password" element={<AdminResetPassword />} />
 
       {/* =====================================================
           WISE ADMIN — PLATFORM LEVEL
@@ -146,25 +141,21 @@ export default function App() {
 
           <Route path="students" element={<Students />} />
 
-          <Route
-            path="students/:id"
-            element={<StudentProfile />}
-          />
+          <Route path="students/:id" element={<StudentProfile />} />
 
           <Route path="parents" element={<Parents />} />
 
           <Route path="teachers" element={<Teachers />} />
 
-          <Route
-            path="teachers/:id"
-            element={<TeacherProfile />}
-          />
+          <Route path="teachers/:id" element={<TeacherProfile />} />
 
           <Route path="pickup-desk" element={<PickupDesk />} />
 
+          <Route path="pickup-history" element={<PickupHistory />} />
+
           <Route
-            path="pickup-history"
-            element={<PickupHistory />}
+            path="pickup-authorisations"
+            element={<ParentPickupAuthorisations />}
           />
 
           {/* =================================================
@@ -174,53 +165,29 @@ export default function App() {
               roles according to the current RLS/permissions.
           ================================================= */}
 
-          <Route
-            path="academic-years"
-            element={<AcademicYears />}
-          />
+          <Route path="academic-years" element={<AcademicYears />} />
 
-          <Route
-            path="academics"
-            element={<ClassesSubjects />}
-          />
+          <Route path="academics" element={<ClassesSubjects />} />
 
-          <Route
-            path="timetable"
-            element={<Timetable />}
-          />
+          <Route path="timetable" element={<Timetable />} />
 
           {/* =================================================
               ATTENDANCE
           ================================================= */}
 
-          <Route
-            path="attendance"
-            element={<Attendance />}
-          />
+          <Route path="attendance" element={<Attendance />} />
 
-          <Route
-            path="attendance/history"
-            element={<AttendanceHistory />}
-          />
+          <Route path="attendance/history" element={<AttendanceHistory />} />
 
-          <Route
-            path="attendance/reports"
-            element={<AttendanceReports />}
-          />
+          <Route path="attendance/reports" element={<AttendanceReports />} />
 
           {/* =================================================
               ASSESSMENTS
           ================================================= */}
 
-          <Route
-            path="assessments"
-            element={<Assessments />}
-          />
+          <Route path="assessments" element={<Assessments />} />
 
-          <Route
-            path="assessments/:id/marks"
-            element={<AssessmentMarks />}
-          />
+          <Route path="assessments/:id/marks" element={<AssessmentMarks />} />
 
           <Route
             path="assessments/:id/results"
@@ -231,10 +198,7 @@ export default function App() {
               STUDENT RESULTS
           ================================================= */}
 
-          <Route
-            path="student-results"
-            element={<StudentResults />}
-          />
+          <Route path="student-results" element={<StudentResults />} />
 
           {/* =================================================
               FINANCE
@@ -250,75 +214,38 @@ export default function App() {
           ================================================= */}
 
           <Route
-            element={
-              <SchoolRoleGuard
-                allowedRoles={["Owner", "Principal"]}
-              />
-            }
+            element={<SchoolRoleGuard allowedRoles={["Owner", "Principal"]} />}
           >
-            <Route
-              path="finance"
-              element={<FeeStructure />}
-            />
+            <Route path="finance" element={<FeeStructure />} />
 
-            <Route
-              path="finance/billing"
-              element={<StudentBilling />}
-            />
+            <Route path="finance/billing" element={<StudentBilling />} />
 
-            <Route
-              path="finance/payments"
-              element={<Payments />}
-            />
+            <Route path="finance/payments" element={<Payments />} />
 
-            <Route
-              path="finance/receipts"
-              element={<Receipts />}
-            />
+            <Route path="finance/receipts" element={<Receipts />} />
 
-            <Route
-              path="finance/reports"
-              element={<FinanceReports />}
-            />
+            <Route path="finance/reports" element={<FinanceReports />} />
           </Route>
 
           {/* =================================================
               COMMUNICATION
           ================================================= */}
 
-          <Route
-            path="announcements"
-            element={<Announcements />}
-          />
+          <Route path="announcements" element={<Announcements />} />
 
-          <Route
-            path="communications"
-            element={<Announcements />}
-          />
+          <Route path="communications" element={<Announcements />} />
 
           {/* =================================================
               SETTINGS
           ================================================= */}
 
-          <Route
-            path="settings/school-profile"
-            element={<SchoolProfile />}
-          />
+          <Route path="settings/school-profile" element={<SchoolProfile />} />
 
-          <Route
-            path="settings/academic"
-            element={<AcademicSettings />}
-          />
+          <Route path="settings/academic" element={<AcademicSettings />} />
 
-          <Route
-            path="settings/users"
-            element={<UsersRoles />}
-          />
+          <Route path="settings/users" element={<UsersRoles />} />
 
-          <Route
-            path="settings"
-            element={<AcademicSettings />}
-          />
+          <Route path="settings" element={<AcademicSettings />} />
         </Route>
       </Route>
     </Routes>

@@ -145,9 +145,6 @@ type PeriodSlot = {
   start: string;
   end: string;
 };
-type DisplayScheduleItem =
-  | { kind: "period"; slot: PeriodSlot }
-  | { kind: "break"; name: string; start: string; end: string; afterPeriod: number };
 
 const DAYS = [
   "Monday",
@@ -450,128 +447,6 @@ function buildTimetableValidationReport({
   return { checks, allPassed: checks.every((check) => check.passed) };
 }
 
-interface TimetableQuality {
-  score: number;
-  label: string;
-  repeatedSubjectPeriods: number;
-  consecutiveSubjectDays: number;
-  sameDaySubjectPairs: number;
-  adjacentSubjectPeriods: number;
-}
-
-function calculateTimetableQuality({
-  entries,
-  assignmentRows,
-  settings,
-}: {
-  entries: GeneratedEntry[];
-  assignmentRows: AssignmentRow[];
-  settings: TimetableSettings;
-}): TimetableQuality {
-  if (entries.length === 0) {
-    return {
-      score: 0,
-      label: "Not generated",
-      repeatedSubjectPeriods: 0,
-      consecutiveSubjectDays: 0,
-      sameDaySubjectPairs: 0,
-      adjacentSubjectPeriods: 0,
-    };
-  }
-
-  const dayIndex = new Map(settings.study_days.map((day, index) => [day, index]));
-  const rowByKey = new Map(
-    assignmentRows.map((row) => [`${row.classId}:${row.subjectId}`, row]),
-  );
-  const byClassSubject = new Map<string, GeneratedEntry[]>();
-
-  for (const entry of entries) {
-    const key = `${entry.class_id}:${entry.subject_id}`;
-    if (!byClassSubject.has(key)) byClassSubject.set(key, []);
-    byClassSubject.get(key)!.push(entry);
-  }
-
-  let repeatedSubjectPeriods = 0;
-  let consecutiveSubjectDays = 0;
-  let sameDaySubjectPairs = 0;
-  let adjacentSubjectPeriods = 0;
-  let penalty = 0;
-
-  for (const [key, subjectEntries] of byClassSubject) {
-    const row = rowByKey.get(key);
-    const preferredPeriod = row?.preferredPeriod ? Number(row.preferredPeriod) : null;
-
-    for (let i = 0; i < subjectEntries.length; i += 1) {
-      for (let j = i + 1; j < subjectEntries.length; j += 1) {
-        const a = subjectEntries[i];
-        const b = subjectEntries[j];
-        const aDay = dayIndex.get(a.day_of_week) ?? -99;
-        const bDay = dayIndex.get(b.day_of_week) ?? -99;
-
-        if (a.period_number === b.period_number) {
-          repeatedSubjectPeriods += 1;
-          penalty += 18;
-          if (Math.abs(aDay - bDay) === 1) penalty += 14;
-        }
-
-        if (a.day_of_week === b.day_of_week) {
-          sameDaySubjectPairs += 1;
-          penalty += 12;
-          if (Math.abs(a.period_number - b.period_number) === 1) {
-            adjacentSubjectPeriods += 1;
-            penalty += 7;
-          }
-        } else if (Math.abs(aDay - bDay) === 1) {
-          consecutiveSubjectDays += 1;
-          penalty += 8;
-        }
-      }
-    }
-
-    if (preferredPeriod) {
-      const preferredCount = subjectEntries.filter(
-        (entry) => entry.period_number === preferredPeriod,
-      ).length;
-      penalty += Math.max(0, preferredCount - 1) * 2;
-    }
-  }
-
-  const classDayCounts = new Map<string, Map<string, number>>();
-  for (const entry of entries) {
-    if (!classDayCounts.has(entry.class_id)) classDayCounts.set(entry.class_id, new Map());
-    const counts = classDayCounts.get(entry.class_id)!;
-    counts.set(entry.day_of_week, (counts.get(entry.day_of_week) ?? 0) + 1);
-  }
-
-  for (const counts of classDayCounts.values()) {
-    const values = settings.study_days.map((day) => counts.get(day) ?? 0);
-    if (values.length > 1) {
-      const min = Math.min(...values);
-      const max = Math.max(...values);
-      penalty += Math.max(0, max - min) * 2;
-    }
-  }
-
-  const score = Math.max(0, Math.round(100 - penalty));
-  const label =
-    score >= 90
-      ? "Excellent"
-      : score >= 75
-        ? "Good"
-        : score >= 60
-          ? "Fair"
-          : "Needs improvement";
-
-  return {
-    score,
-    label,
-    repeatedSubjectPeriods,
-    consecutiveSubjectDays,
-    sameDaySubjectPairs,
-    adjacentSubjectPeriods,
-  };
-}
-
 function preValidateGeneration({
   yearClasses,
   assignmentRows,
@@ -797,6 +672,7 @@ function preValidateGeneration({
 
 export default function Timetable() {
   const [schoolId, setSchoolId] = useState("");
+  const [teacherId, setTeacherId] = useState("");
   const [role, setRole] = useState<ReturnType<typeof normalizeRole>>("Teacher");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -1133,44 +1009,12 @@ export default function Timetable() {
           setLoading(false);
           return;
         }
-        // Resolve the teacher through the Auth-linked user_id first.
-        // Email-only matching can return multiple legacy rows and make
-        // maybeSingle() fail, which previously left the teacher timetable
-        // with no academic year/class options.
-        let teacher: { id: string } | null = null;
-        let teacherError: any = null;
-
-        const teacherByUser = await supabase
+        const { data: teacher, error: teacherError } = await supabase
           .from("teachers")
           .select("id")
           .eq("school_id", membership.school_id)
-          .eq("user_id", user.id)
-          .limit(1)
+          .ilike("email", user.email)
           .maybeSingle();
-
-        if (teacherByUser.error) {
-          teacherError = teacherByUser.error;
-        } else {
-          teacher = teacherByUser.data;
-        }
-
-        // Legacy-safe fallback for teacher records that have not yet been
-        // linked to Auth. Limit the email match to one row so duplicate
-        // legacy records cannot break the whole timetable page.
-        if (!teacherError && !teacher?.id) {
-          const teacherByEmail = await supabase
-            .from("teachers")
-            .select("id")
-            .eq("school_id", membership.school_id)
-            .ilike("email", user.email)
-            .order("id", { ascending: true })
-            .limit(1)
-            .maybeSingle();
-
-          teacher = teacherByEmail.data;
-          teacherError = teacherByEmail.error;
-        }
-
         if (teacherError) {
           setError(getErrorMessage(teacherError));
           setLoading(false);
@@ -1181,7 +1025,8 @@ export default function Timetable() {
           setLoading(false);
           return;
         }
-        const { data: teacherAssignments, error: teacherAssignmentsError } =
+        setTeacherId(teacher.id);
+        const { error: teacherAssignmentsError } =
           await supabase
             .from("teacher_assignments")
             .select("class_id, academic_year_id")
@@ -1192,16 +1037,11 @@ export default function Timetable() {
           setLoading(false);
           return;
         }
-        await loadSetupData(membership.school_id, undefined, {
-          classIds: Array.from(
-            new Set((teacherAssignments ?? []).map((item) => item.class_id)),
-          ),
-          academicYearIds: Array.from(
-            new Set(
-              (teacherAssignments ?? []).map((item) => item.academic_year_id),
-            ),
-          ),
-        });
+        // Load the school's academic years/classes for the teacher view.
+        // The timetable query itself is restricted to this teacher below, so
+        // showing the available school structure here does not expose another
+        // teacher's timetable.
+        await loadSetupData(membership.school_id);
       } else await loadSetupData(membership.school_id);
       setLoading(false);
     }
@@ -1551,6 +1391,17 @@ export default function Timetable() {
     }
     return output;
   }, [settings, breaks]);
+  const periodTimes = useMemo(
+    () =>
+      new Map(
+        periodPreview
+          .filter((item) => item.kind === "period" && item.period)
+          .map((item) => [item.period!, { start: item.start, end: item.end }]),
+      ),
+    [periodPreview],
+  );
+
+
 
   function getRequirement(row: AssignmentRow) {
     return requirements.find(
@@ -1860,6 +1711,15 @@ export default function Timetable() {
     }
   }
 
+  function buildOccurrences() {
+    return assignmentRows.flatMap((row) =>
+      Array.from({ length: Math.max(0, row.lessonsPerWeek) }, (_, index) => ({
+        row,
+        occurrence: index + 1,
+      })),
+    );
+  }
+
   async function generateTimetable() {
     setError("");
     setSuccess("");
@@ -1886,40 +1746,25 @@ export default function Timetable() {
       return;
     }
 
-    // Save only the setup/requirements first. This does NOT replace the
-    // existing timetable entries, so an invalid generation can safely leave
-    // the last valid timetable untouched.
     const saved = await saveSetup(false);
     if (!saved) return;
 
     setGenerating(true);
-
     try {
-      type Slot = { day: string; period: number };
-      type Occurrence = { row: AssignmentRow; occurrence: number };
-
+      const capacityByClass = new Map<string, number>();
       const blockedSet = new Set(
         blockedPeriods.map(
-          (item) => `${item.day_of_week}:${Number(item.period_number)}`,
+          (item) => `${item.day_of_week}:${item.period_number}`,
         ),
       );
 
-      const slots: Slot[] = settings.study_days.flatMap((day) =>
-        Array.from({ length: Math.max(0, settings.periods_per_day) }, (_, i) => ({
-          day,
-          period: i + 1,
-        })),
-      );
-
-      const usableSlots = slots.filter(
-        (slot) => !blockedSet.has(`${slot.day}:${slot.period}`),
-      );
-
-      const capacityByClass = new Map<string, number>();
       for (const schoolClass of yearClasses) {
+        const blocked = blockedPeriods.filter(
+          (item) => settings.study_days.includes(item.day_of_week),
+        ).length;
         capacityByClass.set(
           schoolClass.id,
-          usableSlots.length,
+          settings.study_days.length * settings.periods_per_day - blocked,
         );
       }
 
@@ -1927,68 +1772,59 @@ export default function Timetable() {
         const load = assignmentRows
           .filter((row) => row.classId === schoolClass.id)
           .reduce((sum, row) => sum + row.lessonsPerWeek, 0);
-        const capacity = capacityByClass.get(schoolClass.id) ?? 0;
-
-        if (load > capacity) {
+        if (load > (capacityByClass.get(schoolClass.id) ?? 0)) {
           throw new Error(
-            `${schoolClass.name} needs ${load} lessons but only ${capacity} usable teaching periods are available in the configured school week.`,
+            `${schoolClass.name} needs ${load} lessons but only ${capacityByClass.get(schoolClass.id) ?? 0} usable periods are available.`,
           );
         }
       }
 
-      const occurrences: Occurrence[] = assignmentRows.flatMap((row) =>
-        Array.from({ length: Math.max(0, row.lessonsPerWeek) }, (_, index) => ({
-          row,
-          occurrence: index + 1,
-        })),
+      const slots = settings.study_days.flatMap((day) =>
+        Array.from({ length: settings.periods_per_day }, (_, i) => i + 1).map(
+          (period) => ({ day, period }),
+        ),
       );
-
-      const periodTimes = new Map(
-        Array.from({ length: Math.max(0, settings.periods_per_day) }, (_, i) => {
-          const period = i + 1;
-          const start = periodPreview.find(
-            (item) => item.kind === "period" && item.period === period,
-          );
-          return [
-            period,
-            {
-              start: start?.start ?? "",
-              end: start?.end ?? "",
-            },
-          ];
-        }),
+      const usableSlots = slots.filter(
+        (slot) => !blockedSet.has(`${slot.day}:${slot.period}`),
       );
 
       const occupiedClass = new Set<string>();
       const occupiedTeacher = new Set<string>();
       const result: GeneratedEntry[] = [];
-      const scheduledByClass = new Map<string, GeneratedEntry[]>();
       const classDayCounts = new Map<string, Map<string, number>>();
       const subjectDayCounts = new Map<string, Map<string, number>>();
-      const subjectPeriodCounts = new Map<string, Map<number, number>>();
       const teacherDayCounts = new Map<string, Map<string, number>>();
-      const teacherPeriodCounts = new Map<string, Map<number, number>>();
+      const scheduledByClass = new Map<string, GeneratedEntry[]>();
+
+      const occurrences = buildOccurrences().sort((a, b) => {
+        const priorityOrder = { fixed: 0, preferred: 1, normal: 2 } as Record<
+          string,
+          number
+        >;
+        return (
+          priorityOrder[a.row.priorityLevel] -
+            priorityOrder[b.row.priorityLevel] ||
+          b.row.lessonsPerWeek - a.row.lessonsPerWeek
+        );
+      });
 
       const classKey = (classId: string, day: string, period: number) =>
         `${classId}:${day}:${period}`;
       const teacherKey = (teacherId: string, day: string, period: number) =>
         `${teacherId}:${day}:${period}`;
-
       const countFor = (
         map: Map<string, Map<string, number>>,
         id: string,
         day: string,
       ) => map.get(id)?.get(day) ?? 0;
-
       const bump = (
         map: Map<string, Map<string, number>>,
         id: string,
         day: string,
-        amount: number,
       ) => {
         if (!map.has(id)) map.set(id, new Map());
         const inner = map.get(id)!;
-        inner.set(day, (inner.get(day) ?? 0) + amount);
+        inner.set(day, (inner.get(day) ?? 0) + 1);
       };
 
       const isAdjacentSameSubject = (
@@ -2003,27 +1839,31 @@ export default function Timetable() {
             entry.subject_id === row.subjectId,
         );
 
-      const canPlace = (row: AssignmentRow, slot: Slot) => {
-        if (!row.teacherId) return false;
-        if (!settings.study_days.includes(slot.day)) return false;
+      const canPlace = (
+        row: AssignmentRow,
+        slot: { day: string; period: number },
+      ) => {
+        const times = periodTimes.get(slot.period);
+        if (!times || !row.teacherId) return false;
         if (blockedSet.has(`${slot.day}:${slot.period}`)) return false;
-        if (!periodTimes.get(slot.period)?.start) return false;
+        if (!settings.study_days.includes(slot.day)) return false;
         if (
           occupiedClass.has(classKey(row.classId, slot.day, slot.period)) ||
-          occupiedTeacher.has(
-            teacherKey(row.teacherId, slot.day, slot.period),
-          )
+          occupiedTeacher.has(teacherKey(row.teacherId, slot.day, slot.period))
         ) {
           return false;
         }
+        if (isAdjacentSameSubject(row, slot.day, slot.period)) return false;
         return true;
       };
 
-      const place = (row: AssignmentRow, slot: Slot) => {
+      const place = (
+        row: AssignmentRow,
+        slot: { day: string; period: number },
+      ) => {
         if (!canPlace(row, slot)) return false;
-
         const times = periodTimes.get(slot.period);
-        if (!times?.start || !row.teacherId) return false;
+        if (!times || !row.teacherId) return false;
 
         const entry: GeneratedEntry = {
           school_id: schoolId,
@@ -2043,32 +1883,9 @@ export default function Timetable() {
         result.push(entry);
         occupiedClass.add(classKey(row.classId, slot.day, slot.period));
         occupiedTeacher.add(teacherKey(row.teacherId, slot.day, slot.period));
-        bump(classDayCounts, row.classId, slot.day, 1);
-        bump(
-          subjectDayCounts,
-          `${row.classId}:${row.subjectId}`,
-          slot.day,
-          1,
-        );
-        const subjectKey = `${row.classId}:${row.subjectId}`;
-        if (!subjectPeriodCounts.has(subjectKey)) {
-          subjectPeriodCounts.set(subjectKey, new Map());
-        }
-        const subjectPeriods = subjectPeriodCounts.get(subjectKey)!;
-        subjectPeriods.set(
-          slot.period,
-          (subjectPeriods.get(slot.period) ?? 0) + 1,
-        );
-        bump(teacherDayCounts, row.teacherId, slot.day, 1);
-        if (!teacherPeriodCounts.has(row.teacherId)) {
-          teacherPeriodCounts.set(row.teacherId, new Map());
-        }
-        const teacherPeriods = teacherPeriodCounts.get(row.teacherId)!;
-        teacherPeriods.set(
-          slot.period,
-          (teacherPeriods.get(slot.period) ?? 0) + 1,
-        );
-
+        bump(classDayCounts, row.classId, slot.day);
+        bump(subjectDayCounts, `${row.classId}:${row.subjectId}`, slot.day);
+        bump(teacherDayCounts, row.teacherId, slot.day);
         if (!scheduledByClass.has(row.classId)) {
           scheduledByClass.set(row.classId, []);
         }
@@ -2076,372 +1893,93 @@ export default function Timetable() {
         return true;
       };
 
-      const unplace = (row: AssignmentRow, slot: Slot) => {
-        const classSlot = classKey(row.classId, slot.day, slot.period);
-        const teacherSlot = teacherKey(row.teacherId ?? "", slot.day, slot.period);
-        const resultIndex = result.findIndex(
-          (entry) =>
-            entry.class_id === row.classId &&
-            entry.subject_id === row.subjectId &&
-            entry.teacher_id === row.teacherId &&
-            entry.day_of_week === slot.day &&
-            entry.period_number === slot.period,
-        );
-
-        if (resultIndex >= 0) result.splice(resultIndex, 1);
-        occupiedClass.delete(classSlot);
-        occupiedTeacher.delete(teacherSlot);
-        bump(classDayCounts, row.classId, slot.day, -1);
-        bump(
-          subjectDayCounts,
-          `${row.classId}:${row.subjectId}`,
-          slot.day,
-          -1,
-        );
-        const subjectKey = `${row.classId}:${row.subjectId}`;
-        const subjectPeriods = subjectPeriodCounts.get(subjectKey);
-        if (subjectPeriods) {
-          const nextCount = (subjectPeriods.get(slot.period) ?? 0) - 1;
-          if (nextCount <= 0) subjectPeriods.delete(slot.period);
-          else subjectPeriods.set(slot.period, nextCount);
-        }
-        bump(teacherDayCounts, row.teacherId ?? "", slot.day, -1);
-        const teacherPeriods = teacherPeriodCounts.get(row.teacherId ?? "");
-        if (teacherPeriods) {
-          const nextCount = (teacherPeriods.get(slot.period) ?? 0) - 1;
-          if (nextCount <= 0) teacherPeriods.delete(slot.period);
-          else teacherPeriods.set(slot.period, nextCount);
-        }
-
-        const classEntries = scheduledByClass.get(row.classId) ?? [];
-        const entryIndex = classEntries.findIndex(
-          (entry) =>
-            entry.subject_id === row.subjectId &&
-            entry.teacher_id === row.teacherId &&
-            entry.day_of_week === slot.day &&
-            entry.period_number === slot.period,
-        );
-        if (entryIndex >= 0) classEntries.splice(entryIndex, 1);
-      };
-
-      // Fixed lessons are hard constraints. They are placed before anything
-      // else, so a normal lesson can never steal a fixed slot.
-      const fixedOccurrences = occurrences.filter(
-        (item) => item.row.priorityLevel === "fixed" && item.occurrence === 1,
+      // HARD CONSTRAINT: fixed lessons are placed first. No flexible lesson
+      // is allowed to consume a fixed slot before fixed lessons are checked.
+      const fixedGroups = occurrences.filter(
+        (item) => item.row.priorityLevel === "fixed",
       );
-
-      const fixedSlotKeys = new Set<string>();
-
-      for (const item of fixedOccurrences) {
-        if (!item.row.preferredDay || !item.row.preferredPeriod) {
-          throw new Error(
-            `Fixed lesson is missing its required slot: ${item.row.className} — ${item.row.subjectName}.`,
-          );
-        }
-
-        const slot: Slot = {
+      for (const item of fixedGroups) {
+        if (item.occurrence > 1) continue;
+        const slot = {
           day: item.row.preferredDay,
           period: Number(item.row.preferredPeriod),
         };
-
         if (!place(item.row, slot)) {
           throw new Error(
             `Fixed lesson could not be placed: ${item.row.className} — ${item.row.subjectName} → ${slot.day}, Period ${slot.period}. A hard constraint is blocking this slot.`,
           );
         }
-        fixedSlotKeys.add(`${item.row.classId}:${slot.day}:${slot.period}`);
       }
 
-      const remainingOccurrences = occurrences.filter(
-        (item) => !(item.row.priorityLevel === "fixed" && item.occurrence === 1),
+      const remaining = occurrences.filter(
+        (item) =>
+          !(item.row.priorityLevel === "fixed" && item.occurrence === 1),
       );
 
-      // IMPORTANT:
-      // The previous generator was greedy: it selected one candidate and moved
-      // on permanently. That can leave a perfectly usable slot unused and make
-      // a later PE/English/etc. lesson look impossible.
-      //
-      // We now use bounded backtracking with MRV (minimum remaining values).
-      // At every step we choose the lesson with the fewest currently legal
-      // slots, try the best slot first, and backtrack when that choice makes a
-      // later lesson impossible. This allows the generator to move a flexible
-      // lesson out of Monday P7 so PE can use it, for example.
-      const candidateScore = (item: Occurrence, slot: Slot) => {
-        const row = item.row;
-        let score = 0;
-        const preferred = row.priorityLevel === "preferred";
+      for (const item of remaining) {
+        const preferred =
+          item.row.priorityLevel === "preferred" ||
+          item.row.priorityLevel === "fixed";
 
-        if (row.preferredDay === slot.day) score += preferred ? 700 : 80;
-        if (row.preferredPeriod && Number(row.preferredPeriod) === slot.period) {
-          score += preferred ? 700 : 80;
-        }
-        if (
-          row.preferredDay === slot.day &&
-          row.preferredPeriod &&
-          Number(row.preferredPeriod) === slot.period
-        ) {
-          score += 500;
-        }
-
-        // Spread a subject across the week rather than producing
-        // English/English/English on consecutive days when alternatives exist.
-        const subjectKey = `${row.classId}:${row.subjectId}`;
-        const samePeriodCount =
-          subjectPeriodCounts.get(subjectKey)?.get(slot.period) ?? 0;
-        const sameDayCount = countFor(subjectDayCounts, subjectKey, slot.day);
-
-        // Strongly discourage repeating the same subject in the same period
-        // across different days. This is a soft preference, never a hard rule.
-        score -= samePeriodCount * 900;
-
-        // Spread a subject across the week instead of clustering it.
-        score -= sameDayCount * 300;
-
-        // Avoid unnecessarily repeating a teacher's period pattern too.
-        score -=
-          (teacherPeriodCounts.get(row.teacherId ?? "")?.get(slot.period) ?? 0) *
-          45;
-
-        // Prefer a balanced weekly distribution for each class.
-        score -= countFor(classDayCounts, row.classId, slot.day) * 55;
-
-        // Avoid concentrating a teacher on one day, but never make this a hard
-        // constraint because teacher availability is already a hard constraint.
-        score -= countFor(teacherDayCounts, row.teacherId ?? "", slot.day) * 12;
-
-        // Adjacent copies are undesirable, but they are NOT a hard constraint.
-        // When the school has 74 required lessons and 74 available teaching
-        // slots, filling the valid slot is more important than this preference.
-        if (isAdjacentSameSubject(row, slot.day, slot.period)) score -= 250;
-
-        const subjectEntries = scheduledByClass.get(row.classId) ?? [];
-        const slotDayIndex = settings.study_days.indexOf(slot.day);
-        const consecutiveDaySameSubject = subjectEntries.some(
-          (entry) =>
-            entry.subject_id === row.subjectId &&
-            Math.abs(
-              settings.study_days.indexOf(entry.day_of_week) - slotDayIndex,
-            ) === 1,
+        let candidates = usableSlots.filter((slot) =>
+          canPlace(item.row, slot),
         );
-        if (consecutiveDaySameSubject) score -= 450;
 
-        // Prefer earlier periods when the stronger constraints are equal.
-        score -= (slot.period - 1) * 5;
-
-        return score;
-      };
-
-      const getCandidates = (item: Occurrence) =>
-        usableSlots
-          .filter((slot) => canPlace(item.row, slot))
-          .sort((a, b) => {
-            const scoreDifference =
-              candidateScore(item, b) - candidateScore(item, a);
-            if (scoreDifference !== 0) return scoreDifference;
-            if (a.day !== b.day) {
-              return (
-                settings.study_days.indexOf(a.day) -
-                settings.study_days.indexOf(b.day)
-              );
-            }
-            return a.period - b.period;
-          });
-
-      // First order is used only as a deterministic tie-breaker for MRV.
-      // Highly constrained teachers/subjects naturally rise to the top.
-      const occurrenceConstraintScore = (item: Occurrence) => {
-        let score = 0;
-        if (item.row.priorityLevel === "preferred") score += 1000;
-        if (item.row.priorityLevel === "fixed") score += 2000;
-        if (rowHasUniqueTeacher(item.row, assignmentRows)) score += 500;
-        score += Math.max(0, 100 - item.row.lessonsPerWeek);
-        return score;
-      };
-
-      function rowHasUniqueTeacher(row: AssignmentRow, rows: AssignmentRow[]) {
-        if (!row.teacherId) return false;
-        return rows.filter((candidate) => candidate.teacherId === row.teacherId)
-          .length <= 2;
-      }
-
-      let nodes = 0;
-      const maxNodes = 500_000;
-      let abortedByNodeLimit = false;
-
-      const solve = (remaining: Occurrence[]): boolean => {
-        nodes += 1;
-        if (nodes > maxNodes) {
-          abortedByNodeLimit = true;
-          return false;
-        }
-
-        if (remaining.length === 0) return true;
-
-        // MRV is the key difference from the old greedy generator. A lesson
-        // with only one or two legal slots is handled before a lesson with many
-        // options, which prevents flexible lessons from consuming scarce slots.
-        let selected: Occurrence | null = null;
-        let selectedCandidates: Slot[] = [];
-        let selectedScore = -Infinity;
-
-        for (const item of remaining) {
-          const candidates = getCandidates(item);
-          if (candidates.length === 0) return false;
-
-          const tieScore = occurrenceConstraintScore(item);
-          if (
-            selected === null ||
-            candidates.length < selectedCandidates.length ||
-            (candidates.length === selectedCandidates.length &&
-              tieScore > selectedScore)
-          ) {
-            selected = item;
-            selectedCandidates = candidates;
-            selectedScore = tieScore;
-
-            if (candidates.length === 1) break;
-          }
-        }
-
-        if (!selected) return false;
-
-        for (const slot of selectedCandidates) {
-          if (!place(selected.row, slot)) continue;
-
-          const nextRemaining = remaining.filter(
-            (item) =>
-              !(
-                item.row.key === selected!.row.key &&
-                item.occurrence === selected!.occurrence
-              ),
+        if (preferred && item.row.preferredDay && item.row.preferredPeriod) {
+          const exact = candidates.find(
+            (slot) =>
+              slot.day === item.row.preferredDay &&
+              slot.period === Number(item.row.preferredPeriod),
           );
-
-          // Forward-check every remaining lesson. This catches the exact
-          // situation where using an apparently free slot makes PE impossible
-          // later, and immediately tries another arrangement.
-          let viable = true;
-          for (const item of nextRemaining) {
-            if (getCandidates(item).length === 0) {
-              viable = false;
-              break;
-            }
+          if (exact) {
+            candidates = [
+              exact,
+              ...candidates.filter((slot) => slot !== exact),
+            ];
           }
-
-          if (viable && solve(nextRemaining)) return true;
-
-          unplace(selected.row, slot);
         }
 
-        return false;
-      };
+        candidates.sort((a, b) => {
+          const score = (slot: { day: string; period: number }) => {
+            let value = 0;
+            if (item.row.preferredDay === slot.day)
+              value += preferred ? 100 : 10;
+            if (
+              item.row.preferredPeriod &&
+              Number(item.row.preferredPeriod) === slot.period
+            ) {
+              value += preferred ? 100 : 5;
+            }
+            value -= countFor(classDayCounts, item.row.classId, slot.day) * 20;
+            value -=
+              countFor(
+                subjectDayCounts,
+                `${item.row.classId}:${item.row.subjectId}`,
+                slot.day,
+              ) * 50;
+            value -=
+              countFor(teacherDayCounts, item.row.teacherId ?? "", slot.day) *
+              5;
+            // Prefer earlier periods when all hard/priority constraints are equal.
+            // P1 therefore wins over P2, P2 over P3, etc., without forcing
+            // every class to start at P1 when another constraint is stronger.
+            value -= (slot.period - 1) * 2;
+            return value;
+          };
+          return score(b) - score(a);
+        });
 
-      const solved = solve(remainingOccurrences);
-
-      if (!solved) {
-        const problematic = remainingOccurrences
-          .map((item) => ({ item, candidates: getCandidates(item).length }))
-          .sort((a, b) => a.candidates - b.candidates)
-          .slice(0, 5);
-
-        const details = problematic.map(
-          ({ item, candidates }) =>
-            `${item.row.className} — ${item.row.subjectName} (lesson ${item.occurrence}) has ${candidates} currently usable slot${candidates === 1 ? "" : "s"}.`,
-        );
-
-        if (abortedByNodeLimit) {
+        const chosen = candidates[0];
+        if (!chosen || !place(item.row, chosen)) {
           throw new Error(
-            `The timetable search reached its safety limit before finding a complete arrangement. The generator tried multiple rearrangements but could not prove a valid ${occurrences.length}-lesson timetable within the search limit.`,
+            `Could not schedule ${item.row.className} — ${item.row.subjectName} (lesson ${item.occurrence}). The remaining constraints are too tight.`,
           );
         }
-
-        throw new Error(
-          `Could not build a complete timetable for ${occurrences.length} lessons. The generator tried alternative free slots and backtracked, but the remaining hard constraints are incompatible.${details.length ? ` ${details.join(" ")}` : ""}`,
-        );
       }
 
-      // A valid timetable is not automatically a good timetable. Once the
-      // hard constraints are satisfied, improve the arrangement by swapping
-      // flexible lessons inside the same class. This works even when every
-      // teaching slot is occupied, because no empty slot is required.
-      const scheduleQuality = (entries: GeneratedEntry[]) =>
-        calculateTimetableQuality({ entries, assignmentRows, settings });
-
-      let currentQuality = scheduleQuality(result).score;
-      const classIds = Array.from(new Set(result.map((entry) => entry.class_id)));
-
-      for (let pass = 0; pass < 4; pass += 1) {
-        let improved = false;
-
-        for (const classId of classIds) {
-          const classEntries = result.filter((entry) => entry.class_id === classId);
-
-          for (let i = 0; i < classEntries.length; i += 1) {
-            const first = classEntries[i];
-            if (fixedSlotKeys.has(`${first.class_id}:${first.day_of_week}:${first.period_number}`)) continue;
-
-            for (let j = i + 1; j < classEntries.length; j += 1) {
-              const second = classEntries[j];
-              if (fixedSlotKeys.has(`${second.class_id}:${second.day_of_week}:${second.period_number}`)) continue;
-              if (first.day_of_week === second.day_of_week && first.period_number === second.period_number) continue;
-
-              const firstTeacherConflict = result.some(
-                (entry) =>
-                  entry !== first &&
-                  entry !== second &&
-                  entry.teacher_id === first.teacher_id &&
-                  entry.day_of_week === second.day_of_week &&
-                  entry.period_number === second.period_number,
-              );
-              const secondTeacherConflict = result.some(
-                (entry) =>
-                  entry !== first &&
-                  entry !== second &&
-                  entry.teacher_id === second.teacher_id &&
-                  entry.day_of_week === first.day_of_week &&
-                  entry.period_number === first.period_number,
-              );
-              if (firstTeacherConflict || secondTeacherConflict) continue;
-
-              const firstIndex = result.indexOf(first);
-              const secondIndex = result.indexOf(second);
-              if (firstIndex < 0 || secondIndex < 0) continue;
-
-              const swappedFirst: GeneratedEntry = {
-                ...first,
-                day_of_week: second.day_of_week,
-                period_number: second.period_number,
-                start_time: second.start_time,
-                end_time: second.end_time,
-              };
-              const swappedSecond: GeneratedEntry = {
-                ...second,
-                day_of_week: first.day_of_week,
-                period_number: first.period_number,
-                start_time: first.start_time,
-                end_time: first.end_time,
-              };
-
-              result[firstIndex] = swappedFirst;
-              result[secondIndex] = swappedSecond;
-              const candidateQuality = scheduleQuality(result).score;
-
-              if (candidateQuality > currentQuality) {
-                currentQuality = candidateQuality;
-                classEntries[i] = swappedFirst;
-                classEntries[j] = swappedSecond;
-                improved = true;
-              } else {
-                result[firstIndex] = first;
-                result[secondIndex] = second;
-              }
-            }
-          }
-        }
-
-        if (!improved) break;
-      }
-
-      // Final hard validation happens before the database is touched.
+      // Validate the complete candidate before touching the existing database
+      // timetable. If anything is invalid, the previous valid timetable stays
+      // exactly where it is.
       const candidateReport = buildTimetableValidationReport({
         entries: result,
         assignmentRows,
@@ -2450,7 +1988,6 @@ export default function Timetable() {
         settings,
         breaks,
       });
-
       if (!candidateReport.allPassed) {
         const failedDetails = candidateReport.checks
           .filter((check) => !check.passed)
@@ -2459,15 +1996,12 @@ export default function Timetable() {
               ? [`${check.label}:`, ...check.details]
               : [check.summary],
           );
-
         const guidance = [
           "Do not use this generated result until every validation check passes.",
-          "Fixed lessons are hard constraints and must never be displaced.",
-          "The generator now backtracks through flexible lessons before declaring a timetable impossible.",
-          "If a teacher conflict remains, review that teacher's assignments and fixed/preferred slots.",
-          "If a subject count is short, increase its weekly lesson count only if the school actually requires it.",
+          "Review Fixed lessons first; Fixed is a hard constraint and must never be displaced by a normal lesson.",
+          "If a teacher is double-booked, move one lesson or assign it to another teacher.",
+          "If a class has two lessons in one period, move one lesson to another available period.",
         ];
-
         setGenerationStatus("invalid");
         setGenerationIssues(failedDetails);
         setGenerationGuidance(guidance);
@@ -2490,8 +2024,13 @@ export default function Timetable() {
       }));
 
       // IMPORTANT: timetable_entries commonly has a UNIQUE constraint on
-      // school/year/class/day/period. Keep a backup, replace only after the
-      // candidate has passed all hard validation, and restore on save failure.
+      // school/year/class/day/period. Therefore we cannot insert the new
+      // timetable while the old timetable still occupies those slots.
+      //
+      // We first keep an in-memory backup of the current valid timetable,
+      // then replace it. If the insert fails, we restore the backup. This
+      // avoids the ON CONFLICT problem and guarantees that an invalid/failed
+      // generation does not leave the school without its previous timetable.
       const previousEntriesResult = await supabase
         .from("timetable_entries")
         .select(
@@ -2531,6 +2070,8 @@ export default function Timetable() {
           );
         }
       } catch (saveError) {
+        // Remove any partially inserted candidate rows before restoring the
+        // previous valid timetable.
         if (insertedIds.length > 0) {
           await supabase
             .from("timetable_entries")
@@ -2561,6 +2102,8 @@ export default function Timetable() {
         );
       }
 
+      // The database now contains exactly the validated candidate. Reload it
+      // so the UI uses the same records that teachers/principals will see.
       await loadSavedConfiguration(schoolId, selectedAcademicYearId);
       setGeneratedEntries(
         result.map((entry, index) => ({
@@ -2571,9 +2114,8 @@ export default function Timetable() {
       setGenerationStatus("valid");
       setGenerationIssues([]);
       setGenerationGuidance([]);
-      const finalQuality = scheduleQuality(result);
       setSuccess(
-        `Timetable generated successfully: ${result.length} lessons across ${yearClasses.length} class${yearClasses.length === 1 ? "" : "es"}. Quality: ${finalQuality.label} (${finalQuality.score}/100).`,
+        `Timetable generated successfully: ${result.length} lessons across ${yearClasses.length} class${yearClasses.length === 1 ? "" : "es"}.`,
       );
       setStep(5);
     } catch (generationError) {
@@ -2585,8 +2127,7 @@ export default function Timetable() {
       ]);
       setGenerationGuidance([
         "No replacement timetable was accepted.",
-        "The generator now checks alternative free slots before declaring a lesson impossible.",
-        "Review the remaining hard constraint above and regenerate after fixing it.",
+        "Review the constraint or database error above and regenerate after fixing it.",
         "The last valid timetable remains available for review.",
       ]);
       setError(
@@ -2598,6 +2139,7 @@ export default function Timetable() {
       setGenerating(false);
     }
   }
+
   if (loading)
     return (
       <div className="mx-auto max-w-[1500px]">
@@ -2615,6 +2157,7 @@ export default function Timetable() {
     return (
       <TeacherTimetableView
         schoolId={schoolId}
+        teacherId={teacherId}
         role={role}
         isTeacher={isTeacher}
         academicYears={academicYears}
@@ -3780,15 +3323,6 @@ function GenerateReviewStep({
     return map;
   }, [classEntries]);
   const generated = generatedEntries.length > 0;
-  const timetableQuality = useMemo(
-    () =>
-      calculateTimetableQuality({
-        entries: generatedEntries,
-        assignmentRows,
-        settings,
-      }),
-    [generatedEntries, assignmentRows, settings],
-  );
   const validationReport = useMemo(
     () =>
       buildTimetableValidationReport({
@@ -3809,41 +3343,46 @@ function GenerateReviewStep({
     ],
   );
 
-  // Build the display rows in the same component that renders the timetable.
-  // Periods and configured breaks are separate visual states.
-  const displayScheduleItems: DisplayScheduleItem[] = useMemo(() => {
+  // Build the display periods in the same component that renders the timetable.
+  // This keeps P1, P2, etc. visible even when a period has no lesson.
+  const displayPeriods: PeriodSlot[] = useMemo(() => {
     const breakMap = new Map<number, BreakRule>(
       breaks.map((item: BreakRule) => [item.after_period, item]),
     );
     let current = minutesFromTime(settings.first_period_start);
-    const items: DisplayScheduleItem[] = [];
+    const periods: PeriodSlot[] = [];
 
-    for (let period = 1; period <= Math.max(0, settings.periods_per_day); period += 1) {
+    for (
+      let period = 1;
+      period <= Math.max(0, settings.periods_per_day);
+      period += 1
+    ) {
       const start = current;
       const end = start + Math.max(1, settings.period_duration_minutes);
-      items.push({
-        kind: "period",
-        slot: { period, start: timeFromMinutes(start), end: timeFromMinutes(end) },
+
+      periods.push({
+        period,
+        start: timeFromMinutes(start),
+        end: timeFromMinutes(end),
       });
 
       current = end + Math.max(0, settings.gap_minutes);
+
       const breakRule = breakMap.get(period);
       if (breakRule) {
-        const breakStart = current;
-        const breakEnd = breakStart + Math.max(0, breakRule.duration_minutes);
-        items.push({
-          kind: "break",
-          name: breakRule.name,
-          start: timeFromMinutes(breakStart),
-          end: timeFromMinutes(breakEnd),
-          afterPeriod: period,
-        });
-        current = breakEnd + Math.max(0, settings.gap_minutes);
+        current += Math.max(0, breakRule.duration_minutes);
+        current += Math.max(0, settings.gap_minutes);
       }
     }
 
-    return items;
-  }, [settings, breaks]);
+    return periods;
+  }, [
+    breaks,
+    settings.first_period_start,
+    settings.periods_per_day,
+    settings.period_duration_minutes,
+    settings.gap_minutes,
+  ]);
 
   return (
     <section className="mt-6">
@@ -3882,23 +3421,6 @@ function GenerateReviewStep({
           good={generated}
         />
       </div>
-      {generated && (
-        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Timetable quality</p>
-              <p className="mt-1 text-sm font-semibold text-slate-900">{timetableQuality.label} · {timetableQuality.score}/100</p>
-              <p className="mt-1 text-xs text-slate-500">Subjects are spread across different days and periods where the hard constraints allow it.</p>
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-[11px] sm:grid-cols-4">
-              <div className="rounded-lg bg-slate-50 px-3 py-2 text-slate-600"><b>{timetableQuality.repeatedSubjectPeriods}</b> same-period repeats</div>
-              <div className="rounded-lg bg-slate-50 px-3 py-2 text-slate-600"><b>{timetableQuality.consecutiveSubjectDays}</b> consecutive-day repeats</div>
-              <div className="rounded-lg bg-slate-50 px-3 py-2 text-slate-600"><b>{timetableQuality.sameDaySubjectPairs}</b> same-day subject pairs</div>
-              <div className="rounded-lg bg-slate-50 px-3 py-2 text-slate-600"><b>{timetableQuality.adjacentSubjectPeriods}</b> adjacent subject periods</div>
-            </div>
-          </div>
-        </div>
-      )}
       {!readinessGood && (
         <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
           <b>Setup not ready.</b>{" "}
@@ -4123,49 +3645,10 @@ function GenerateReviewStep({
                     </div>
 
                     <div className="space-y-2 p-3">
-                      {displayScheduleItems.map((item) => {
-                        if (item.kind === "break") {
-                          return (
-                            <div
-                              key={`${day}-break-${item.afterPeriod}`}
-                              className="rounded-lg border border-amber-200 bg-amber-50 p-3"
-                            >
-                              <p className="text-[11px] font-bold uppercase tracking-wide text-amber-700">
-                                {item.name}
-                              </p>
-                              <p className="mt-1 text-xs font-medium text-amber-700">
-                                {formatTime(item.start)}–{formatTime(item.end)}
-                              </p>
-                            </div>
-                          );
-                        }
-
-                        const periodSlot = item.slot;
-                        const blocked = blockedPeriods.find(
-                          (blockedPeriod) =>
-                            blockedPeriod.day_of_week === day &&
-                            Number(blockedPeriod.period_number) === periodSlot.period,
-                        );
+                      {displayPeriods.map((periodSlot: PeriodSlot) => {
                         const entry = dayEntries.find(
-                          (entryItem) => entryItem.period_number === periodSlot.period,
+                          (item) => item.period_number === periodSlot.period,
                         );
-
-                        if (blocked) {
-                          return (
-                            <div
-                              key={`${day}-P${periodSlot.period}-blocked`}
-                              className="rounded-lg border border-slate-300 bg-slate-100 p-3"
-                            >
-                              <p className="text-[11px] font-semibold text-slate-500">
-                                P{periodSlot.period} · {formatTime(periodSlot.start)}–{formatTime(periodSlot.end)}
-                              </p>
-                              <p className="mt-2 text-sm font-semibold text-slate-600">Blocked</p>
-                              <p className="mt-1 text-[11px] text-slate-500">
-                                {blocked.reason || "No classes"}
-                              </p>
-                            </div>
-                          );
-                        }
 
                         if (!entry) {
                           return (
@@ -4224,6 +3707,7 @@ function GenerateReviewStep({
 
 function TeacherTimetableView({
   schoolId,
+  teacherId,
   role,
   isTeacher,
   academicYears,
@@ -4232,6 +3716,7 @@ function TeacherTimetableView({
   setSelectedAcademicYearId,
 }: {
   schoolId: string;
+  teacherId: string;
   role: ReturnType<typeof normalizeRole>;
   isTeacher: boolean;
   academicYears: AcademicYear[];
@@ -4241,45 +3726,135 @@ function TeacherTimetableView({
 }) {
   const [selectedClassId, setSelectedClassId] = useState("");
   const [entries, setEntries] = useState<any[]>([]);
+  const [teacherEntries, setTeacherEntries] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Teachers should only see classes/years for which they actually have
+  // timetable entries. This also prevents selecting another teacher's class
+  // and accidentally viewing that class's timetable.
+  const teacherYearIds = useMemo(
+    () =>
+      new Set(
+        teacherEntries
+          .map((entry) => entry.academic_year_id)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    [teacherEntries],
+  );
+
+  const teacherClassIds = useMemo(
+    () =>
+      new Set(
+        teacherEntries
+          .filter(
+            (entry) =>
+              !selectedAcademicYearId ||
+              entry.academic_year_id === selectedAcademicYearId,
+          )
+          .map((entry) => entry.class_id)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    [teacherEntries, selectedAcademicYearId],
+  );
+
+  const teacherAcademicYears = useMemo(
+    () =>
+      academicYears.filter((year) =>
+        teacherYearIds.size > 0 ? teacherYearIds.has(year.id) : true,
+      ),
+    [academicYears, teacherYearIds],
+  );
+
   const availableClasses = useMemo(
     () =>
       classes.filter(
-        (item) => item.academic_year_id === selectedAcademicYearId,
+        (item) =>
+          item.academic_year_id === selectedAcademicYearId &&
+          (teacherClassIds.size > 0 ? teacherClassIds.has(item.id) : false),
       ),
-    [classes, selectedAcademicYearId],
+    [classes, selectedAcademicYearId, teacherClassIds],
   );
+
+  // First load every timetable entry assigned to this teacher. This is what
+  // determines the academic years and classes that should appear in the
+  // teacher's selectors.
+  useEffect(() => {
+    async function loadTeacherEntries() {
+      if (!schoolId || !teacherId) {
+        setTeacherEntries([]);
+        return;
+      }
+
+      setLoading(true);
+      setError("");
+
+      const { data, error: queryError } = await supabase
+        .from("timetable_entries")
+        .select(
+          "id, school_id, academic_year_id, class_id, subject_id, teacher_id, day_of_week, start_time, end_time, subjects(name), teachers(first_name, middle_name, last_name)",
+        )
+        .eq("school_id", schoolId)
+        .eq("teacher_id", teacherId)
+        .order("academic_year_id")
+        .order("day_of_week")
+        .order("start_time");
+
+      if (queryError) {
+        setTeacherEntries([]);
+        setError(getErrorMessage(queryError));
+        setLoading(false);
+        return;
+      }
+
+      setTeacherEntries(data ?? []);
+      setLoading(false);
+    }
+
+    void loadTeacherEntries();
+  }, [schoolId, teacherId]);
+
+  useEffect(() => {
+    if (!teacherAcademicYears.length) {
+      if (selectedAcademicYearId) setSelectedAcademicYearId("");
+      return;
+    }
+
+    if (!teacherAcademicYears.some((year) => year.id === selectedAcademicYearId)) {
+      setSelectedAcademicYearId(
+        teacherAcademicYears.find((year) => year.is_active)?.id ??
+          teacherAcademicYears[0].id,
+      );
+    }
+  }, [
+    teacherAcademicYears,
+    selectedAcademicYearId,
+    setSelectedAcademicYearId,
+  ]);
+
   useEffect(() => {
     if (
       !selectedClassId ||
       !availableClasses.some((item) => item.id === selectedClassId)
-    )
+    ) {
       setSelectedClassId(availableClasses[0]?.id ?? "");
-  }, [availableClasses, selectedClassId]);
-  useEffect(() => {
-    async function load() {
-      if (!schoolId || !selectedAcademicYearId || !selectedClassId) {
-        setEntries([]);
-        return;
-      }
-      setLoading(true);
-      setError("");
-      const { data, error: queryError } = await supabase
-        .from("timetable_entries")
-        .select(
-          "id, class_id, subject_id, teacher_id, day_of_week, start_time, end_time, subjects(name), teachers(first_name, middle_name, last_name)",
-        )
-        .eq("school_id", schoolId)
-        .eq("academic_year_id", selectedAcademicYearId)
-        .eq("class_id", selectedClassId)
-        .order("start_time");
-      if (queryError) setError(getErrorMessage(queryError));
-      setEntries(data ?? []);
-      setLoading(false);
     }
-    void load();
-  }, [schoolId, selectedAcademicYearId, selectedClassId]);
+  }, [availableClasses, selectedClassId]);
+
+  useEffect(() => {
+    if (!selectedClassId || !selectedAcademicYearId) {
+      setEntries([]);
+      return;
+    }
+
+    setEntries(
+      teacherEntries.filter(
+        (entry) =>
+          entry.academic_year_id === selectedAcademicYearId &&
+          entry.class_id === selectedClassId,
+      ),
+    );
+  }, [teacherEntries, selectedAcademicYearId, selectedClassId]);
   const grouped = useMemo(() => {
     const result: Record<string, any[]> = {};
     DAYS.slice(0, 5).forEach((day) => {
@@ -4306,9 +3881,9 @@ function TeacherTimetableView({
             label="Academic Year"
             value={selectedAcademicYearId}
             onChange={setSelectedAcademicYearId}
-            options={academicYears.map((year) => ({
+            options={teacherAcademicYears.map((year) => ({
               value: year.id,
-              label: year.name,
+              label: `${year.name}${year.is_active ? " • Active" : ""}`,
             }))}
           />
           <SelectField
