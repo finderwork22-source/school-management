@@ -41,7 +41,6 @@ interface Teacher {
 }
 
 interface TeacherForm {
-  teacherId: string;
   firstName: string;
   middleName: string;
   lastName: string;
@@ -57,7 +56,6 @@ interface TeacherForm {
 
 function emptyForm(): TeacherForm {
   return {
-    teacherId: "",
     firstName: "",
     middleName: "",
     lastName: "",
@@ -449,9 +447,6 @@ export default function Teachers() {
     setEditingTeacher(teacher);
 
     setForm({
-      teacherId:
-        teacher.teacher_id,
-
       firstName:
         teacher.first_name,
 
@@ -649,14 +644,6 @@ export default function Teachers() {
       return;
     }
 
-    if (!form.teacherId.trim()) {
-      setError(
-        "Teacher ID is required.",
-      );
-
-      return;
-    }
-
     if (!form.firstName.trim()) {
       setError(
         "First name is required.",
@@ -710,9 +697,6 @@ export default function Teachers() {
     const payload = {
       school_id:
         schoolId,
-
-      teacher_id:
-        form.teacherId.trim(),
 
       first_name:
         form.firstName.trim(),
@@ -1578,20 +1562,19 @@ export default function Teachers() {
 
                 <div className="mt-4 grid gap-4 sm:grid-cols-2">
 
-                  <Field
-                    label="Teacher ID"
-                    value={
-                      form.teacherId
-                    }
-                    onChange={(value) =>
-                      updateField(
-                        "teacherId",
-                        value,
-                      )
-                    }
-                    placeholder="e.g. T-001"
-                    required
-                  />
+                  <div className="block">
+                    <span className="mb-1.5 block text-xs font-medium text-slate-600">
+                      Teacher ID
+                    </span>
+
+                    <div className="flex h-11 w-full items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-600">
+                      {editingTeacher?.teacher_id ?? "Automatically generated"}
+                    </div>
+
+                    <p className="mt-1.5 text-xs text-slate-400">
+                      Teacher ID is generated automatically by MojaSchool.
+                    </p>
+                  </div>
 
                   <Field
                     label="Joined date"
