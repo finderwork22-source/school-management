@@ -64,6 +64,7 @@ import AdminPlatformSettings from "./pages/admin/AdminPlatformSettings";
 import AdminForgotPassword from "./pages/admin/AdminForgotPassword";
 import AdminResetPassword from "./pages/admin/AdminResetPassword";
 
+
 export default function App() {
   return (
     <Routes>
