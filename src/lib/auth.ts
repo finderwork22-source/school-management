@@ -51,9 +51,9 @@ export async function signUp({
         last_name: lastName.trim(),
       },
 
-      // Normal school account signup should continue through the
-      // regular email-confirmation flow. Invitations use a separate
-      // /accept-invitation flow.
+      // New school accounts must go through the dedicated email
+      // verification screen before continuing to school setup.
+      // Invitations use the separate /accept-invitation flow.
       emailRedirectTo: `${window.location.origin}/email-confirmed.html`,
     },
   });
@@ -64,7 +64,7 @@ export async function signOut() {
 }
 
 /**
- * Resolve the authenticated WISE school role.
+ * Resolve the authenticated MojaSchool school role.
  *
  * Parents are linked through parents.user_id and are resolved through the
  * SECURITY DEFINER get_my_parent_membership() RPC.
