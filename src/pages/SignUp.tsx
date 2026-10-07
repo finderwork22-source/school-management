@@ -171,7 +171,7 @@ export default function SignUp() {
           <div className="w-full max-w-sm">
             <div className="mb-8 lg:hidden">
               <img
-                src="/MojaSchool-white.svg"
+                src="/MojaSchool.svg"
                 alt="MojaSchool"
                 className="h-auto w-[180px]"
               />
@@ -279,7 +279,7 @@ export default function SignUp() {
           {/* Mobile logo */}
           <div className="mb-8 lg:hidden">
             <img
-              src="/MojaSchool-white.svg"
+              src="/MojaSchool.svg"
               alt="MojaSchool"
               className="h-auto w-[180px]"
             />

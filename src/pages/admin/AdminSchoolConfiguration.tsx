@@ -545,7 +545,7 @@ export default function AdminSchoolConfiguration() {
           onClick={() =>
             navigate(`/admin/applications?id=${application.id}`)
           }
-          className="inline-flex items-center gap-2 text-sm font-semibold text-wiser-600 hover:text-wiser-700"
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-MojaSchool-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-MojaSchool-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
           <ArrowLeft size={16} />
           Back to school request
