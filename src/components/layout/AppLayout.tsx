@@ -78,6 +78,8 @@ type NavigationChild = {
 
   path: string;
 
+  moduleKey?: string;
+
 };
 
 
@@ -93,6 +95,8 @@ type NavigationItem = {
   children?: NavigationChild[];
 
   allowedRoles?: string[];
+
+  moduleKey?: string;
 
 };
 
@@ -175,6 +179,7 @@ const navigation: NavigationSection[] = [
         icon: ShieldCheck,
 
         path: "/pickup-authorisations",
+        moduleKey: "pickup",
 
       },
 
@@ -217,6 +222,7 @@ const navigation: NavigationSection[] = [
         icon: GraduationCap,
 
         path: "/admissions",
+        moduleKey: "admissions",
 
       },
 
@@ -227,6 +233,7 @@ const navigation: NavigationSection[] = [
         icon: ShieldCheck,
 
         path: "/pickup-desk",
+        moduleKey: "pickup",
 
       },
 
@@ -237,6 +244,7 @@ const navigation: NavigationSection[] = [
         icon: History,
 
         path: "/pickup-history",
+        moduleKey: "pickup",
 
       },
 
@@ -247,6 +255,7 @@ const navigation: NavigationSection[] = [
         icon: Users,
 
         path: "/students",
+        moduleKey: "students",
 
       },
 
@@ -257,6 +266,7 @@ const navigation: NavigationSection[] = [
         icon: UserRound,
 
         path: "/parents",
+        moduleKey: "parents",
 
         allowedRoles: ["Owner", "Principal", "Head of Academics", "Secretary"],
 
@@ -269,6 +279,7 @@ const navigation: NavigationSection[] = [
         icon: GraduationCap,
 
         path: "/teachers",
+        moduleKey: "teachers",
 
       },
 
@@ -291,6 +302,7 @@ const navigation: NavigationSection[] = [
         icon: BookOpen,
 
         path: "/academics",
+        moduleKey: "academics",
 
       },
 
@@ -303,6 +315,7 @@ const navigation: NavigationSection[] = [
         icon: CalendarDays,
 
         path: "/timetable",
+        moduleKey: "timetable",
 
       },
 
@@ -315,6 +328,7 @@ const navigation: NavigationSection[] = [
         icon: ClipboardCheck,
 
         path: "/attendance",
+        moduleKey: "attendance",
 
         children: [
 
@@ -351,6 +365,7 @@ const navigation: NavigationSection[] = [
         icon: FileText,
 
         path: "/assessments",
+        moduleKey: "assessments",
 
         children: [
 
@@ -361,6 +376,7 @@ const navigation: NavigationSection[] = [
             icon: ClipboardCheck,
 
             path: "/student-results",
+            moduleKey: "student_results",
 
           },
 
@@ -389,6 +405,7 @@ const navigation: NavigationSection[] = [
         icon: Wallet,
 
         path: "/finance",
+        moduleKey: "finance",
 
         children: [
 
@@ -399,6 +416,7 @@ const navigation: NavigationSection[] = [
             icon: FileText,
 
             path: "/finance",
+            moduleKey: "finance",
 
           },
 
@@ -558,7 +576,7 @@ function Sidebar({
 
   const navigate = useNavigate();
 
-  const { membership } = useSchool();
+  const { membership, isModuleEnabled } = useSchool();
 
   const role = normalizeRole(membership?.role);
 
@@ -641,13 +659,30 @@ function Sidebar({
 
               if (!roleExplicitlyAllowed) return null;
 
+              if (
+                item.moduleKey &&
+                !isModuleEnabled(item.moduleKey)
+              ) {
+                return null;
+              }
+
               if (!item.children?.length) {
                 return canAccessPath(role, item.path) ? item : null;
               }
 
-              const visibleChildren = item.children.filter((child) =>
-                canAccessPath(role, child.path),
-              );
+              const visibleChildren = item.children.filter((child) => {
+                if (!canAccessPath(role, child.path)) {
+                  return false;
+                }
+
+                const childModuleKey =
+                  child.moduleKey ?? item.moduleKey;
+
+                return (
+                  !childModuleKey ||
+                  isModuleEnabled(childModuleKey)
+                );
+              });
 
               if (visibleChildren.length === 0) return null;
 
@@ -2271,6 +2306,37 @@ function Header({ onOpenNavigation }: { onOpenNavigation: () => void }) {
 
 
 
+const MODULE_ROUTE_RULES: Array<{
+  prefix: string;
+  moduleKey: string;
+}> = [
+  { prefix: "/admissions", moduleKey: "admissions" },
+  { prefix: "/students", moduleKey: "students" },
+  { prefix: "/parents", moduleKey: "parents" },
+  { prefix: "/teachers", moduleKey: "teachers" },
+  { prefix: "/pickup-desk", moduleKey: "pickup" },
+  { prefix: "/pickup-history", moduleKey: "pickup" },
+  { prefix: "/pickup-authorisations", moduleKey: "pickup" },
+  { prefix: "/academic-years", moduleKey: "academics" },
+  { prefix: "/academics", moduleKey: "academics" },
+  { prefix: "/timetable", moduleKey: "timetable" },
+  { prefix: "/attendance", moduleKey: "attendance" },
+  { prefix: "/assessments", moduleKey: "assessments" },
+  { prefix: "/student-results", moduleKey: "student_results" },
+  { prefix: "/finance", moduleKey: "finance" },
+  { prefix: "/announcements", moduleKey: "announcements" },
+];
+
+function getRequiredModule(pathname: string): string | null {
+  const match = MODULE_ROUTE_RULES.find(
+    ({ prefix }) =>
+      pathname === prefix ||
+      pathname.startsWith(`${prefix}/`),
+  );
+
+  return match?.moduleKey ?? null;
+}
+
 function AccessDenied() {
 
   return (
@@ -2321,7 +2387,12 @@ function AccessDenied() {
 
 export default function AppLayout() {
 
-  const { membership } = useSchool();
+  const {
+    membership,
+    configuration,
+    loading: schoolLoading,
+    isModuleEnabled,
+  } = useSchool();
 
   const location = useLocation();
 
@@ -2329,7 +2400,18 @@ export default function AppLayout() {
 
   const hasLoadedRole = Boolean(membership?.role);
 
-  const allowed = !hasLoadedRole || canAccessPath(role, location.pathname);
+  const roleAllowed =
+    !hasLoadedRole ||
+    canAccessPath(role, location.pathname);
+
+  const requiredModule = getRequiredModule(location.pathname);
+
+  const moduleAllowed =
+    !requiredModule ||
+    !configuration ||
+    isModuleEnabled(requiredModule);
+
+  const allowed = roleAllowed && moduleAllowed;
 
 
 
@@ -2395,7 +2477,17 @@ export default function AppLayout() {
 
         <main className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-5 lg:p-8">
 
-          {allowed ? <Outlet /> : <AccessDenied />}
+          {schoolLoading ? (
+            <div className="flex min-h-[60vh] items-center justify-center">
+              <div className="text-sm text-slate-500">
+                Loading school configuration...
+              </div>
+            </div>
+          ) : allowed ? (
+            <Outlet />
+          ) : (
+            <AccessDenied />
+          )}
 
         </main>
 

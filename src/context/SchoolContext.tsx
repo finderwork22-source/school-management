@@ -7,6 +7,7 @@ import {
 } from "react";
 
 import { getMySchoolMembership } from "../lib/auth";
+import { supabase } from "../lib/supabase";
 import type { SchoolMembershipResult } from "../lib/auth";
 import { useAuth } from "./AuthContext";
 
@@ -29,12 +30,38 @@ export interface SchoolMembership {
   school: School;
 }
 
+export interface SchoolConfiguration {
+  school_id: string;
+  school_type: string;
+  curriculum: string;
+  enabled_modules: Record<string, boolean>;
+  academic_settings: Record<string, unknown>;
+  ai_settings: {
+    enabled: boolean;
+    allowed_roles: string[];
+    allow_finance_insights: boolean;
+    allow_student_insights: boolean;
+    allow_teacher_insights: boolean;
+    allow_academic_insights: boolean;
+    allow_timetable_insights: boolean;
+  };
+  branding: {
+    logo_url: string | null;
+    primary_color: string;
+    secondary_color: string;
+    portal_name: string | null;
+    tagline: string | null;
+  };
+}
+
 interface SchoolContextValue {
   school: School | null;
   membership: SchoolMembership | null;
+  configuration: SchoolConfiguration | null;
   loading: boolean;
   error: string | null;
   refreshSchool: () => Promise<void>;
+  isModuleEnabled: (moduleKey: string) => boolean;
 }
 
 const SchoolContext =
@@ -51,6 +78,9 @@ export function SchoolProvider({
   const [membership, setMembership] =
     useState<SchoolMembership | null>(null);
 
+  const [configuration, setConfiguration] =
+    useState<SchoolConfiguration | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,6 +88,7 @@ export function SchoolProvider({
     if (!user) {
       setSchool(null);
       setMembership(null);
+      setConfiguration(null);
       setError(null);
       setLoading(false);
       return;
@@ -78,6 +109,7 @@ export function SchoolProvider({
       );
       setSchool(null);
       setMembership(null);
+      setConfiguration(null);
       setError(membershipError.message);
       setLoading(false);
       return;
@@ -86,6 +118,7 @@ export function SchoolProvider({
     if (!resolvedMembership) {
       setSchool(null);
       setMembership(null);
+      setConfiguration(null);
       setLoading(false);
       return;
     }
@@ -104,6 +137,43 @@ export function SchoolProvider({
     });
 
     setSchool(typedMembership.school);
+
+    const {
+      data: configurationData,
+      error: configurationError,
+    } = await supabase
+      .from("school_configurations")
+      .select(
+        `
+          school_id,
+          school_type,
+          curriculum,
+          enabled_modules,
+          academic_settings,
+          ai_settings,
+          branding
+        `,
+      )
+      .eq("school_id", typedMembership.school_id)
+      .maybeSingle();
+
+    if (configurationError) {
+      console.error(
+        "Failed to load school configuration:",
+        configurationError,
+      );
+
+      // Keep the school workspace usable if an older/provisioning school
+      // does not yet have a configuration row. A provisioned school is
+      // expected to have one, and the platform admin can create it.
+      setConfiguration(null);
+      setError(configurationError.message);
+    } else {
+      setConfiguration(
+        (configurationData as SchoolConfiguration | null) ?? null,
+      );
+    }
+
     setLoading(false);
   }
 
@@ -113,14 +183,24 @@ export function SchoolProvider({
     void loadSchool();
   }, [user?.id, authLoading]);
 
+  function isModuleEnabled(moduleKey: string) {
+    if (!configuration) {
+      return true;
+    }
+
+    return configuration.enabled_modules?.[moduleKey] !== false;
+  }
+
   return (
     <SchoolContext.Provider
       value={{
         school,
         membership,
+        configuration,
         loading: authLoading || loading,
         error,
         refreshSchool: loadSchool,
+        isModuleEnabled,
       }}
     >
       {children}
