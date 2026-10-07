@@ -709,7 +709,7 @@ export default function AdminSchoolConfiguration() {
             type="button"
             onClick={() => void saveConfiguration()}
             disabled={saving}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-wiser-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-wiser-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-wiser-600 px-4 bg-MojaSchoolr-600 text-sm font-semibold text-white shadow-sm hover:bg-wiser-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {saving ? (
               <Loader2 size={16} className="animate-spin" />
