@@ -15,7 +15,7 @@ import {
   Building2,
   ShieldCheck,
 } from "lucide-react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { supabase } from "../../lib/supabase";
 
@@ -163,6 +163,7 @@ function getApplicantName(application: ApplicationRow) {
 }
 
 export default function AdminApplications() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const selectedApplicationId = searchParams.get("id");
@@ -352,35 +353,26 @@ export default function AdminApplications() {
       if (approvalError) throw approvalError;
 
       const result = data as {
+        success?: boolean;
+        application_id?: string;
         school_id?: string;
         membership_id?: string;
         assigned_role?: string;
         status?: string;
       };
 
-      setSuccess(
-        `Application approved. The school and its initial ${formatRole(
-          result.assigned_role ?? assignedRole,
-        )} membership have been created.`,
-      );
-      await loadApplications(true);
-
-      const refreshed = applications.find(
-        (application) => application.id === selectedApplication.id,
-      );
-      if (refreshed) {
-        setSelectedApplication({
-          ...refreshed,
-          status: "approved",
-          assigned_role: assignedRole,
-        });
-      } else {
-        setSelectedApplication((current) =>
-          current
-            ? { ...current, status: "approved", assigned_role: assignedRole }
-            : current,
+      if (!result.school_id) {
+        throw new Error(
+          "The application was approved, but no school ID was returned. The school configuration cannot be opened.",
         );
       }
+
+      // The approval RPC already creates the school, platform account,
+      // membership, and default configuration. Open that configuration
+      // workspace immediately after a successful approval.
+      navigate(`/admin/schools/${result.school_id}/configuration`, {
+        replace: true,
+      });
     } catch (processError) {
       console.error("Failed to approve application:", processError);
 
