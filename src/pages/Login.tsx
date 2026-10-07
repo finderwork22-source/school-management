@@ -8,7 +8,7 @@ import {
   LockKeyhole,
   Mail,
 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { signIn, getMySchoolMembership } from "../lib/auth";
 import { isPlatformAdmin } from "../lib/platformAuth";
@@ -18,6 +18,7 @@ type LoginMode = "signIn" | "forgot" | "reset";
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [mode, setMode] = useState<LoginMode>("signIn");
   const [email, setEmail] = useState("");
@@ -27,10 +28,19 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(() => {
+    const state = location.state as { accessDeniedReason?: string } | null;
+    return state?.accessDeniedReason ?? "";
+  });
   const [success, setSuccess] = useState("");
 
   useEffect(() => {
+    const state = location.state as { accessDeniedReason?: string } | null;
+    if (state?.accessDeniedReason) {
+      setError(state.accessDeniedReason);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
     let mounted = true;
 
     async function resolveInvitationCallback() {
@@ -97,7 +107,7 @@ export default function Login() {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [navigate]);
+  }, [navigate, location.state]);
 
   function switchToSignIn() {
     setMode("signIn");
@@ -184,6 +194,45 @@ export default function Login() {
         return;
       }
 
+      // Check school/platform access immediately after authentication.
+      // This prevents a suspended school user from being navigated into
+      // the dashboard even for a moment.
+      const { data: schoolAccessData, error: schoolAccessError } =
+        await supabase.rpc("get_my_school_access");
+
+      if (schoolAccessError) {
+        console.error(
+          "School access check failed after sign in:",
+          schoolAccessError,
+        );
+        await supabase.auth.signOut();
+        setError(
+          "We could not verify your school access. Please try again.",
+        );
+        return;
+      }
+
+      const schoolAccess = schoolAccessData as {
+        allowed: boolean;
+        has_school: boolean;
+        school_status: string | null;
+        reason: string | null;
+        is_platform_admin: boolean;
+      };
+
+      if (!schoolAccess.allowed && schoolAccess.has_school) {
+        const message =
+          schoolAccess.reason === "school_suspended"
+            ? "Your school account has been suspended. Please contact your school administrator or MojaSchool support for assistance."
+            : schoolAccess.reason === "school_archived"
+              ? "Your school account has been archived. Please contact your school administrator or MojaSchool support for assistance."
+              : "Your school account is currently unavailable. Please contact your school administrator or MojaSchool support for assistance.";
+
+        await supabase.auth.signOut();
+        setError(message);
+        return;
+      }
+
       // Platform Super Admins are not school members. Resolve platform
       // access before checking school membership so they go to /admin
       // instead of being incorrectly sent to school setup.
@@ -225,7 +274,7 @@ export default function Login() {
   const isReset = mode === "reset";
 
   return (
-    <div className="min-h-screen bg-MojaSchoolr-background lg:grid lg:grid-cols-[minmax(0,1fr)_520px]">
+    <div className="min-h-screen w-full min-w-0 overflow-x-hidden bg-MojaSchoolr-background lg:grid lg:grid-cols-[minmax(0,1fr)_520px]">
       {/* Brand panel */}
       <section className="hidden min-h-screen bg-MojaSchoolr-900 px-10 py-10 text-white lg:flex lg:items-center lg:justify-center xl:px-16">
         <div className="w-full max-w-xl">
@@ -252,11 +301,11 @@ export default function Login() {
       </section>
 
       {/* Form panel */}
-      <main className="flex min-h-screen w-full items-center justify-center px-5 py-8 sm:px-8 lg:px-10">
-        <div className="w-full max-w-sm">
+      <main className="flex min-h-screen w-full min-w-0 items-center justify-center overflow-x-hidden px-4 py-6 sm:px-8 sm:py-8 lg:px-10">
+        <div className="w-full min-w-0 max-w-sm">
           <div className="mb-8 lg:hidden">
             <img
-              src="/MojaSchool.svg"
+              src="/MojaSchool-white.svg"
               alt="MojaSchool"
               className="h-auto w-[180px]"
             />
@@ -290,7 +339,7 @@ export default function Login() {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+          <form onSubmit={handleSubmit} className="mt-8 w-full min-w-0 space-y-5">
             {error && (
               <div
                 role="alert"
