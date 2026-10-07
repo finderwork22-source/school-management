@@ -15,7 +15,7 @@ import {
   WalletCards,
   XCircle,
 } from "lucide-react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { supabase } from "../../lib/supabase";
 
@@ -190,6 +190,7 @@ function mapPlans(plans: PlanRecord[]) {
 }
 
 export default function AdminSchools() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedSchoolId = searchParams.get("id");
 
@@ -443,6 +444,9 @@ export default function AdminSchools() {
         error={error}
         success={success}
         onBack={closeSchool}
+        onConfigure={() =>
+          navigate(`/admin/schools/${selectedRow.school.id}/configuration`)
+        }
         onStatusChange={(status) => void updateSchoolStatus(status)}
       />
     );
@@ -617,6 +621,7 @@ function SchoolDetail({
   error,
   success,
   onBack,
+  onConfigure,
   onStatusChange,
 }: {
   row: SchoolListRow;
@@ -624,6 +629,7 @@ function SchoolDetail({
   error: string;
   success: string;
   onBack: () => void;
+  onConfigure: () => void;
   onStatusChange: (status: SchoolStatus) => void;
 }) {
   const { school, account, subscription, plan } = row;
@@ -660,6 +666,17 @@ function SchoolDetail({
               Joined MojaSchool {formatDate(account.joined_at || account.created_at)}
             </p>
           </div>
+        </div>
+
+        <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+          <button
+            type="button"
+            onClick={onConfigure}
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-MojaSchoolr-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-MojaSchoolr-700"
+          >
+            Configure school
+            <ChevronRight size={16} />
+          </button>
         </div>
       </div>
 
