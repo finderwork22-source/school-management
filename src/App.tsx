@@ -3,9 +3,7 @@ import { Route, Routes } from "react-router-dom";
 import AppLayout from "./components/layout/AppLayout";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import PlatformAdminRoute from "./components/auth/PlatformAdminRoute";
-import SchoolRoleGuard from "./components/auth/SchoolRoleGuard";
 import AdminLayout from "./components/admin/AdminLayout";
-import ParentPickupAuthorisations from "./pages/ParentPickupAuthorisations";
 
 // Public
 import Login from "./pages/Login";
@@ -59,6 +57,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminApplications from "./pages/admin/AdminApplications";
 import AdminBilling from "./pages/admin/AdminBilling";
 import AdminSchools from "./pages/admin/AdminSchools";
+import AdminSchoolConfiguration from "./pages/admin/AdminSchoolConfiguration";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminAuditLogs from "./pages/admin/AdminAuditLogs";
 import AdminPlatformSettings from "./pages/admin/AdminPlatformSettings";
@@ -75,21 +74,19 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<SignUp />} />
 
-      {/* Invitation links must remain public so invited users
+      {/* Invitation links must remain public so an invited user
           can establish their password before signing in. */}
       <Route path="/accept-invitation" element={<AcceptInvitation />} />
 
-      {/* WISE Admin password recovery */}
+      {/* MOJASCHOOL Admin password recovery stays public so an administrator
+          can recover access without an active platform session. */}
       <Route path="/admin/forgot-password" element={<AdminForgotPassword />} />
-
       <Route path="/admin/reset-password" element={<AdminResetPassword />} />
 
       {/* =====================================================
-          WISE ADMIN — PLATFORM LEVEL
-
-          Separate from school-level authorization.
+          MOJASCHOOL ADMIN — PLATFORM LEVEL
+          This is intentionally separate from school AppLayout.
       ===================================================== */}
-
       <Route
         path="/admin"
         element={
@@ -102,14 +99,21 @@ export default function App() {
 
         <Route path="schools" element={<AdminSchools />} />
 
+        <Route
+          path="schools/:schoolId/configuration"
+          element={<AdminSchoolConfiguration />}
+        />
+
         <Route path="applications" element={<AdminApplications />} />
 
+        <Route
+          path="school-configuration"
+          element={<AdminSchoolConfiguration />}
+        />
+
         <Route path="billing" element={<AdminBilling />} />
-
         <Route path="analytics" element={<AdminAnalytics />} />
-
         <Route path="audit" element={<AdminAuditLogs />} />
-
         <Route path="settings" element={<AdminPlatformSettings />} />
       </Route>
 
@@ -121,130 +125,58 @@ export default function App() {
         <Route path="/setup-school" element={<SetupSchool />} />
 
         <Route element={<AppLayout />}>
-          {/* =================================================
-              OVERVIEW
-          ================================================= */}
-
+          {/* Overview */}
           <Route index element={<Dashboard />} />
 
-          {/* =================================================
-              PERSONAL PROFILE
-          ================================================= */}
-
+          {/* Personal profile */}
           <Route path="profile" element={<MyProfile />} />
 
-          {/* =================================================
-              SCHOOL
-          ================================================= */}
-
+          {/* School */}
           <Route path="admissions" element={<Admissions />} />
-
           <Route path="students" element={<Students />} />
-
           <Route path="students/:id" element={<StudentProfile />} />
-
           <Route path="parents" element={<Parents />} />
-
           <Route path="teachers" element={<Teachers />} />
-
           <Route path="teachers/:id" element={<TeacherProfile />} />
-
           <Route path="pickup-desk" element={<PickupDesk />} />
-
           <Route path="pickup-history" element={<PickupHistory />} />
 
-          <Route
-            path="pickup-authorisations"
-            element={<ParentPickupAuthorisations />}
-          />
-
-          {/* =================================================
-              ACADEMICS
-              
-              These remain available to the existing school
-              roles according to the current RLS/permissions.
-          ================================================= */}
-
+          {/* Academics */}
           <Route path="academic-years" element={<AcademicYears />} />
-
           <Route path="academics" element={<ClassesSubjects />} />
-
           <Route path="timetable" element={<Timetable />} />
 
-          {/* =================================================
-              ATTENDANCE
-          ================================================= */}
-
+          {/* Attendance */}
           <Route path="attendance" element={<Attendance />} />
-
           <Route path="attendance/history" element={<AttendanceHistory />} />
-
           <Route path="attendance/reports" element={<AttendanceReports />} />
 
-          {/* =================================================
-              ASSESSMENTS
-          ================================================= */}
-
+          {/* Assessments */}
           <Route path="assessments" element={<Assessments />} />
-
           <Route path="assessments/:id/marks" element={<AssessmentMarks />} />
-
           <Route
             path="assessments/:id/results"
             element={<AssessmentResults />}
           />
 
-          {/* =================================================
-              STUDENT RESULTS
-          ================================================= */}
-
+          {/* Student results */}
           <Route path="student-results" element={<StudentResults />} />
 
-          {/* =================================================
-              FINANCE
-              
-              IMPORTANT:
-              Only Owner and Principal may access school
-              financial pages.
+          {/* Finance */}
+          <Route path="finance" element={<FeeStructure />} />
+          <Route path="finance/billing" element={<StudentBilling />} />
+          <Route path="finance/payments" element={<Payments />} />
+          <Route path="finance/receipts" element={<Receipts />} />
+          <Route path="finance/reports" element={<FinanceReports />} />
 
-              Head of Academics is deliberately excluded.
-              
-              This protects direct URL navigation as well as
-              normal sidebar navigation.
-          ================================================= */}
-
-          <Route
-            element={<SchoolRoleGuard allowedRoles={["Owner", "Principal"]} />}
-          >
-            <Route path="finance" element={<FeeStructure />} />
-
-            <Route path="finance/billing" element={<StudentBilling />} />
-
-            <Route path="finance/payments" element={<Payments />} />
-
-            <Route path="finance/receipts" element={<Receipts />} />
-
-            <Route path="finance/reports" element={<FinanceReports />} />
-          </Route>
-
-          {/* =================================================
-              COMMUNICATION
-          ================================================= */}
-
+          {/* Communication */}
           <Route path="announcements" element={<Announcements />} />
-
           <Route path="communications" element={<Announcements />} />
 
-          {/* =================================================
-              SETTINGS
-          ================================================= */}
-
+          {/* Settings */}
           <Route path="settings/school-profile" element={<SchoolProfile />} />
-
           <Route path="settings/academic" element={<AcademicSettings />} />
-
           <Route path="settings/users" element={<UsersRoles />} />
-
           <Route path="settings" element={<AcademicSettings />} />
         </Route>
       </Route>
