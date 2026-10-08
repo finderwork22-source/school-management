@@ -52,7 +52,7 @@ import AcademicSettings from "./pages/AcademicSettings";
 import UsersRoles from "./pages/UsersRoles";
 import MyProfile from "./pages/MyProfile";
 
-// WISE Admin
+// MojaSchool Admin
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminApplications from "./pages/admin/AdminApplications";
 import AdminBilling from "./pages/admin/AdminBilling";

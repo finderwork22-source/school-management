@@ -1,15 +1,21 @@
 import { useEffect, useState } from "react";
-import type { FormEvent } from "react";
+import type { FormEvent, ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
+import type { LucideIcon } from "lucide-react";
 import {
   AlertCircle,
+  Award,
+  Baby,
+  BookOpen,
   Building2,
   CheckCircle2,
   Clock3,
+  GraduationCap,
   MapPin,
   Mail,
   Phone,
   Send,
+  School,
 } from "lucide-react";
 
 import { useAuth } from "../context/AuthContext";
@@ -27,12 +33,42 @@ const APPLICATION_STATUS_LABELS: Record<string, string> = {
   cancelled: "Cancelled",
 };
 
-const SCHOOL_SECTION_PRESETS = [
-  { key: "creche", name: "Crèche" },
-  { key: "nursery", name: "Nursery" },
-  { key: "primary", name: "Primary" },
-  { key: "lower_secondary", name: "Lower Secondary" },
-  { key: "upper_secondary", name: "Upper Secondary" },
+const SCHOOL_SECTION_PRESETS: Array<{
+  key: string;
+  name: string;
+  description: string;
+  icon: LucideIcon;
+}> = [
+  {
+    key: "creche",
+    name: "Crèche",
+    description: "Early childhood care and development.",
+    icon: Baby,
+  },
+  {
+    key: "nursery",
+    name: "Nursery",
+    description: "Early years learning and foundational academics.",
+    icon: BookOpen,
+  },
+  {
+    key: "primary",
+    name: "Primary",
+    description: "Foundational education and core learning.",
+    icon: School,
+  },
+  {
+    key: "lower_secondary",
+    name: "Lower Secondary",
+    description: "Continued academic development, e.g. Grades 7–9.",
+    icon: GraduationCap,
+  },
+  {
+    key: "upper_secondary",
+    name: "Upper Secondary",
+    description: "Advanced secondary education, e.g. Grades 10–12.",
+    icon: Award,
+  },
 ];
 
 const REQUESTED_ROLES = [
@@ -229,10 +265,10 @@ export default function SetupSchool() {
 
   if (loadingApplication) {
     return (
-      <div className="min-h-screen bg-wiser-background px-4 py-10">
+      <div className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 sm:py-12">
         <div className="mx-auto flex min-h-[70vh] max-w-xl items-center justify-center">
-          <div className="flex items-center gap-3 text-sm text-wiser-text-secondary">
-            <span className="h-5 w-5 animate-spin rounded-full border-2 border-wiser-200 border-t-wiser-600" />
+          <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm font-medium text-slate-600 shadow-sm">
+            <span className="h-5 w-5 animate-spin rounded-full border-2 border-violet-200 border-t-violet-600" />
             Checking your school request...
           </div>
         </div>
@@ -246,103 +282,60 @@ export default function SetupSchool() {
 
   if (isPending) {
     return (
-      <div className="min-h-screen bg-wiser-background px-4 py-10 sm:px-6">
-        <div className="mx-auto w-full max-w-2xl">
-          <div className="overflow-hidden rounded-2xl border border-wiser-border bg-white shadow-sm">
-            <div className="border-b border-wiser-border px-6 py-6 sm:px-8">
+      <div className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 sm:py-10">
+        <div className="mx-auto w-full max-w-3xl">
+          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_20px_60px_-30px_rgba(15,23,42,0.28)]">
+            <div className="bg-gradient-to-br from-violet-700 via-violet-600 to-indigo-600 px-6 py-8 text-white sm:px-9 sm:py-10">
               <div className="flex items-start gap-4">
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-wiser-50 text-wiser-600">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/20">
                   <Clock3 size={22} />
                 </div>
-
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-wiser-500">
-                    WISE school onboarding
+                <div className="min-w-0">
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-violet-100">
+                    MOJASCHOOL school onboarding
                   </p>
-
-                  <h1 className="mt-2 text-xl font-semibold tracking-tight text-wiser-text sm:text-2xl">
+                  <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
                     Your school request is being reviewed
                   </h1>
-
-                  <p className="mt-2 text-sm leading-6 text-wiser-text-secondary">
-                    WISE has received your request. A WISE administrator will
-                    review the school information and assign your school role.
+                  <p className="mt-2 max-w-2xl text-sm leading-6 text-violet-100 sm:text-base">
+                    MOJASCHOOL has received your request. Our administrator will review the school information and assign your school role.
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="space-y-5 px-6 py-6 sm:px-8">
+            <div className="space-y-6 p-6 sm:p-9">
               {error && (
-                <div
-                  role="alert"
-                  className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-                >
-                  {error}
+                <div role="alert" className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  <AlertCircle size={17} className="mt-0.5 shrink-0" />
+                  <span>{error}</span>
                 </div>
               )}
 
-              <div className="rounded-xl border border-wiser-border bg-wiser-50/50 p-5">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-wiser-text-muted">
-                      Application status
-                    </p>
-
-                    <p className="mt-1 text-sm font-semibold text-wiser-text">
-                      {APPLICATION_STATUS_LABELS[
-                        application.status
-                      ] ?? application.status}
-                    </p>
-                  </div>
-
-                  <span className="rounded-full bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700">
-                    {APPLICATION_STATUS_LABELS[
-                      application.status
-                    ] ?? application.status}
-                  </span>
+              <div className="flex flex-col gap-4 rounded-2xl border border-violet-100 bg-violet-50/70 p-5 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-violet-600">Application status</p>
+                  <p className="mt-1 text-base font-semibold text-slate-900">
+                    {APPLICATION_STATUS_LABELS[application.status] ?? application.status}
+                  </p>
                 </div>
+                <span className="inline-flex w-fit rounded-full bg-white px-3 py-1.5 text-xs font-bold text-violet-700 ring-1 ring-violet-200">
+                  {APPLICATION_STATUS_LABELS[application.status] ?? application.status}
+                </span>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <InfoItem
-                  icon={Building2}
-                  label="School"
-                  value={application.school_name}
-                />
-
-                <InfoItem
-                  icon={MapPin}
-                  label="Location"
-                  value={[application.city, application.country]
-                    .filter(Boolean)
-                    .join(", ")}
-                />
-
-                <InfoItem
-                  icon={Mail}
-                  label="Applicant email"
-                  value={application.applicant_email}
-                />
-
-                <InfoItem
-                  icon={Send}
-                  label="Submitted"
-                  value={formatDate(application.created_at)}
-                />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <InfoItem icon={Building2} label="School" value={application.school_name} />
+                <InfoItem icon={MapPin} label="Location" value={[application.city, application.country].filter(Boolean).join(", ")} />
+                <InfoItem icon={Mail} label="Applicant email" value={application.applicant_email} />
+                <InfoItem icon={Send} label="Submitted" value={formatDate(application.created_at)} />
               </div>
 
-              <div className="rounded-xl border border-dashed border-wiser-border px-4 py-4 text-sm leading-6 text-wiser-text-secondary">
-                You can stay on this page or return to the login screen. Once
-                WISE approves your request, your assigned school role will
-                determine the access you receive.
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm leading-6 text-slate-600">
+                You can stay on this page or return to the sign-in screen. Once MOJASCHOOL approves your request, your assigned school role will determine the access you receive.
               </div>
 
-              <button
-                type="button"
-                onClick={() => navigate("/login")}
-                className="h-11 w-full rounded-lg border border-wiser-border bg-white px-4 text-sm font-semibold text-wiser-text transition hover:bg-wiser-50"
-              >
+              <button type="button" onClick={() => navigate("/login")} className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2">
                 Return to sign in
               </button>
             </div>
@@ -353,127 +346,96 @@ export default function SetupSchool() {
   }
 
   return (
-    <div className="min-h-screen bg-wiser-background px-4 py-8 sm:px-6 sm:py-10">
-      <div className="mx-auto w-full max-w-2xl">
-        <div className="overflow-hidden rounded-2xl border border-wiser-border bg-white shadow-sm">
-          <div className="border-b border-wiser-border bg-white px-6 py-6 sm:px-8">
-            <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-wiser-50 text-wiser-600">
-                <Building2 size={22} />
+    <div className="min-h-screen overflow-x-hidden bg-slate-50 px-3 py-6 sm:px-6 sm:py-10 lg:py-12">
+      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+        <div className="absolute -left-32 top-20 h-72 w-72 rounded-full bg-violet-200/40 blur-3xl" />
+        <div className="absolute -right-32 bottom-10 h-80 w-80 rounded-full bg-indigo-200/30 blur-3xl" />
+      </div>
+
+      <div className="mx-auto w-full max-w-4xl">
+        <div className="mb-5 flex items-center justify-between gap-4 px-1">
+          <button
+            type="button"
+            onClick={() => navigate("/login")}
+            className="inline-flex min-h-10 items-center gap-2 rounded-xl px-2 text-sm font-semibold text-slate-600 transition hover:bg-white hover:text-violet-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2"
+          >
+            <span aria-hidden="true">←</span>
+            Back to sign in
+          </button>
+
+          <div className="hidden items-center gap-2 sm:flex">
+            <span className="h-2 w-2 rounded-full bg-violet-600" />
+            <span className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">MOJASCHOOL</span>
+          </div>
+        </div>
+
+        <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_24px_80px_-35px_rgba(15,23,42,0.3)]">
+          <div className="border-b border-slate-200 bg-gradient-to-br from-violet-50 via-white to-indigo-50/70 px-5 py-7 sm:px-9 sm:py-9">
+            <div className="flex items-start gap-4 sm:gap-5">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-violet-100 text-violet-700 ring-1 ring-violet-200 sm:h-14 sm:w-14">
+                <Building2 size={24} />
               </div>
 
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-wiser-500">
-                  WISE school onboarding
+              <div className="min-w-0">
+                <p className="text-xs font-bold uppercase tracking-[0.18em] text-violet-600">
+                  MOJASCHOOL school onboarding
                 </p>
-
-                <h1 className="mt-2 text-xl font-semibold tracking-tight text-wiser-text sm:text-2xl">
+                <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
                   Request access for your school
                 </h1>
-
-                <p className="mt-2 text-sm leading-6 text-wiser-text-secondary">
-                  Tell us about your school. Your request will be reviewed by a
-                  WISE administrator before the school workspace is activated.
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
+                  Tell us about your school. Our administrator will review your request before the school workspace is activated.
                 </p>
               </div>
             </div>
           </div>
 
-          <form
-            onSubmit={handleSubmit}
-            className="space-y-6 px-6 py-6 sm:px-8"
-          >
+          <form onSubmit={handleSubmit} className="space-y-5 p-4 sm:space-y-6 sm:p-8 lg:p-9">
             {error && (
-              <div
-                role="alert"
-                className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-              >
-                <AlertCircle
-                  size={17}
-                  className="mt-0.5 shrink-0"
-                />
-                <span>{error}</span>
+              <div role="alert" className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3.5 text-sm text-red-700">
+                <AlertCircle size={18} className="mt-0.5 shrink-0" />
+                <span className="leading-6">{error}</span>
               </div>
             )}
 
             {application?.status === "rejected" && (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800">
-                <p className="font-semibold">
-                  Your previous request was not approved.
-                </p>
-
-                {application.rejection_reason && (
-                  <p className="mt-1 leading-6">
-                    Reason: {application.rejection_reason}
-                  </p>
-                )}
-
-                <p className="mt-2 leading-6">
-                  You can update the information below and submit a new
-                  request.
-                </p>
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800">
+                <p className="font-bold">Your previous request was not approved.</p>
+                {application.rejection_reason && <p className="mt-1 leading-6">Reason: {application.rejection_reason}</p>}
+                <p className="mt-2 leading-6">Update the information below and submit a new request.</p>
               </div>
             )}
 
-            <div className="grid gap-5 sm:grid-cols-2">
-              <Field
-                label="School name"
-                required
-                value={schoolName}
-                onChange={setSchoolName}
-                placeholder="e.g. High Gate International Academy"
-                disabled={loading}
-              />
-
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-wiser-text-secondary">
-                  School type
-                </label>
-
-                <select
+            <OnboardingSection number="1" title="School details" description="Basic information about your school.">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="School name" required value={schoolName} onChange={setSchoolName} placeholder="e.g. High Gate International Academy" disabled={loading} />
+                <SelectField
+                  label="School type"
                   value={schoolType}
-                  onChange={(event) =>
-                    handleSchoolTypeChange(event.target.value)
-                  }
+                  onChange={handleSchoolTypeChange}
                   disabled={loading}
-                  className="h-11 w-full rounded-lg border border-wiser-border bg-white px-3 text-sm text-wiser-text outline-none transition focus:border-wiser-500 focus:ring-2 focus:ring-wiser-100"
-                >
-                  <option value="School">School</option>
-                  <option value="Primary School">
-                    Primary School
-                  </option>
-                  <option value="Secondary School">
-                    Secondary School
-                  </option>
-                  <option value="Primary & Secondary">
-                    Primary & Secondary
-                  </option>
-                  <option value="International School">
-                    International School
-                  </option>
-                  <option value="Other">Other</option>
-                </select>
+                  options={[
+                    ["School", "School"],
+                    ["Primary School", "Primary School"],
+                    ["Secondary School", "Secondary School"],
+                    ["Primary & Secondary", "Primary & Secondary"],
+                    ["International School", "International School"],
+                    ["Other", "Other"],
+                  ]}
+                />
               </div>
-            </div>
+            </OnboardingSection>
 
-            <div className="rounded-xl border border-wiser-border bg-wiser-50/50 p-4">
-              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <label className="block text-sm font-semibold text-wiser-text">
-                    School sections / levels offered
-                  </label>
-                  <p className="mt-1 text-xs leading-5 text-wiser-text-muted">
-                    Select the educational sections your school operates. A school can have multiple sections.
-                  </p>
-                </div>
-                <span className="text-xs font-semibold text-wiser-text-muted">
-                  {selectedSections.length} selected
-                </span>
-              </div>
-
-              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <OnboardingSection
+              number="2"
+              title="School sections / levels offered"
+              description="Select every educational section your school operates. You can have multiple sections."
+              badge={`${selectedSections.length} selected`}
+            >
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {SCHOOL_SECTION_PRESETS.map((section) => {
                   const selected = selectedSections.includes(section.key);
+                  const SectionIcon = section.icon;
 
                   return (
                     <button
@@ -481,155 +443,118 @@ export default function SetupSchool() {
                       type="button"
                       onClick={() => toggleSection(section.key)}
                       disabled={loading}
+                      aria-pressed={selected}
                       className={[
-                        "flex min-h-12 items-center gap-3 rounded-lg border px-3 py-3 text-left text-sm transition",
+                        "group relative min-h-[112px] rounded-2xl border p-4 text-left transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2",
                         selected
-                          ? "border-wiser-300 bg-white text-wiser-700 ring-1 ring-wiser-100"
-                          : "border-wiser-border bg-white text-wiser-text-secondary hover:bg-slate-50",
+                          ? "border-violet-500 bg-violet-50/70 shadow-sm ring-1 ring-violet-200"
+                          : "border-slate-200 bg-white hover:-translate-y-0.5 hover:border-violet-200 hover:bg-violet-50/30 hover:shadow-sm",
                       ].join(" ")}
                     >
+                      <span className={[
+                        "absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-lg border text-xs font-bold transition",
+                        selected ? "border-violet-600 bg-violet-600 text-white" : "border-slate-300 bg-white text-transparent",
+                      ].join(" ")}>✓</span>
                       <span
                         className={[
-                          "flex h-5 w-5 shrink-0 items-center justify-center rounded-md border",
+                          "flex h-10 w-10 items-center justify-center rounded-xl transition",
                           selected
-                            ? "border-wiser-600 bg-wiser-600 text-white"
-                            : "border-slate-300 bg-white text-transparent",
+                            ? "bg-white text-violet-700 ring-1 ring-violet-200"
+                            : "bg-slate-100 text-slate-500 group-hover:bg-violet-50 group-hover:text-violet-600",
                         ].join(" ")}
+                        aria-hidden="true"
                       >
-                        <CheckCircle2 size={13} />
+                        <SectionIcon size={20} strokeWidth={2} />
                       </span>
-                      <span className="font-semibold">{section.name}</span>
+                      <span className="mt-3 block text-sm font-bold text-slate-900">
+                        {section.name}
+                      </span>
+                      <span className="mt-1 block text-xs leading-5 text-slate-500">
+                        {section.description}
+                      </span>
                     </button>
                   );
                 })}
               </div>
-            </div>
+            </OnboardingSection>
 
-            <div className="grid gap-5 sm:grid-cols-2">
-              <Field
-                label="Country"
+            <OnboardingSection number="3" title="Location and contact information" description="Where your school is located and how to reach you.">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Country" required value={country} onChange={setCountry} placeholder="e.g. Rwanda" disabled={loading} />
+                <Field label="City" required value={city} onChange={setCity} placeholder="e.g. Kigali" disabled={loading} />
+                <Field label="School phone" value={phone} onChange={setPhone} placeholder="+250 7XX XXX XXX" type="tel" icon={Phone} disabled={loading} />
+                <Field label="School email" value={email} onChange={setEmail} placeholder="info@school.com" type="email" icon={Mail} disabled={loading} />
+              </div>
+              <div className="mt-4">
+                <label className="mb-1.5 block text-sm font-semibold text-slate-700">Address</label>
+                <textarea value={address} onChange={(event) => setAddress(event.target.value)} rows={3} placeholder="School address" disabled={loading} className="min-h-24 w-full resize-y rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-violet-500 focus:ring-4 focus:ring-violet-100 disabled:bg-slate-50" />
+              </div>
+            </OnboardingSection>
+
+            <OnboardingSection number="4" title="Your role at the school" description="This is the role you are requesting. MOJASCHOOL will review it before approval.">
+              <SelectField
+                label="Role"
                 required
-                value={country}
-                onChange={setCountry}
-                placeholder="e.g. Rwanda"
-                disabled={loading}
-              />
-
-              <Field
-                label="City"
-                required
-                value={city}
-                onChange={setCity}
-                placeholder="e.g. Kigali"
-                disabled={loading}
-              />
-            </div>
-
-            <div className="grid gap-5 sm:grid-cols-2">
-              <Field
-                label="School phone"
-                value={phone}
-                onChange={setPhone}
-                placeholder="+250 7XX XXX XXX"
-                type="tel"
-                icon={Phone}
-                disabled={loading}
-              />
-
-              <Field
-                label="School email"
-                value={email}
-                onChange={setEmail}
-                placeholder="info@school.com"
-                type="email"
-                icon={Mail}
-                disabled={loading}
-              />
-            </div>
-
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-wiser-text-secondary">
-                Address
-              </label>
-
-              <textarea
-                value={address}
-                onChange={(event) =>
-                  setAddress(event.target.value)
-                }
-                rows={3}
-                placeholder="School address"
-                disabled={loading}
-                className="w-full rounded-lg border border-wiser-border bg-white px-3 py-2 text-sm text-wiser-text outline-none transition placeholder:text-slate-400 focus:border-wiser-500 focus:ring-2 focus:ring-wiser-100"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-wiser-text-secondary">
-                Your role at the school
-              </label>
-
-              <select
                 value={requestedRole}
-                onChange={(event) =>
-                  setRequestedRole(event.target.value)
-                }
+                onChange={setRequestedRole}
                 disabled={loading}
-                className="h-11 w-full rounded-lg border border-wiser-border bg-white px-3 text-sm text-wiser-text outline-none transition focus:border-wiser-500 focus:ring-2 focus:ring-wiser-100"
-              >
-                {REQUESTED_ROLES.map((role) => (
-                  <option
-                    key={role.value}
-                    value={role.value}
-                  >
-                    {role.label}
-                  </option>
-                ))}
-              </select>
+                options={REQUESTED_ROLES.map((role) => [role.value, role.label] as [string, string])}
+              />
+            </OnboardingSection>
 
-              <p className="mt-1.5 text-xs leading-5 text-wiser-text-muted">
-                This is the role you are requesting. WISE will review the
-                request and assign the final school role.
-              </p>
-            </div>
-
-            <div className="rounded-xl border border-wiser-border bg-wiser-50/60 px-4 py-4 text-sm leading-6 text-wiser-text-secondary">
+            <div className="rounded-2xl border border-violet-100 bg-gradient-to-r from-violet-50 to-indigo-50 px-4 py-4 sm:px-5">
               <div className="flex items-start gap-3">
-                <CheckCircle2
-                  size={17}
-                  className="mt-0.5 shrink-0 text-wiser-600"
-                />
-
-                <p>
-                  After approval, your assigned school role will determine
-                  which school features you can access. Approved
-                  Owner/Principal/Head of Academics accounts can then invite
-                  additional staff members through the existing WISE
-                  invitation workflow.
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-violet-700 shadow-sm ring-1 ring-violet-100">
+                  <CheckCircle2 size={18} />
+                </div>
+                <p className="text-sm leading-6 text-slate-600">
+                  After approval, your assigned school role will determine which school features you can access. Approved Owner, Principal and Head of Academics accounts can invite additional staff through the existing MOJASCHOOL invitation workflow.
                 </p>
               </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-wiser-600 px-4 text-sm font-semibold text-white transition hover:bg-wiser-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wiser-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {loading ? (
-                <>
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
-                  Submitting request...
-                </>
-              ) : (
-                <>
-                  <Send size={16} />
-                  Submit school request
-                </>
-              )}
-            </button>
+            <div className="flex flex-col-reverse gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between sm:pt-6">
+              <button type="button" onClick={() => navigate("/login")} disabled={loading} className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-bold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60">
+                Back to sign in
+              </button>
+              <button type="submit" disabled={loading} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-violet-600 px-6 text-sm font-bold text-white shadow-sm transition hover:bg-violet-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:min-w-48">
+                {loading ? <><span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" /> Submitting...</> : <><Send size={16} /> Submit request <span aria-hidden="true">→</span></>}
+              </button>
+            </div>
           </form>
         </div>
+
+        <p className="mt-4 px-1 text-center text-xs text-slate-400">MOJASCHOOL · School management made simple.</p>
       </div>
+    </div>
+  );
+}
+
+function OnboardingSection({ number, title, description, badge, children }: { number: string; title: string; description: string; badge?: string; children: ReactNode }) {
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+      <div className="mb-4 flex items-start gap-3">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-600 text-xs font-bold text-white shadow-sm">{number}</span>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-bold text-slate-900 sm:text-base">{title}</h2>
+            {badge && <span className="rounded-full bg-violet-50 px-2.5 py-1 text-xs font-bold text-violet-700">{badge}</span>}
+          </div>
+          <p className="mt-1 text-xs leading-5 text-slate-500 sm:text-sm">{description}</p>
+        </div>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function SelectField({ label, value, onChange, options, disabled, required = false }: { label: string; value: string; onChange: (value: string) => void; options: Array<[string, string]>; disabled: boolean; required?: boolean }) {
+  return (
+    <div>
+      <label className="mb-1.5 block text-sm font-semibold text-slate-700">{label}{required && <span className="ml-1 text-red-500">*</span>}</label>
+      <select required={required} value={value} onChange={(event) => onChange(event.target.value)} disabled={disabled} className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-medium text-slate-900 outline-none transition focus:border-violet-500 focus:ring-4 focus:ring-violet-100 disabled:bg-slate-50">
+        {options.map(([optionValue, optionLabel]) => <option key={optionValue || "empty"} value={optionValue}>{optionLabel}</option>)}
+      </select>
     </div>
   );
 }
@@ -655,7 +580,7 @@ function Field({
 }) {
   return (
     <div>
-      <label className="mb-1.5 block text-sm font-medium text-wiser-text-secondary">
+      <label className="mb-1.5 block text-sm font-medium text-slate-600">
         {label}
         {required && <span className="ml-1 text-red-500">*</span>}
       </label>
@@ -665,7 +590,7 @@ function Field({
           <Icon
             size={16}
             aria-hidden="true"
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-wiser-text-muted"
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
           />
         )}
 
@@ -679,8 +604,8 @@ function Field({
           required={required}
           disabled={disabled}
           className={[
-            "h-11 w-full rounded-lg border border-wiser-border bg-white pr-3 text-sm text-wiser-text outline-none transition",
-            "placeholder:text-slate-400 focus:border-wiser-500 focus:ring-2 focus:ring-wiser-100",
+            "h-11 w-full rounded-xl border border-slate-200 bg-white pr-3 text-sm text-slate-900 outline-none transition",
+            "placeholder:text-slate-400 focus:border-violet-500 focus:ring-4 focus:ring-violet-100",
             Icon ? "pl-9" : "pl-3",
           ].join(" ")}
         />
@@ -699,13 +624,13 @@ function InfoItem({
   value: string;
 }) {
   return (
-    <div className="rounded-xl border border-wiser-border bg-white p-4">
-      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-wiser-text-muted">
+    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+      <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-slate-400">
         <Icon size={14} />
         {label}
       </div>
 
-      <p className="mt-2 break-words text-sm font-medium text-wiser-text">
+      <p className="mt-2 break-words text-sm font-medium text-slate-900">
         {value || "—"}
       </p>
     </div>

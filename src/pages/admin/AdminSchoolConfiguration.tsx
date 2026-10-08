@@ -224,7 +224,7 @@ const AI_ROLES = [
 ];
 
 const inputClassName =
-  "h-10 w-full rounded-lg border border-wiser-border bg-white px-3 text-sm text-wiser-text outline-none focus:border-wiser-500 focus:ring-2 focus:ring-wiser-100";
+  "h-10 w-full rounded-lg border border-MojaSchoolr-border bg-white px-3 text-sm text-MojaSchoolr-text outline-none focus:border-MojaSchoolr-500 focus:ring-2 focus:ring-MojaSchoolr-100";
 
 function mergeConfig(
   row: Partial<SchoolConfiguration> | null,
@@ -270,8 +270,8 @@ function tabClasses(active: boolean) {
   return [
     "inline-flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold transition",
     active
-      ? "bg-wiser-600 text-white"
-      : "text-wiser-text-secondary hover:bg-slate-100 hover:text-wiser-text",
+      ? "bg-MojaSchoolr-600 text-white"
+      : "text-MojaSchoolr-text-secondary hover:bg-slate-100 hover:text-MojaSchoolr-text",
   ].join(" ");
 }
 
@@ -380,7 +380,7 @@ export default function AdminSchoolConfiguration() {
     const confirmed = window.confirm(
       `Approve ${application.school_name} as a ${formatRole(
         assignedRole,
-      )} and create its WISE school account?`,
+      )} and create its MojaSchool school account?`,
     );
 
     if (!confirmed) return;
@@ -650,7 +650,7 @@ export default function AdminSchoolConfiguration() {
   if (loading) {
     return (
       <div className="flex min-h-[420px] items-center justify-center">
-        <div className="flex items-center gap-2 text-sm text-wiser-text-secondary">
+        <div className="flex items-center gap-2 text-sm text-MojaSchoolr-text-secondary">
           <Loader2 size={17} className="animate-spin" />
           Loading school configuration...
         </div>
@@ -666,29 +666,29 @@ export default function AdminSchoolConfiguration() {
           onClick={() =>
             navigate(`/admin/applications?id=${application.id}`)
           }
-          className="inline-flex items-center gap-2 text-sm font-semibold text-wiser-600 hover:text-wiser-700"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-MojaSchoolr-600 hover:text-MojaSchoolr-700"
         >
           <ArrowLeft size={16} />
           Back to school request
         </button>
 
-        <div className="mt-5 rounded-2xl border border-wiser-border bg-white p-6 shadow-sm">
+        <div className="mt-5 rounded-2xl border border-MojaSchoolr-border bg-white p-6 shadow-sm">
           <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-wiser-50 text-wiser-600">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-MojaSchoolr-50 text-MojaSchoolr-600">
               <Building2 size={22} />
             </div>
 
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-2xl font-semibold tracking-tight text-wiser-text">
+                <h1 className="text-2xl font-semibold tracking-tight text-MojaSchoolr-text">
                   {application.school_name}
                 </h1>
                 <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">
                   {application.status.replaceAll("_", " ")}
                 </span>
               </div>
-              <p className="mt-2 text-sm leading-6 text-wiser-text-secondary">
-                Approve this school first. WISE will then create the school
+              <p className="mt-2 text-sm leading-6 text-MojaSchoolr-text-secondary">
+                Approve this school first. MojaSchool will then create the school
                 account and open the configuration workspace.
               </p>
             </div>
@@ -736,7 +736,7 @@ export default function AdminSchoolConfiguration() {
                     .map((section) => (
                       <span
                         key={section.key}
-                        className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-wiser-text shadow-sm ring-1 ring-slate-200"
+                        className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-MojaSchoolr-text shadow-sm ring-1 ring-slate-200"
                       >
                         {section.name}
                       </span>
@@ -754,7 +754,7 @@ export default function AdminSchoolConfiguration() {
               onClick={() =>
                 navigate(`/admin/applications?id=${application.id}`)
               }
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-wiser-border bg-white px-5 text-sm font-semibold text-wiser-text-secondary hover:bg-slate-50"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-MojaSchoolr-border bg-white px-5 text-sm font-semibold text-MojaSchoolr-text-secondary hover:bg-slate-50"
             >
               Review application
             </button>
@@ -766,7 +766,7 @@ export default function AdminSchoolConfiguration() {
                 approving ||
                 !["pending", "under_review"].includes(application.status)
               }
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-wiser-600 px-5 text-sm font-semibold text-white hover:bg-wiser-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-MojaSchoolr-600 px-5 text-sm font-semibold text-white hover:bg-MojaSchoolr-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {approving ? (
                 <Loader2 size={17} className="animate-spin" />
@@ -799,14 +799,14 @@ export default function AdminSchoolConfiguration() {
           <button
             type="button"
             onClick={() => navigate("/admin/schools")}
-            className="inline-flex items-center gap-2 text-sm font-semibold text-wiser-600 hover:text-wiser-700"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-MojaSchoolr-600 hover:text-MojaSchoolr-700"
           >
             <ArrowLeft size={16} />
             Back to schools
           </button>
 
           <div className="mt-4 flex items-start gap-3">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-wiser-50 text-wiser-600">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-MojaSchoolr-50 text-MojaSchoolr-600">
               {school.logo_url ? (
                 <img
                   src={school.logo_url}
@@ -820,14 +820,14 @@ export default function AdminSchoolConfiguration() {
 
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="truncate text-2xl font-semibold tracking-tight text-wiser-text sm:text-3xl">
+                <h1 className="truncate text-2xl font-semibold tracking-tight text-MojaSchoolr-text sm:text-3xl">
                   {school.name}
                 </h1>
                 <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
                   Configuration
                 </span>
               </div>
-              <p className="mt-1 text-sm text-wiser-text-secondary">
+              <p className="mt-1 text-sm text-MojaSchoolr-text-secondary">
                 {school.city || "—"}, {school.country || "—"} ·{" "}
                 {config.school_type} · {config.curriculum}
               </p>
@@ -840,7 +840,7 @@ export default function AdminSchoolConfiguration() {
             type="button"
             onClick={() => void load(true)}
             disabled={refreshing || saving}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-wiser-border bg-white px-4 text-sm font-semibold text-wiser-text-secondary shadow-sm hover:bg-slate-50 disabled:opacity-60"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-MojaSchoolr-border bg-white px-4 text-sm font-semibold text-MojaSchoolr-text-secondary shadow-sm hover:bg-slate-50 disabled:opacity-60"
           >
             <RefreshCw
               size={16}
@@ -853,7 +853,7 @@ export default function AdminSchoolConfiguration() {
             type="button"
             onClick={() => void saveConfiguration()}
             disabled={saving}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-wiser-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-wiser-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-MojaSchoolr-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-MojaSchoolr-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {saving ? (
               <Loader2 size={16} className="animate-spin" />
@@ -880,13 +880,13 @@ export default function AdminSchoolConfiguration() {
       )}
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[250px_minmax(0,1fr)]">
-        <aside className="h-fit rounded-xl border border-wiser-border bg-white p-2 shadow-sm">
+        <aside className="h-fit rounded-xl border border-MojaSchoolr-border bg-white p-2 shadow-sm">
           <div className="px-3 py-3">
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
               School setup
             </p>
             <p className="mt-1 text-xs leading-5 text-slate-500">
-              Control what this school can use on WISE.
+              Control what this school can use on MojaSchool.
             </p>
           </div>
 
@@ -939,7 +939,7 @@ export default function AdminSchoolConfiguration() {
 
         <main className="min-w-0">
           {activeTab === "modules" && (
-            <section className="rounded-xl border border-wiser-border bg-white shadow-sm">
+            <section className="rounded-xl border border-MojaSchoolr-border bg-white shadow-sm">
               <SectionHeader
                 icon={LayoutGrid}
                 title="Modules"
@@ -950,7 +950,7 @@ export default function AdminSchoolConfiguration() {
                 {moduleGroups.map((group) => (
                   <div key={group.category}>
                     <div className="mb-3">
-                      <h2 className="text-sm font-semibold text-wiser-text">
+                      <h2 className="text-sm font-semibold text-MojaSchoolr-text">
                         {group.category}
                       </h2>
                       <p className="mt-0.5 text-xs text-slate-500">
@@ -980,7 +980,7 @@ export default function AdminSchoolConfiguration() {
                             className={[
                               "flex items-start gap-3 rounded-xl border p-4 text-left transition",
                               enabled
-                                ? "border-wiser-200 bg-wiser-50/60"
+                                ? "border-MojaSchoolr-200 bg-MojaSchoolr-50/60"
                                 : "border-slate-200 bg-white hover:bg-slate-50",
                             ].join(" ")}
                           >
@@ -988,7 +988,7 @@ export default function AdminSchoolConfiguration() {
                               className={[
                                 "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border",
                                 enabled
-                                  ? "border-wiser-600 bg-wiser-600 text-white"
+                                  ? "border-MojaSchoolr-600 bg-MojaSchoolr-600 text-white"
                                   : "border-slate-300 bg-white text-transparent",
                               ].join(" ")}
                             >
@@ -1003,7 +1003,7 @@ export default function AdminSchoolConfiguration() {
                                 {module.key === "ai_assistant" && (
                                   <Sparkles
                                     size={14}
-                                    className="text-wiser-600"
+                                    className="text-MojaSchoolr-600"
                                   />
                                 )}
                               </span>
@@ -1022,7 +1022,7 @@ export default function AdminSchoolConfiguration() {
           )}
 
           {activeTab === "academic" && (
-            <section className="rounded-xl border border-wiser-border bg-white shadow-sm">
+            <section className="rounded-xl border border-MojaSchoolr-border bg-white shadow-sm">
               <SectionHeader
                 icon={GraduationCap}
                 title="Academic settings"
@@ -1088,7 +1088,7 @@ export default function AdminSchoolConfiguration() {
                           className={[
                             "flex items-start gap-3 rounded-xl border p-4 text-left transition",
                             enabled
-                              ? "border-wiser-200 bg-white ring-1 ring-wiser-100"
+                              ? "border-MojaSchoolr-200 bg-white ring-1 ring-MojaSchoolr-100"
                               : "border-slate-200 bg-slate-50 hover:bg-white",
                           ].join(" ")}
                         >
@@ -1096,7 +1096,7 @@ export default function AdminSchoolConfiguration() {
                             className={[
                               "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border",
                               enabled
-                                ? "border-wiser-600 bg-wiser-600 text-white"
+                                ? "border-MojaSchoolr-600 bg-MojaSchoolr-600 text-white"
                                 : "border-slate-300 bg-white text-transparent",
                             ].join(" ")}
                           >
@@ -1220,7 +1220,7 @@ export default function AdminSchoolConfiguration() {
           )}
 
           {activeTab === "ai" && (
-            <section className="rounded-xl border border-wiser-border bg-white shadow-sm">
+            <section className="rounded-xl border border-MojaSchoolr-border bg-white shadow-sm">
               <SectionHeader
                 icon={Bot}
                 title="AI access"
@@ -1233,7 +1233,7 @@ export default function AdminSchoolConfiguration() {
                     <div className="flex items-center gap-2">
                       <Sparkles
                         size={17}
-                        className="text-wiser-600"
+                        className="text-MojaSchoolr-600"
                       />
                       <h2 className="text-sm font-semibold text-slate-900">
                         Enable AI Assistant
@@ -1252,7 +1252,7 @@ export default function AdminSchoolConfiguration() {
                     }
                     className={[
                       "relative h-7 w-12 shrink-0 rounded-full transition",
-                      aiEnabled ? "bg-wiser-600" : "bg-slate-300",
+                      aiEnabled ? "bg-MojaSchoolr-600" : "bg-slate-300",
                     ].join(" ")}
                     aria-pressed={aiEnabled}
                   >
@@ -1281,7 +1281,7 @@ export default function AdminSchoolConfiguration() {
                         className={[
                           "flex items-center gap-3 rounded-xl border p-4 text-left transition",
                           allowed
-                            ? "border-wiser-200 bg-wiser-50/60"
+                            ? "border-MojaSchoolr-200 bg-MojaSchoolr-50/60"
                             : "border-slate-200 bg-white",
                           !aiEnabled &&
                             "cursor-not-allowed opacity-50",
@@ -1291,7 +1291,7 @@ export default function AdminSchoolConfiguration() {
                           size={17}
                           className={
                             allowed
-                              ? "text-wiser-600"
+                              ? "text-MojaSchoolr-600"
                               : "text-slate-400"
                           }
                         />
@@ -1362,7 +1362,7 @@ export default function AdminSchoolConfiguration() {
                         className={[
                           "rounded-xl border p-4 text-left",
                           enabled
-                            ? "border-wiser-200 bg-wiser-50/60"
+                            ? "border-MojaSchoolr-200 bg-MojaSchoolr-50/60"
                             : "border-slate-200",
                           (!aiEnabled ||
                             key === "allow_finance_insights") &&
@@ -1405,7 +1405,7 @@ export default function AdminSchoolConfiguration() {
           )}
 
           {activeTab === "branding" && (
-            <section className="rounded-xl border border-wiser-border bg-white shadow-sm">
+            <section className="rounded-xl border border-MojaSchoolr-border bg-white shadow-sm">
               <SectionHeader
                 icon={Palette}
                 title="Branding"
@@ -1559,13 +1559,13 @@ function SectionHeader({
   description: string;
 }) {
   return (
-    <div className="flex items-start gap-3 border-b border-wiser-border px-5 py-4 sm:px-6">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-wiser-50 text-wiser-600">
+    <div className="flex items-start gap-3 border-b border-MojaSchoolr-border px-5 py-4 sm:px-6">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-MojaSchoolr-50 text-MojaSchoolr-600">
         <Icon size={18} />
       </div>
       <div>
-        <h2 className="text-base font-semibold text-wiser-text">{title}</h2>
-        <p className="mt-1 max-w-3xl text-xs leading-5 text-wiser-text-secondary">
+        <h2 className="text-base font-semibold text-MojaSchoolr-text">{title}</h2>
+        <p className="mt-1 max-w-3xl text-xs leading-5 text-MojaSchoolr-text-secondary">
           {description}
         </p>
       </div>
