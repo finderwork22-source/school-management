@@ -67,6 +67,7 @@ interface ApplicationRecord {
   requested_role: string | null;
   assigned_role: string | null;
   status: string;
+  sections: Array<{ key: string; name: string; enabled: boolean; display_order: number }> | null;
 }
 
 interface SchoolConfiguration {
@@ -188,15 +189,19 @@ const SCHOOL_TYPES = [
   "Crèche & Nursery",
   "Primary",
   "Secondary",
-  "Combined",
+  "Primary & Secondary",
   "International School",
+  "Private School",
+  "Combined",
+  "Other",
 ];
 
 const SECTION_PRESETS = [
   { key: "creche", name: "Crèche", description: "Early childhood care, development and daily activities." },
   { key: "nursery", name: "Nursery", description: "Early years learning, development and foundational academics." },
   { key: "primary", name: "Primary", description: "Primary school academic section." },
-  { key: "secondary", name: "Secondary", description: "Secondary school academic section." },
+  { key: "lower_secondary", name: "Lower Secondary", description: "Lower secondary / junior secondary education." },
+  { key: "upper_secondary", name: "Upper Secondary", description: "Upper secondary / senior secondary education." },
 ];
 
 const CURRICULA = [
@@ -305,7 +310,7 @@ export default function AdminSchoolConfiguration() {
         const { data: applicationData, error: applicationError } = await supabase
           .from("school_applications")
           .select(
-            "id, school_id, school_name, school_type, school_email, school_phone, country, city, address, applicant_first_name, applicant_last_name, applicant_email, requested_role, assigned_role, status",
+            "id, school_id, school_name, school_type, school_email, school_phone, country, city, address, applicant_first_name, applicant_last_name, applicant_email, requested_role, assigned_role, status, sections",
           )
           .eq("id", applicationId)
           .single();
@@ -512,7 +517,7 @@ export default function AdminSchoolConfiguration() {
           enabled: true,
           display_order: index + 1,
         }));
-      } else if (value === "Creche" || value === "Crèche") {
+      } else if (value === "Crèche" || value === "Creche") {
         nextSections = [
           { key: "creche", name: "Crèche", enabled: true, display_order: 1 },
         ];
@@ -520,6 +525,32 @@ export default function AdminSchoolConfiguration() {
         nextSections = [
           { key: "nursery", name: "Nursery", enabled: true, display_order: 1 },
         ];
+      } else if (value === "Primary") {
+        nextSections = [
+          { key: "primary", name: "Primary", enabled: true, display_order: 1 },
+        ];
+      } else if (value === "Secondary") {
+        nextSections = [
+          { key: "lower_secondary", name: "Lower Secondary", enabled: true, display_order: 1 },
+          { key: "upper_secondary", name: "Upper Secondary", enabled: true, display_order: 2 },
+        ];
+      } else if (value === "Primary & Secondary") {
+        nextSections = [
+          { key: "primary", name: "Primary", enabled: true, display_order: 1 },
+          { key: "lower_secondary", name: "Lower Secondary", enabled: true, display_order: 2 },
+          { key: "upper_secondary", name: "Upper Secondary", enabled: true, display_order: 3 },
+        ];
+      } else if (value === "International School") {
+        nextSections = [
+          { key: "creche", name: "Crèche", enabled: true, display_order: 1 },
+          { key: "nursery", name: "Nursery", enabled: true, display_order: 2 },
+          { key: "primary", name: "Primary", enabled: true, display_order: 3 },
+          { key: "lower_secondary", name: "Lower Secondary", enabled: true, display_order: 4 },
+        ];
+      } else if (value === "Private School") {
+        nextSections = current.sections.length
+          ? current.sections
+          : [{ key: "primary", name: "Primary", enabled: true, display_order: 1 }];
       }
 
       return {
@@ -692,6 +723,29 @@ export default function AdminSchoolConfiguration() {
               label="School email"
               value={application.school_email || "—"}
             />
+
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 sm:col-span-2">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                Requested school sections
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {(application.sections ?? []).filter((section) => section.enabled).length > 0 ? (
+                  (application.sections ?? [])
+                    .filter((section) => section.enabled)
+                    .sort((a, b) => a.display_order - b.display_order)
+                    .map((section) => (
+                      <span
+                        key={section.key}
+                        className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-wiser-text shadow-sm ring-1 ring-slate-200"
+                      >
+                        {section.name}
+                      </span>
+                    ))
+                ) : (
+                  <span className="text-sm text-slate-500">No sections supplied.</span>
+                )}
+              </div>
+            </div>
           </div>
 
           <div className="mt-7 flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:justify-end">

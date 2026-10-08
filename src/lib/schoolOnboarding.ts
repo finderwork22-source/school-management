@@ -16,6 +16,7 @@ export interface SchoolApplication {
   applicant_email: string;
   applicant_phone: string | null;
   requested_role: string | null;
+  sections: Array<{ key: string; name: string; enabled: boolean; display_order: number }>;
   assigned_role: string | null;
   status:
     | "pending"
@@ -41,6 +42,7 @@ export async function submitSchoolApplication({
   address,
   website,
   requestedRole,
+  sections,
 }: {
   schoolName: string;
   schoolType?: string;
@@ -51,6 +53,7 @@ export async function submitSchoolApplication({
   address?: string;
   website?: string;
   requestedRole?: string | null;
+  sections?: Array<{ key: string; name: string; enabled?: boolean; display_order?: number }>;
 }) {
   const { data, error } = await supabase.rpc(
     "submit_school_application",
@@ -64,6 +67,7 @@ export async function submitSchoolApplication({
       p_address: address?.trim() || null,
       p_website: website?.trim() || null,
       p_requested_role: requestedRole || null,
+      p_sections: sections ?? [],
     },
   );
 
