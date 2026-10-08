@@ -73,6 +73,12 @@ interface SchoolConfiguration {
   school_id: string;
   school_type: string;
   curriculum: string;
+  sections: Array<{
+    key: string;
+    name: string;
+    enabled: boolean;
+    display_order: number;
+  }>;
   enabled_modules: Record<string, boolean>;
   academic_settings: {
     school_days_per_week: number;
@@ -147,6 +153,7 @@ const DEFAULT_CONFIG: SchoolConfiguration = {
   school_id: "",
   school_type: "School",
   curriculum: "General",
+  sections: [],
   enabled_modules: DEFAULT_MODULES,
   academic_settings: {
     school_days_per_week: 5,
@@ -176,12 +183,20 @@ const DEFAULT_CONFIG: SchoolConfiguration = {
 
 const SCHOOL_TYPES = [
   "School",
-  "Creche",
+  "Crèche",
   "Nursery",
+  "Crèche & Nursery",
   "Primary",
   "Secondary",
   "Combined",
   "International School",
+];
+
+const SECTION_PRESETS = [
+  { key: "creche", name: "Crèche", description: "Early childhood care, development and daily activities." },
+  { key: "nursery", name: "Nursery", description: "Early years learning, development and foundational academics." },
+  { key: "primary", name: "Primary", description: "Primary school academic section." },
+  { key: "secondary", name: "Secondary", description: "Secondary school academic section." },
 ];
 
 const CURRICULA = [
@@ -212,8 +227,14 @@ function mergeConfig(
 ): SchoolConfiguration {
   return {
     school_id: schoolId,
-    school_type: row?.school_type ?? DEFAULT_CONFIG.school_type,
+    school_type:
+      row?.school_type === "Creche"
+        ? "Crèche"
+        : row?.school_type === "Creche & Nursery"
+          ? "Crèche & Nursery"
+          : row?.school_type ?? DEFAULT_CONFIG.school_type,
     curriculum: row?.curriculum ?? DEFAULT_CONFIG.curriculum,
+    sections: Array.isArray(row?.sections) ? row!.sections : DEFAULT_CONFIG.sections,
     enabled_modules: {
       ...DEFAULT_MODULES,
       ...(row?.enabled_modules ?? {}),
@@ -311,7 +332,7 @@ export default function AdminSchoolConfiguration() {
           supabase
             .from("school_configurations")
             .select(
-              "school_id, school_type, curriculum, enabled_modules, academic_settings, ai_settings, branding",
+              "school_id, school_type, curriculum, sections, enabled_modules, academic_settings, ai_settings, branding",
             )
             .eq("school_id", targetSchoolId)
             .maybeSingle(),
@@ -478,6 +499,61 @@ export default function AdminSchoolConfiguration() {
     }));
   }
 
+  function setSchoolType(value: string) {
+    setConfig((current) => {
+      let nextSections = current.sections;
+
+      if (value === "Crèche & Nursery") {
+        nextSections = SECTION_PRESETS.filter((section) =>
+          ["creche", "nursery"].includes(section.key),
+        ).map((section, index) => ({
+          key: section.key,
+          name: section.name,
+          enabled: true,
+          display_order: index + 1,
+        }));
+      } else if (value === "Creche" || value === "Crèche") {
+        nextSections = [
+          { key: "creche", name: "Crèche", enabled: true, display_order: 1 },
+        ];
+      } else if (value === "Nursery") {
+        nextSections = [
+          { key: "nursery", name: "Nursery", enabled: true, display_order: 1 },
+        ];
+      }
+
+      return {
+        ...current,
+        school_type: value,
+        sections: nextSections,
+      };
+    });
+  }
+
+  function toggleSchoolSection(key: string) {
+    setConfig((current) => {
+      const currentSection = current.sections.find((section) => section.key === key);
+      const enabled = !(currentSection?.enabled ?? false);
+
+      const existing = current.sections.some((section) => section.key === key);
+      const next = existing
+        ? current.sections.map((section) =>
+            section.key === key ? { ...section, enabled } : section,
+          )
+        : [
+            ...current.sections,
+            {
+              key,
+              name: SECTION_PRESETS.find((section) => section.key === key)?.name ?? key,
+              enabled: true,
+              display_order: current.sections.length + 1,
+            },
+          ];
+
+      return { ...current, sections: next };
+    });
+  }
+
   async function saveConfiguration() {
     if (!school) return;
 
@@ -501,8 +577,22 @@ export default function AdminSchoolConfiguration() {
 
       if (saveError) throw saveError;
 
+      const { data: sectionsData, error: sectionsError } =
+        await supabase.rpc("save_school_sections", {
+          p_school_id: school.id,
+          p_sections: config.sections,
+        });
+
+      if (sectionsError) throw sectionsError;
+
       setConfig(
-        mergeConfig(data as Partial<SchoolConfiguration>, school.id),
+        mergeConfig(
+          {
+            ...(data as Partial<SchoolConfiguration>),
+            sections: sectionsData ?? config.sections,
+          },
+          school.id,
+        ),
       );
       setSuccess("School configuration saved successfully.");
     } catch (saveError) {
@@ -545,7 +635,7 @@ export default function AdminSchoolConfiguration() {
           onClick={() =>
             navigate(`/admin/applications?id=${application.id}`)
           }
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-MojaSchool-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-MojaSchool-700 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-wiser-600 hover:text-wiser-700"
         >
           <ArrowLeft size={16} />
           Back to school request
@@ -709,7 +799,7 @@ export default function AdminSchoolConfiguration() {
             type="button"
             onClick={() => void saveConfiguration()}
             disabled={saving}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-wiser-600 px-4 bg-MojaSchoolr-600 text-sm font-semibold text-white shadow-sm hover:bg-wiser-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-wiser-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-wiser-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {saving ? (
               <Loader2 size={16} className="animate-spin" />
@@ -889,12 +979,7 @@ export default function AdminSchoolConfiguration() {
                 <Field label="School type">
                   <select
                     value={config.school_type}
-                    onChange={(event) =>
-                      setConfig((current) => ({
-                        ...current,
-                        school_type: event.target.value,
-                      }))
-                    }
+                    onChange={(event) => setSchoolType(event.target.value)}
                     className={inputClassName}
                   >
                     {SCHOOL_TYPES.map((type) => (
@@ -923,6 +1008,59 @@ export default function AdminSchoolConfiguration() {
                     ))}
                   </select>
                 </Field>
+
+                <div className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-900">School sections</h3>
+                      <p className="mt-1 text-xs leading-5 text-slate-500">
+                        A school can contain multiple educational sections. For a Crèche & Nursery school, enable both sections. These sections are used by classes and teacher assignments.
+                      </p>
+                    </div>
+                    <span className="text-xs font-semibold text-slate-500">
+                      {config.sections.filter((section) => section.enabled).length} enabled
+                    </span>
+                  </div>
+
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    {SECTION_PRESETS.map((section) => {
+                      const enabled = config.sections.find((item) => item.key === section.key)?.enabled ?? false;
+
+                      return (
+                        <button
+                          key={section.key}
+                          type="button"
+                          onClick={() => toggleSchoolSection(section.key)}
+                          className={[
+                            "flex items-start gap-3 rounded-xl border p-4 text-left transition",
+                            enabled
+                              ? "border-wiser-200 bg-white ring-1 ring-wiser-100"
+                              : "border-slate-200 bg-slate-50 hover:bg-white",
+                          ].join(" ")}
+                        >
+                          <span
+                            className={[
+                              "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border",
+                              enabled
+                                ? "border-wiser-600 bg-wiser-600 text-white"
+                                : "border-slate-300 bg-white text-transparent",
+                            ].join(" ")}
+                          >
+                            <Check size={13} strokeWidth={3} />
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block text-sm font-semibold text-slate-900">
+                              {section.name}
+                            </span>
+                            <span className="mt-1 block text-xs leading-5 text-slate-500">
+                              {section.description}
+                            </span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
 
                 <Field label="School days per week">
                   <input
