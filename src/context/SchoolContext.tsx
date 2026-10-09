@@ -6,7 +6,9 @@ import {
   type ReactNode,
 } from "react";
 
+import { getMySchoolMembership } from "../lib/auth";
 import { supabase } from "../lib/supabase";
+import type { SchoolMembershipResult } from "../lib/auth";
 import { useAuth } from "./AuthContext";
 
 export interface School {
@@ -31,30 +33,24 @@ export interface SchoolMembership {
 export interface SchoolConfiguration {
   school_id: string;
   school_type: string;
+  ownership_type?: string | null;
   curriculum: string;
-  sections: Array<{
+  sections?: Array<{
     key: string;
     name: string;
     enabled: boolean;
     display_order: number;
   }>;
   enabled_modules: Record<string, boolean>;
-  academic_settings: {
-    school_days_per_week: number;
-    periods_per_day: number;
-    lesson_duration_minutes: number;
-    break_duration_minutes: number;
-    grading_system: string;
-    week_starts_on: string;
-  };
+  academic_settings: Record<string, unknown>;
   ai_settings: {
     enabled: boolean;
     allowed_roles: string[];
-    allow_academic_insights: boolean;
+    allow_finance_insights: boolean;
     allow_student_insights: boolean;
     allow_teacher_insights: boolean;
+    allow_academic_insights: boolean;
     allow_timetable_insights: boolean;
-    allow_finance_insights: boolean;
   };
   branding: {
     logo_url: string | null;
@@ -108,33 +104,25 @@ export function SchoolProvider({
     setLoading(true);
     setError(null);
 
-    const { data, error: queryError } = await supabase
-      .from("school_members")
-      .select(
-        `
-          id,
-          school_id,
-          role,
-          schools (
-            id,
-            name,
-            slug,
-            email,
-            phone,
-            address,
-            city,
-            country,
-            logo_url
-          )
-        `,
-      )
-      .eq("user_id", user.id)
-      .limit(1)
-      .maybeSingle();
+    const {
+      membership: resolvedMembership,
+      error: membershipError,
+    } = await getMySchoolMembership();
 
-    if (queryError) {
-      console.error("Failed to load school:", queryError);
-      setError(queryError.message);
+    if (membershipError) {
+      console.error(
+        "Failed to resolve authenticated school membership:",
+        membershipError,
+      );
+      setSchool(null);
+      setMembership(null);
+      setConfiguration(null);
+      setError(membershipError.message);
+      setLoading(false);
+      return;
+    }
+
+    if (!resolvedMembership) {
       setSchool(null);
       setMembership(null);
       setConfiguration(null);
@@ -142,24 +130,20 @@ export function SchoolProvider({
       return;
     }
 
-    if (!data) {
-      setSchool(null);
-      setMembership(null);
-      setConfiguration(null);
-      setLoading(false);
-      return;
-    }
-
-    const schoolData = data.schools as unknown as School;
+    // getMySchoolMembership uses the same SchoolMembershipResult shape for
+    // parents and staff. Keep the context contract unchanged for the rest of
+    // the application.
+    const typedMembership =
+      resolvedMembership as SchoolMembershipResult;
 
     setMembership({
-      id: data.id,
-      school_id: data.school_id,
-      role: data.role,
-      school: schoolData,
+      id: typedMembership.id,
+      school_id: typedMembership.school_id,
+      role: typedMembership.role,
+      school: typedMembership.school,
     });
 
-    setSchool(schoolData);
+    setSchool(typedMembership.school);
 
     const {
       data: configurationData,
@@ -170,6 +154,7 @@ export function SchoolProvider({
         `
           school_id,
           school_type,
+          ownership_type,
           curriculum,
           sections,
           enabled_modules,
@@ -178,7 +163,7 @@ export function SchoolProvider({
           branding
         `,
       )
-      .eq("school_id", data.school_id)
+      .eq("school_id", typedMembership.school_id)
       .maybeSingle();
 
     if (configurationError) {
@@ -187,11 +172,14 @@ export function SchoolProvider({
         configurationError,
       );
 
+      // Keep the school workspace usable if an older/provisioning school
+      // does not yet have a configuration row. A provisioned school is
+      // expected to have one, and the platform admin can create it.
       setConfiguration(null);
       setError(configurationError.message);
     } else {
       setConfiguration(
-        configurationData as SchoolConfiguration | null,
+        (configurationData as SchoolConfiguration | null) ?? null,
       );
     }
 
@@ -201,14 +189,11 @@ export function SchoolProvider({
   useEffect(() => {
     if (authLoading) return;
 
-    loadSchool();
-  }, [user, authLoading]);
+    void loadSchool();
+  }, [user?.id, authLoading]);
 
   function isModuleEnabled(moduleKey: string) {
     if (!configuration) {
-      // Preserve the existing application behaviour while configuration
-      // is unavailable. Every provisioned school should have a
-      // school_configurations row.
       return true;
     }
 

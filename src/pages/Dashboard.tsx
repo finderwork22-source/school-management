@@ -860,7 +860,7 @@ function OwnerSummaryCard({
           </p>
         </div>
 
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-MojaSchoolr-50 text-MojaSchoolr-600">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-wiser-50 text-wiser-600">
           {icon}
         </div>
       </div>
@@ -898,7 +898,7 @@ function OwnerProgressRow({
 
       <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
         <div
-          className="h-full rounded-full bg-MojaSchoolr-600 transition-all duration-500"
+          className="h-full rounded-full bg-wiser-600 transition-all duration-500"
           style={{ width: `${safePercent}%` }}
         />
       </div>
@@ -921,9 +921,9 @@ function OwnerQuickAccessCard({
     <button
       type="button"
       onClick={onClick}
-      className="group flex min-w-0 items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 text-left transition hover:border-MojaSchoolr-200 hover:bg-MojaSchoolr-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-MojaSchoolr-500 focus-visible:ring-offset-2"
+      className="group flex min-w-0 items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 text-left transition hover:border-wiser-200 hover:bg-wiser-50/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wiser-500 focus-visible:ring-offset-2"
     >
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-MojaSchoolr-50 text-MojaSchoolr-600">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-wiser-50 text-wiser-600">
         {icon}
       </div>
 
@@ -934,7 +934,7 @@ function OwnerQuickAccessCard({
           </h3>
           <ArrowUpRight
             size={14}
-            className="mt-0.5 shrink-0 text-slate-400 transition group-hover:text-MojaSchoolr-600"
+            className="mt-0.5 shrink-0 text-slate-400 transition group-hover:text-wiser-600"
           />
         </div>
 
@@ -1474,7 +1474,7 @@ function OwnerDashboard() {
             <button
               type="button"
               onClick={() => navigate("/attendance")}
-              className="inline-flex shrink-0 items-center gap-1 self-start text-sm font-medium text-MojaSchoolr-600 hover:text-MojaSchoolr-700"
+              className="inline-flex shrink-0 items-center gap-1 self-start text-sm font-medium text-wiser-600 hover:text-wiser-700"
             >
               View details
               <ArrowUpRight size={14} />
@@ -1594,10 +1594,10 @@ function OwnerDashboard() {
             <button
               type="button"
               onClick={() => navigate("/finance/payments")}
-              className="inline-flex w-full items-center justify-between rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:border-MojaSchoolr-200 hover:bg-MojaSchoolr-50 hover:text-MojaSchoolr-700"
+              className="inline-flex w-full items-center justify-between rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:border-wiser-200 hover:bg-wiser-50 hover:text-wiser-700"
             >
               <span className="inline-flex items-center gap-2">
-                <CreditCard size={16} className="text-MojaSchoolr-600" />
+                <CreditCard size={16} className="text-wiser-600" />
                 Open finance
               </span>
               <ArrowUpRight size={14} className="text-slate-400" />
@@ -1643,7 +1643,7 @@ function OwnerDashboard() {
             <button
               type="button"
               onClick={() => navigate("/admissions")}
-              className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-MojaSchoolr-600 hover:text-MojaSchoolr-700"
+              className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-wiser-600 hover:text-wiser-700"
             >
               Open admissions
               <ArrowUpRight size={14} />
@@ -1718,7 +1718,7 @@ function OwnerDashboard() {
                     key={activity.id}
                     className="flex min-w-0 gap-3"
                   >
-                    <div className="mt-2 h-2 w-2 shrink-0 rounded-full bg-MojaSchoolr-600" />
+                    <div className="mt-2 h-2 w-2 shrink-0 rounded-full bg-wiser-600" />
 
                     <div className="min-w-0">
                       <p className="break-words text-sm font-medium text-slate-900">
@@ -1758,7 +1758,7 @@ function OwnerDashboard() {
             <button
               type="button"
               onClick={() => navigate("/announcements")}
-              className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-MojaSchoolr-600 hover:text-MojaSchoolr-700"
+              className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-wiser-600 hover:text-wiser-700"
             >
               View all
               <ArrowUpRight size={14} />
@@ -1778,9 +1778,9 @@ function OwnerDashboard() {
                     key={announcement.id}
                     type="button"
                     onClick={() => navigate("/announcements")}
-                    className="flex w-full min-w-0 items-start gap-3 rounded-xl border border-slate-100 p-3 text-left transition hover:border-MojaSchoolr-200 hover:bg-MojaSchoolr-50/40"
+                    className="flex w-full min-w-0 items-start gap-3 rounded-xl border border-slate-100 p-3 text-left transition hover:border-wiser-200 hover:bg-wiser-50/40"
                   >
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-MojaSchoolr-50 text-MojaSchoolr-600">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-wiser-50 text-wiser-600">
                       <Megaphone size={16} />
                     </div>
 
@@ -1883,7 +1883,7 @@ function OwnerChartHeader({
       <button
         type="button"
         onClick={onAction}
-        className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-MojaSchoolr-600 hover:text-MojaSchoolr-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-MojaSchoolr-500 focus-visible:ring-offset-2"
+        className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-wiser-600 hover:text-wiser-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wiser-500 focus-visible:ring-offset-2"
       >
         {actionLabel}
         <ArrowUpRight size={14} />
@@ -1955,7 +1955,7 @@ function OwnerLineChart({
             <polyline
               fill="none"
               stroke="currentColor"
-              className="text-MojaSchoolr-600"
+              className="text-wiser-600"
               strokeWidth="3"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -1969,7 +1969,7 @@ function OwnerLineChart({
                   cy={point.y}
                   r="4"
                   fill="currentColor"
-                  className="text-MojaSchoolr-600"
+                  className="text-wiser-600"
                 />
                 <text
                   x={point.x}
@@ -2066,7 +2066,7 @@ function OwnerAdmissionsTrendChart({
                 <div key={item.label} className="space-y-3">
                   <div className="flex h-[180px] items-end justify-center gap-1.5 rounded-xl bg-slate-50/70 px-2">
                     <div
-                      className="w-5 rounded-t-md bg-MojaSchoolr-600 transition-all duration-500"
+                      className="w-5 rounded-t-md bg-wiser-600 transition-all duration-500"
                       style={{
                         height: `${Math.max(4, (item.applications / maxValue) * 150)}px`,
                       }}
@@ -2090,7 +2090,7 @@ function OwnerAdmissionsTrendChart({
 
             <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-slate-500">
               <span className="inline-flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-sm bg-MojaSchoolr-600" />
+                <span className="h-2.5 w-2.5 rounded-sm bg-wiser-600" />
                 Applications
               </span>
               <span className="inline-flex items-center gap-2">
@@ -2185,7 +2185,7 @@ function OwnerFeeTrendChart({
             data={data}
             valueKey="collected"
             formatValue={(value) => formatMoney(value)}
-            barClassName="bg-MojaSchoolr-600"
+            barClassName="bg-wiser-600"
           />
           <div className="mt-3 text-xs text-slate-500">
             Monthly payment collection in RWF.
@@ -2531,7 +2531,7 @@ function HeadOfAcademicsDashboard() {
             <button
               type="button"
               onClick={() => navigate("/attendance")}
-              className="inline-flex shrink-0 items-center gap-1 self-start text-sm font-medium text-MojaSchoolr-600 hover:text-MojaSchoolr-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-MojaSchoolr-500 focus-visible:ring-offset-2"
+              className="inline-flex shrink-0 items-center gap-1 self-start text-sm font-medium text-wiser-600 hover:text-wiser-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wiser-500 focus-visible:ring-offset-2"
             >
               Open attendance
               <ArrowUpRight size={14} />
@@ -2557,7 +2557,7 @@ function HeadOfAcademicsDashboard() {
               </div>
               <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
                 <div
-                  className="h-full rounded-full bg-MojaSchoolr-600 transition-all duration-500"
+                  className="h-full rounded-full bg-wiser-600 transition-all duration-500"
                   style={{ width: `${Math.min(100, Math.max(0, attendanceCoverage))}%` }}
                 />
               </div>
@@ -2571,7 +2571,7 @@ function HeadOfAcademicsDashboard() {
               <h2 className="text-sm font-semibold text-slate-900">Assessment pipeline</h2>
               <p className="mt-1 text-sm text-slate-500">Current academic year's assessment workload.</p>
             </div>
-            <ClipboardCheck size={20} className="shrink-0 text-MojaSchoolr-600" />
+            <ClipboardCheck size={20} className="shrink-0 text-wiser-600" />
           </div>
 
           <div className="mt-6 grid grid-cols-2 gap-3">
@@ -2588,7 +2588,7 @@ function HeadOfAcademicsDashboard() {
           <button
             type="button"
             onClick={() => navigate("/assessments")}
-            className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-MojaSchoolr-600 hover:text-MojaSchoolr-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-MojaSchoolr-500 focus-visible:ring-offset-2"
+            className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-wiser-600 hover:text-wiser-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wiser-500 focus-visible:ring-offset-2"
           >
             Open assessments
             <ArrowUpRight size={14} />
@@ -2603,7 +2603,7 @@ function HeadOfAcademicsDashboard() {
               <h2 className="text-sm font-semibold text-slate-900">Academic coverage</h2>
               <p className="mt-1 text-sm text-slate-500">A quick view of teacher and class assignment coverage.</p>
             </div>
-            <GraduationCap size={20} className="shrink-0 text-MojaSchoolr-600" />
+            <GraduationCap size={20} className="shrink-0 text-wiser-600" />
           </div>
 
           <div className="mt-6 space-y-5">
@@ -2635,7 +2635,7 @@ function HeadOfAcademicsDashboard() {
               <h2 className="text-sm font-semibold text-slate-900">Upcoming assessments</h2>
               <p className="mt-1 text-sm text-slate-500">The next assessments scheduled for the academic year.</p>
             </div>
-            <CalendarDays size={20} className="shrink-0 text-MojaSchoolr-600" />
+            <CalendarDays size={20} className="shrink-0 text-wiser-600" />
           </div>
 
           <div className="mt-5 space-y-3">
@@ -2690,7 +2690,7 @@ function HeadOfAcademicsDashboard() {
               <h2 className="text-sm font-semibold text-slate-900">Academic actions</h2>
               <p className="mt-1 text-sm text-slate-500">Open the areas you use to coordinate academic work.</p>
             </div>
-            <BookOpen size={20} className="shrink-0 text-MojaSchoolr-600" />
+            <BookOpen size={20} className="shrink-0 text-wiser-600" />
           </div>
 
           <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -2709,7 +2709,7 @@ function HeadOfAcademicsDashboard() {
               <h2 className="text-sm font-semibold text-slate-900">School notices</h2>
               <p className="mt-1 text-sm text-slate-500">Latest announcements available to academic leadership.</p>
             </div>
-            <School size={20} className="shrink-0 text-MojaSchoolr-600" />
+            <School size={20} className="shrink-0 text-wiser-600" />
           </div>
 
           <div className="mt-5 space-y-4">
@@ -2749,7 +2749,7 @@ function CoverageRow({
       </div>
       <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
         <div
-          className="h-full rounded-full bg-MojaSchoolr-600 transition-all duration-500"
+          className="h-full rounded-full bg-wiser-600 transition-all duration-500"
           style={{ width: `${Math.min(100, Math.max(0, percent))}%` }}
         />
       </div>
@@ -2770,10 +2770,10 @@ function ActionButton({
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex min-h-10 items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-left text-sm font-medium text-slate-700 transition hover:border-MojaSchoolr-200 hover:bg-MojaSchoolr-50 hover:text-MojaSchoolr-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-MojaSchoolr-500 focus-visible:ring-offset-2"
+      className="inline-flex min-h-10 items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-left text-sm font-medium text-slate-700 transition hover:border-wiser-200 hover:bg-wiser-50 hover:text-wiser-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-wiser-500 focus-visible:ring-offset-2"
     >
       <span className="inline-flex min-w-0 items-center gap-2">
-        <span className="text-MojaSchoolr-600">{icon}</span>
+        <span className="text-wiser-600">{icon}</span>
         <span className="truncate">{label}</span>
       </span>
       <ArrowUpRight size={14} className="shrink-0 text-slate-400" />
@@ -2835,7 +2835,7 @@ function LibrarianDashboard() {
             <BookOpen size={19} />
           </div>
           <h2 className="mt-4 text-sm font-semibold text-slate-900">Profile</h2>
-          <p className="mt-1 text-sm leading-6 text-slate-500">Manage your MojaSchool account information.</p>
+          <p className="mt-1 text-sm leading-6 text-slate-500">Manage your WISE account information.</p>
           <Button
             type="button"
             variant="secondary"
