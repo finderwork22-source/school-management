@@ -8,7 +8,6 @@ import Card from "../components/ui/Card";
 
 interface AcademicYear { id:string; name:string; start_date:string|null; end_date:string|null; is_active:boolean; }
 interface AcademicSection { id:string; academic_year_id:string; name:string; display_order:number; is_active:boolean; }
-const DEFAULT_SECTIONS=["Creche","Nursery","Primary","Lower Secondary"];
 
 function formatDate(value:string|null){
   if(!value)return "Date not set";
@@ -59,33 +58,14 @@ export default function AcademicSettings(){
       const payload={name,start_date:startDate,end_date:endDate,is_active:makeActive};
       if(editingYear){const {error}=await supabase.from("academic_years").update(payload).eq("id",editingYear.id).eq("school_id",school.id);if(error)throw error;}
       else{
-        const {data,error}=await supabase
+        // The database trigger trg_academic_year_configured_sections creates
+        // the enabled academic sections from school_configurations.sections.
+        // Do not insert DEFAULT_SECTIONS here as well: that duplicates the
+        // trigger-created rows and violates academic_sections' unique key.
+        const { error } = await supabase
           .from("academic_years")
-          .insert({school_id:school.id,...payload})
-          .select("id")
-          .single();
-        if(error)throw error;
-
-        if(data){
-          const rows=DEFAULT_SECTIONS.map((name,i)=>({
-            school_id:school.id,
-            academic_year_id:data.id,
-            name,
-            display_order:i+1,
-            is_active:true,
-          }));
-          const {error:e}=await supabase.from("academic_sections").insert(rows);
-          if(e){
-            // Do not leave a half-created academic year if its default
-            // sections cannot be created.
-            await supabase
-              .from("academic_years")
-              .delete()
-              .eq("id",data.id)
-              .eq("school_id",school.id);
-            throw new Error(`Academic year was created, but the default sections could not be created: ${e.message}`);
-          }
-        }
+          .insert({ school_id: school.id, ...payload });
+        if (error) throw error;
       }
       setShowYearModal(false);await loadData();
     }catch(e){

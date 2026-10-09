@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { useSchool } from "../context/SchoolContext";
+import { useAuth } from "../context/AuthContext";
 import { getStudents, type Student } from "../lib/students";
 import { getClasses, type SchoolClass } from "../lib/classes";
 import { supabase } from "../lib/supabase";
@@ -528,16 +529,9 @@ export default function Students() {
                         <div className="break-words text-sm text-slate-700">
                           {student.parent}
                         </div>
-                        {student.parentPhone && student.parentPhone !== "—" && (
-                          <div className="mt-0.5 break-words text-xs text-slate-400">
-                            {student.parentPhone}
-                          </div>
-                        )}
-                        {student.parentEmail && (
-                          <div className="mt-0.5 break-all text-xs text-slate-400">
-                            {student.parentEmail}
-                          </div>
-                        )}
+                        <div className="mt-0.5 break-words text-xs text-slate-400">
+                          {student.parentPhone}
+                        </div>
                       </td>
 
                       <td className="px-5 py-4">
@@ -655,10 +649,6 @@ export default function Students() {
                       label="Phone"
                       value={student.parentPhone || "—"}
                     />
-                    <MobileStudentDetail
-                      label="Parent email"
-                      value={student.parentEmail || "—"}
-                    />
                   </div>
                 </div>
               ))}
@@ -730,6 +720,55 @@ export default function Students() {
   );
 }
 
+type AddStudentDraft = {
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string;
+  nationality: string;
+  photoName: string;
+  sectionId: string;
+  classId: string;
+  parent: string;
+  parentPhone: string;
+  gender: "Male" | "Female";
+  savedAt: number;
+};
+
+const STUDENT_DRAFT_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+function readAddStudentDraft(storageKey: string): AddStudentDraft | null {
+  try {
+    const rawDraft = window.sessionStorage.getItem(storageKey);
+    if (!rawDraft) return null;
+
+    const parsed = JSON.parse(rawDraft) as Partial<AddStudentDraft>;
+    if (
+      typeof parsed.savedAt !== "number" ||
+      Date.now() - parsed.savedAt > STUDENT_DRAFT_MAX_AGE_MS
+    ) {
+      window.sessionStorage.removeItem(storageKey);
+      return null;
+    }
+
+    return {
+      firstName: typeof parsed.firstName === "string" ? parsed.firstName : "",
+      lastName: typeof parsed.lastName === "string" ? parsed.lastName : "",
+      dateOfBirth: typeof parsed.dateOfBirth === "string" ? parsed.dateOfBirth : "",
+      nationality: typeof parsed.nationality === "string" ? parsed.nationality : "Rwandan",
+      photoName: typeof parsed.photoName === "string" ? parsed.photoName : "",
+      sectionId: typeof parsed.sectionId === "string" ? parsed.sectionId : "",
+      classId: typeof parsed.classId === "string" ? parsed.classId : "",
+      parent: typeof parsed.parent === "string" ? parsed.parent : "",
+      parentPhone: typeof parsed.parentPhone === "string" ? parsed.parentPhone : "",
+      gender: parsed.gender === "Female" ? "Female" : "Male",
+      savedAt: parsed.savedAt,
+    };
+  } catch (draftError) {
+    console.warn("Unable to restore the Add Student draft:", draftError);
+    return null;
+  }
+}
+
 interface AddStudentModalProps {
   academicYear: AcademicYear | null;
   sections: AcademicSection[];
@@ -747,33 +786,103 @@ function AddStudentModal({
   onClose,
   onCreated,
 }: AddStudentModalProps) {
-  const [firstName, setFirstName] = useState("");
+  const { user } = useAuth();
+  const draftStorageKey = `mojaschool:add-student-draft:${schoolId}:${user?.id ?? "unknown-user"}`;
+  const [initialDraft] = useState<AddStudentDraft | null>(() =>
+    readAddStudentDraft(draftStorageKey),
+  );
+  const [draftRestored, setDraftRestored] = useState(Boolean(initialDraft));
 
-  const [lastName, setLastName] = useState("");
-
-  const [dateOfBirth, setDateOfBirth] = useState("");
-
-  const [nationality, setNationality] = useState("Rwandan");
-
+  const [firstName, setFirstName] = useState(initialDraft?.firstName ?? "");
+  const [lastName, setLastName] = useState(initialDraft?.lastName ?? "");
+  const [dateOfBirth, setDateOfBirth] = useState(initialDraft?.dateOfBirth ?? "");
+  const [nationality, setNationality] = useState(initialDraft?.nationality ?? "Rwandan");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
-
   const [photoPreview, setPhotoPreview] = useState("");
-
-  const [sectionId, setSectionId] = useState("");
-
-  const [classId, setClassId] = useState("");
-
-  const [parent, setParent] = useState("");
-
-  const [parentPhone, setParentPhone] = useState("");
-
-  const [parentEmail, setParentEmail] = useState("");
-
-  const [gender, setGender] = useState<"Male" | "Female">("Male");
+  const [photoName, setPhotoName] = useState(initialDraft?.photoName ?? "");
+  const [sectionId, setSectionId] = useState(initialDraft?.sectionId ?? "");
+  const [classId, setClassId] = useState(initialDraft?.classId ?? "");
+  const [parent, setParent] = useState(initialDraft?.parent ?? "");
+  const [parentPhone, setParentPhone] = useState(initialDraft?.parentPhone ?? "");
+  const [gender, setGender] = useState<"Male" | "Female">(initialDraft?.gender ?? "Male");
 
   const [saving, setSaving] = useState(false);
-
   const [error, setError] = useState("");
+
+  // Save an unfinished draft only in this browser tab's session. This allows
+  // recovery after a page reload/remount without creating a database record.
+  useEffect(() => {
+    try {
+      const hasUserEnteredData = Boolean(
+        firstName.trim() ||
+          lastName.trim() ||
+          dateOfBirth ||
+          photoName ||
+          sectionId ||
+          classId ||
+          parent.trim() ||
+          parentPhone.trim() ||
+          nationality.trim() !== "Rwandan" ||
+          gender !== "Male",
+      );
+
+      if (!hasUserEnteredData) {
+        window.sessionStorage.removeItem(draftStorageKey);
+        return;
+      }
+
+      const draft: AddStudentDraft = {
+        firstName,
+        lastName,
+        dateOfBirth,
+        nationality,
+        photoName,
+        sectionId,
+        classId,
+        parent,
+        parentPhone,
+        gender,
+        savedAt: Date.now(),
+      };
+      window.sessionStorage.setItem(draftStorageKey, JSON.stringify(draft));
+    } catch (draftError) {
+      console.warn("Unable to save the Add Student draft:", draftError);
+    }
+  }, [
+    draftStorageKey,
+    firstName,
+    lastName,
+    dateOfBirth,
+    nationality,
+    photoName,
+    sectionId,
+    classId,
+    parent,
+    parentPhone,
+    gender,
+  ]);
+
+  function discardDraft() {
+    try {
+      window.sessionStorage.removeItem(draftStorageKey);
+    } catch (draftError) {
+      console.warn("Unable to discard the Add Student draft:", draftError);
+    }
+    setFirstName("");
+    setLastName("");
+    setDateOfBirth("");
+    setNationality("Rwandan");
+    setPhotoFile(null);
+    setPhotoPreview("");
+    setPhotoName("");
+    setSectionId("");
+    setClassId("");
+    setParent("");
+    setParentPhone("");
+    setGender("Male");
+    setDraftRestored(false);
+    setError("");
+  }
 
   const classesForSection = useMemo(() => {
     if (!sectionId) return [];
@@ -867,7 +976,6 @@ function AddStudentModal({
       p_photo_url: uploadedPhotoUrl || null,
       p_parent_name: parent.trim(),
       p_parent_phone: parentPhone.trim() || "",
-      p_parent_email: parentEmail.trim() || "",
     });
 
     if (createError) {
@@ -882,6 +990,12 @@ function AddStudentModal({
       setError("Student was not created.");
       setSaving(false);
       return;
+    }
+
+    try {
+      window.sessionStorage.removeItem(draftStorageKey);
+    } catch (draftError) {
+      console.warn("Unable to clear the saved Add Student draft:", draftError);
     }
 
     await onCreated();
@@ -919,6 +1033,19 @@ function AddStudentModal({
             {error && (
               <div className="rounded-lg border border-red-100 bg-red-50 px-4 py-3">
                 <p className="text-sm text-red-600">{error}</p>
+              </div>
+            )}
+
+            {draftRestored && (
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
+                <p className="text-sm font-medium text-emerald-800">Your unfinished student form has been restored.</p>
+                <p className="mt-1 text-xs leading-5 text-emerald-700">Your entries are kept temporarily in this browser tab and will be removed after a successful save or when you discard the draft.</p>
+              </div>
+            )}
+
+            {photoName && !photoFile && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+                <p className="text-sm text-amber-800">The previously selected photo ({photoName}) must be selected again because browsers don't restore file uploads after a page refresh.</p>
               </div>
             )}
 
@@ -1086,6 +1213,8 @@ function AddStudentModal({
 
                             setError("");
                             setPhotoFile(file);
+                            setPhotoName(file.name);
+                            setDraftRestored(false);
 
                             const previewUrl = URL.createObjectURL(file);
                             setPhotoPreview(previewUrl);
@@ -1108,10 +1237,6 @@ function AddStudentModal({
                 Parent / guardian
               </h3>
 
-              <p className="mt-1 text-xs leading-5 text-slate-500">
-                When the same parent already has a child at this school, use the same phone number or parent name. Add the parent's email so the school can send the invitation directly. MojaSchool will reuse the existing parent record instead of creating a duplicate.
-              </p>
-
               <div className="mt-3 grid gap-4 sm:grid-cols-2">
                 <Field
                   label="Parent / guardian name"
@@ -1126,32 +1251,35 @@ function AddStudentModal({
                   onChange={setParentPhone}
                   placeholder="+250 7XX XXX XXX"
                 />
-
-                <Field
-                  label="Email address"
-                  value={parentEmail}
-                  onChange={setParentEmail}
-                  placeholder="parent@example.com"
-                  type="email"
-                />
               </div>
             </div>
           </div>
 
           {/* Footer */}
-          <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-slate-200 bg-white px-4 py-4 sm:flex-row sm:justify-end sm:px-6">
+          <div className="flex shrink-0 flex-col-reverse gap-2 border-t border-slate-200 bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
             <Button
               type="button"
               variant="secondary"
-              onClick={onClose}
+              onClick={discardDraft}
               disabled={saving}
             >
-              Cancel
+              Discard draft
             </Button>
 
-            <Button type="submit" disabled={saving}>
-              {saving ? "Creating..." : "Add student"}
-            </Button>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={onClose}
+                disabled={saving}
+              >
+                Close
+              </Button>
+
+              <Button type="submit" disabled={saving}>
+                {saving ? "Creating..." : "Add student"}
+              </Button>
+            </div>
           </div>
         </form>
       </div>
