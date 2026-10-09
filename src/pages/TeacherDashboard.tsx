@@ -9,7 +9,12 @@ import {
   GraduationCap,
   Loader2,
   Megaphone,
+  Moon,
+  Search,
+  Save,
+  Utensils,
   Users,
+  X,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
@@ -48,14 +53,23 @@ interface Teacher {
   status: string | null;
 }
 
+type DashboardSectionType =
+  | "creche"
+  | "nursery"
+  | "primary"
+  | "lower_secondary"
+  | "academic";
+
 interface Assignment {
   id: string;
   academic_year_id: string;
   class_id: string;
   subject_id: string;
+  academic_section_id: string | null;
   className: string;
   subjectName: string;
   academicYearName: string;
+  sectionName: string;
 }
 
 interface TimetableEntry {
@@ -103,6 +117,55 @@ interface TeacherStats {
   attendanceRate: number;
 }
 
+interface AcademicSection {
+  id: string;
+  name: string;
+}
+
+interface CrecheChild {
+  id: string;
+  studentId: string;
+  name: string;
+  classId: string;
+  className: string;
+  dateOfBirth: string | null;
+  photoUrl: string | null;
+}
+
+interface CareRecordForm {
+  mood: string;
+  wellbeing: string;
+  breakfast: boolean;
+  morningSnack: boolean;
+  lunch: boolean;
+  feedingNotes: string;
+  napStart: string;
+  napEnd: string;
+  napQuality: string;
+  observation: string;
+  hygieneNotes: string;
+  incidentNotes: string;
+  activityNotes: string;
+  teacherNotes: string;
+}
+
+const emptyCareRecord: CareRecordForm = {
+  mood: "",
+  wellbeing: "",
+  breakfast: false,
+  morningSnack: false,
+  lunch: false,
+  feedingNotes: "",
+  napStart: "",
+  napEnd: "",
+  napQuality: "",
+  observation: "",
+  hygieneNotes: "",
+  incidentNotes: "",
+  activityNotes: "",
+  teacherNotes: "",
+};
+
 const initialStats: TeacherStats = {
   classes: 0,
   subjects: 0,
@@ -143,6 +206,38 @@ function formatDate(value: string) {
   }).format(date);
 }
 
+function getDashboardSectionType(name: string | null | undefined): DashboardSectionType {
+  const normalized = name?.trim().toLowerCase();
+
+  if (normalized === "creche" || normalized === "crèche") return "creche";
+  if (normalized === "nursery") return "nursery";
+  if (normalized === "primary") return "primary";
+  if (
+    normalized === "lower secondary" ||
+    normalized === "lower-secondary" ||
+    normalized === "lower_secondary"
+  ) {
+    return "lower_secondary";
+  }
+
+  return "academic";
+}
+
+function getSectionLabel(sectionType: DashboardSectionType) {
+  switch (sectionType) {
+    case "creche":
+      return "Creche";
+    case "nursery":
+      return "Nursery";
+    case "primary":
+      return "Primary";
+    case "lower_secondary":
+      return "Lower Secondary";
+    default:
+      return "Academic";
+  }
+}
+
 function formatRelativeTime(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
@@ -168,6 +263,20 @@ export default function TeacherDashboard() {
 
   const [teacher, setTeacher] = useState<Teacher | null>(null);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [sectionType, setSectionType] = useState<DashboardSectionType>("academic");
+  const [sectionOptions, setSectionOptions] = useState<AcademicSection[]>([]);
+  const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
+  const [activeAcademicYearId, setActiveAcademicYearId] = useState<string | null>(null);
+  const [crecheChildren, setCrecheChildren] = useState<CrecheChild[]>([]);
+  const [crecheChildrenLoading, setCrecheChildrenLoading] = useState(false);
+  const [crecheChildrenError, setCrecheChildrenError] = useState("");
+  const [crecheSearch, setCrecheSearch] = useState("");
+  const [careChild, setCareChild] = useState<CrecheChild | null>(null);
+  const [careDate, setCareDate] = useState(getToday());
+  const [careForm, setCareForm] = useState<CareRecordForm>(emptyCareRecord);
+  const [careLoading, setCareLoading] = useState(false);
+  const [careSaving, setCareSaving] = useState(false);
+  const [careError, setCareError] = useState("");
   const [timetable, setTimetable] = useState<TimetableEntry[]>([]);
   const [, setAttendance] = useState<AttendanceRecord[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -254,6 +363,12 @@ export default function TeacherDashboard() {
       if (!teacherData) {
         setTeacher(null);
         setAssignments([]);
+        setSectionType("academic");
+        setSectionOptions([]);
+        setSelectedSectionId(null);
+        setActiveAcademicYearId(null);
+        setCrecheChildren([]);
+        setCareChild(null);
         setTimetable([]);
         setAttendance([]);
         setAssessments([]);
@@ -293,11 +408,15 @@ export default function TeacherDashboard() {
         ),
       );
 
+      // Section information is resolved from the assigned classes after the
+      // class query, keeping the same non-embedded query strategy as the rest
+      // of this dashboard.
+
       const [classesResult, subjectsResult, yearsResult] = await Promise.all([
         classIds.length > 0
           ? supabase
               .from("classes")
-              .select("id, name, academic_year_id")
+              .select("id, name, academic_year_id, academic_section_id")
               .eq("school_id", schoolId)
               .in("id", classIds)
           : Promise.resolve({ data: [], error: null }),
@@ -321,6 +440,25 @@ export default function TeacherDashboard() {
       if (subjectsResult.error) throw subjectsResult.error;
       if (yearsResult.error) throw yearsResult.error;
 
+      const sectionIds = Array.from(
+        new Set(
+          (classesResult.data ?? [])
+            .map((item: any) => item.academic_section_id)
+            .filter(Boolean),
+        ),
+      );
+
+      const sectionsResult =
+        sectionIds.length > 0
+          ? await supabase
+              .from("academic_sections")
+              .select("id, name")
+              .eq("school_id", schoolId)
+              .in("id", sectionIds)
+          : { data: [], error: null };
+
+      if (sectionsResult.error) throw sectionsResult.error;
+
       const classMap = new Map(
         (classesResult.data ?? []).map((item: any) => [item.id, item]),
       );
@@ -330,30 +468,70 @@ export default function TeacherDashboard() {
       const yearMap = new Map(
         (yearsResult.data ?? []).map((item: any) => [item.id, item]),
       );
+      const sectionMap = new Map(
+        (sectionsResult.data ?? []).map((item: any) => [item.id, item]),
+      );
 
       const mappedAssignments: Assignment[] = assignmentRows.map((item: any) => {
         const schoolClass = classMap.get(item.class_id);
         const subject = subjectMap.get(item.subject_id);
         const year = yearMap.get(item.academic_year_id);
+        const academicSection = schoolClass?.academic_section_id
+          ? sectionMap.get(schoolClass.academic_section_id)
+          : null;
 
         return {
           id: item.id,
           academic_year_id: item.academic_year_id,
           class_id: item.class_id,
           subject_id: item.subject_id,
+          academic_section_id: schoolClass?.academic_section_id ?? null,
           className: schoolClass?.name ?? "Unknown class",
           subjectName: subject?.name ?? "Unknown subject",
           academicYearName: year?.name ?? "Unknown academic year",
+          sectionName: academicSection?.name ?? "Academic",
         };
       });
 
       setAssignments(mappedAssignments);
+
+      const distinctSectionIds = Array.from(
+        new Set(
+          mappedAssignments
+            .map((assignment) => assignment.academic_section_id)
+            .filter(Boolean),
+        ),
+      ) as string[];
+
+      const distinctSections = distinctSectionIds
+        .map((id) => sectionMap.get(id))
+        .filter(Boolean) as AcademicSection[];
+
+      setSectionOptions(distinctSections);
+
+      // A teacher assigned to one section is automatically placed in that
+      // section's workflow. If multiple sections are assigned, the first
+      // section is selected as the initial dashboard context and the teacher
+      // can switch context without changing assignments.
+      const initialSectionId =
+        selectedSectionId && distinctSectionIds.includes(selectedSectionId)
+          ? selectedSectionId
+          : distinctSectionIds[0] ?? null;
+
+      setSelectedSectionId(initialSectionId);
+
+      const initialSectionName = initialSectionId
+        ? sectionMap.get(initialSectionId)?.name
+        : null;
+
+      setSectionType(getDashboardSectionType(initialSectionName));
 
       const activeYear =
         (yearsResult.data ?? []).find((year: any) => year.is_active) ??
         (yearsResult.data ?? [])[0] ??
         null;
       const activeYearId = activeYear?.id ?? null;
+      setActiveAcademicYearId(activeYearId);
 
       // These are intentionally loaded independently. A problem in an optional
       // dashboard section should not make the whole teacher dashboard unusable.
@@ -526,6 +704,226 @@ export default function TeacherDashboard() {
     void loadDashboard();
   }, [school?.id]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCrecheChildren() {
+      if (sectionType !== "creche" || !school?.id || !activeAcademicYearId) {
+        setCrecheChildren([]);
+        setCrecheChildrenError("");
+        return;
+      }
+
+      const classIds = Array.from(
+        new Set(
+          assignments
+            .filter(
+              (assignment) =>
+                assignment.academic_section_id === selectedSectionId &&
+                assignment.academic_year_id === activeAcademicYearId,
+            )
+            .map((assignment) => assignment.class_id),
+        ),
+      );
+
+      if (classIds.length === 0) {
+        setCrecheChildren([]);
+        setCrecheChildrenError("");
+        return;
+      }
+
+      setCrecheChildrenLoading(true);
+      setCrecheChildrenError("");
+
+      try {
+        const [enrollmentResult, classResult] = await Promise.all([
+          supabase
+            .from("enrollments")
+            .select(
+              `id, student_id, class_id, academic_year_id, status, students (
+                id, student_id, first_name, middle_name, last_name, date_of_birth, photo_url
+              )`,
+            )
+            .eq("school_id", school.id)
+            .eq("academic_year_id", activeAcademicYearId)
+            .eq("status", "Active")
+            .in("class_id", classIds),
+          supabase
+            .from("classes")
+            .select("id, name")
+            .eq("school_id", school.id)
+            .in("id", classIds),
+        ]);
+
+        if (enrollmentResult.error) throw enrollmentResult.error;
+        if (classResult.error) throw classResult.error;
+
+        const classMap = new Map(
+          (classResult.data ?? []).map((item: any) => [item.id, item.name]),
+        );
+
+        const children: CrecheChild[] = (enrollmentResult.data ?? [])
+          .map((enrollment: any) => {
+            const student = Array.isArray(enrollment.students)
+              ? enrollment.students[0]
+              : enrollment.students;
+
+            if (!student) return null;
+
+            return {
+              id: student.id,
+              studentId: student.student_id ?? "—",
+              name: [student.first_name, student.middle_name, student.last_name]
+                .filter(Boolean)
+                .join(" "),
+              classId: enrollment.class_id,
+              className: classMap.get(enrollment.class_id) ?? "Unknown class",
+              dateOfBirth: student.date_of_birth ?? null,
+              photoUrl: student.photo_url ?? null,
+            };
+          })
+          .filter(Boolean) as CrecheChild[];
+
+        const uniqueChildren = Array.from(
+          new Map(children.map((child) => [child.id, child])).values(),
+        ).sort((a, b) => a.name.localeCompare(b.name));
+
+        if (!cancelled) setCrecheChildren(uniqueChildren);
+      } catch (err) {
+        if (!cancelled) {
+          setCrecheChildren([]);
+          setCrecheChildrenError(getErrorMessage(err));
+        }
+      } finally {
+        if (!cancelled) setCrecheChildrenLoading(false);
+      }
+    }
+
+    void loadCrecheChildren();
+    return () => {
+      cancelled = true;
+    };
+  }, [school?.id, sectionType, selectedSectionId, activeAcademicYearId, assignments]);
+
+  async function openCareRecord(child: CrecheChild) {
+    if (!school?.id || !teacher) return;
+
+    setCareChild(child);
+    setCareDate(getToday());
+    setCareForm(emptyCareRecord);
+    setCareError("");
+    setCareLoading(true);
+
+    try {
+      const { data, error: recordError } = await supabase
+        .from("creche_daily_care_records")
+        .select(
+          "mood, wellbeing, breakfast, morning_snack, lunch, feeding_notes, nap_start, nap_end, nap_quality, observation, hygiene_notes, incident_notes, activity_notes, teacher_notes",
+        )
+        .eq("school_id", school.id)
+        .eq("student_id", child.id)
+        .eq("class_id", child.classId)
+        .eq("care_date", getToday())
+        .maybeSingle();
+
+      if (recordError) throw recordError;
+
+      if (data) {
+        setCareForm({
+          mood: data.mood ?? "",
+          wellbeing: data.wellbeing ?? "",
+          breakfast: Boolean(data.breakfast),
+          morningSnack: Boolean(data.morning_snack),
+          lunch: Boolean(data.lunch),
+          feedingNotes: data.feeding_notes ?? "",
+          napStart: data.nap_start ?? "",
+          napEnd: data.nap_end ?? "",
+          napQuality: data.nap_quality ?? "",
+          observation: data.observation ?? "",
+          hygieneNotes: data.hygiene_notes ?? "",
+          incidentNotes: data.incident_notes ?? "",
+          activityNotes: data.activity_notes ?? "",
+          teacherNotes: data.teacher_notes ?? "",
+        });
+      }
+    } catch (err) {
+      setCareError(getErrorMessage(err));
+    } finally {
+      setCareLoading(false);
+    }
+  }
+
+  async function saveCareRecord() {
+    if (!school?.id || !teacher || !careChild || !activeAcademicYearId) return;
+
+    setCareSaving(true);
+    setCareError("");
+
+    try {
+      const payload = {
+        school_id: school.id,
+        academic_year_id: activeAcademicYearId,
+        class_id: careChild.classId,
+        student_id: careChild.id,
+        teacher_id: teacher.id,
+        care_date: careDate,
+        mood: careForm.mood || null,
+        wellbeing: careForm.wellbeing || null,
+        breakfast: careForm.breakfast,
+        morning_snack: careForm.morningSnack,
+        lunch: careForm.lunch,
+        feeding_notes: careForm.feedingNotes || null,
+        nap_start: careForm.napStart || null,
+        nap_end: careForm.napEnd || null,
+        nap_quality: careForm.napQuality || null,
+        observation: careForm.observation || null,
+        hygiene_notes: careForm.hygieneNotes || null,
+        incident_notes: careForm.incidentNotes || null,
+        activity_notes: careForm.activityNotes || null,
+        teacher_notes: careForm.teacherNotes || null,
+      };
+
+      const { error: saveError } = await supabase
+        .from("creche_daily_care_records")
+        .upsert(payload, { onConflict: "school_id,student_id,class_id,care_date" });
+
+      if (saveError) throw saveError;
+
+      setCareChild(null);
+    } catch (err) {
+      setCareError(getErrorMessage(err));
+    } finally {
+      setCareSaving(false);
+    }
+  }
+
+  const filteredCrecheChildren = useMemo(() => {
+    const query = crecheSearch.trim().toLowerCase();
+    if (!query) return crecheChildren;
+    return crecheChildren.filter(
+      (child) =>
+        child.name.toLowerCase().includes(query) ||
+        child.studentId.toLowerCase().includes(query) ||
+        child.className.toLowerCase().includes(query),
+    );
+  }, [crecheChildren, crecheSearch]);
+
+  const selectedSectionAssignments = useMemo(() => {
+    if (!selectedSectionId) return assignments;
+    return assignments.filter(
+      (assignment) => assignment.academic_section_id === selectedSectionId,
+    );
+  }, [assignments, selectedSectionId]);
+
+  const sectionLabel = getSectionLabel(sectionType);
+
+  const sectionDescription =
+    sectionType === "creche"
+      ? "Care, wellbeing, daily routines and activities for children in your care."
+      : sectionType === "nursery"
+        ? "Early-years learning, classroom routines, observations and child development."
+        : "Your classes, timetable, attendance and academic work in one place.";
+
   const today = getDayName();
 
   const todayLessons = useMemo(
@@ -560,9 +958,9 @@ export default function TeacherDashboard() {
   return (
     <div className="mx-auto w-full min-w-0 max-w-[1400px]">
       <PageHeader
-        eyebrow="Teacher workspace"
+        eyebrow={`${sectionLabel} teacher workspace`}
         title={teacher ? `Good morning, ${teacher.first_name}` : "Teacher dashboard"}
-        description="Your classes, timetable, attendance and academic work in one place."
+        description={sectionDescription}
         actions={
           <Button type="button" onClick={() => navigate("/attendance")}>
             <ClipboardCheck size={16} />
@@ -575,6 +973,156 @@ export default function TeacherDashboard() {
         <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           {error}
         </div>
+      )}
+
+      <Card className="mb-6 min-w-0 p-4 sm:p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">
+              Teaching section
+            </p>
+            <h2 className="mt-1 text-base font-semibold text-slate-900">{sectionLabel}</h2>
+            <p className="mt-1 text-sm text-slate-500">
+              {sectionType === "creche"
+                ? "Creche workflows are focused on care, wellbeing, routines and child observations."
+                : sectionType === "nursery"
+                  ? "Nursery workflows are focused on early-years learning and child development."
+                  : "Academic teaching workflows are enabled for this section."}
+            </p>
+          </div>
+
+          {sectionOptions.length > 1 && (
+            <label className="flex shrink-0 flex-col gap-1 text-xs font-medium text-slate-600">
+              Dashboard context
+              <select
+                value={selectedSectionId ?? ""}
+                onChange={(event) => {
+                  const nextId = event.target.value || null;
+                  setSelectedSectionId(nextId);
+                  const nextSection = sectionOptions.find((section) => section.id === nextId);
+                  setSectionType(getDashboardSectionType(nextSection?.name));
+                }}
+                className="min-w-[190px] rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+              >
+                {sectionOptions.map((section) => (
+                  <option key={section.id} value={section.id}>
+                    {section.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+        </div>
+      </Card>
+
+      {sectionType === "creche" && (
+        <Card className="mb-6 min-w-0 p-4 sm:p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <Users size={18} className="text-indigo-500" />
+                <h2 className="text-sm font-semibold text-slate-900">Children under care</h2>
+              </div>
+              <p className="mt-1 text-sm text-slate-500">
+                Children currently enrolled in the Creche classes assigned to you. Open a child to record today's care.
+              </p>
+            </div>
+            <span className="inline-flex w-fit items-center rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700">
+              {crecheChildren.length} {crecheChildren.length === 1 ? "child" : "children"}
+            </span>
+          </div>
+
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="relative min-w-0 flex-1">
+              <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                value={crecheSearch}
+                onChange={(event) => setCrecheSearch(event.target.value)}
+                placeholder="Search by child name, student ID or class"
+                className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+              />
+            </div>
+          </div>
+
+          {crecheChildrenError && (
+            <div className="mt-4 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">
+              {crecheChildrenError}
+            </div>
+          )}
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {crecheChildrenLoading ? (
+              <div className="flex items-center gap-2 rounded-xl border border-dashed border-slate-200 px-4 py-8 text-sm text-slate-500 sm:col-span-2 lg:col-span-3">
+                <Loader2 size={16} className="animate-spin" />
+                Loading children under care...
+              </div>
+            ) : filteredCrecheChildren.length > 0 ? (
+              filteredCrecheChildren.map((child) => (
+                <button
+                  key={child.id}
+                  type="button"
+                  onClick={() => void openCareRecord(child)}
+                  className="group flex min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 text-left transition hover:border-indigo-200 hover:bg-indigo-50/40 hover:shadow-sm"
+                >
+                  {child.photoUrl ? (
+                    <img src={child.photoUrl} alt="" className="h-11 w-11 shrink-0 rounded-full object-cover" />
+                  ) : (
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-sm font-semibold text-indigo-700">
+                      {child.name.slice(0, 1).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-slate-900">{child.name}</p>
+                    <p className="mt-0.5 truncate text-xs text-slate-500">
+                      {child.studentId} • {child.className}
+                    </p>
+                    <span className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-indigo-600 group-hover:text-indigo-700">
+                      Open daily care <ArrowUpRight size={12} />
+                    </span>
+                  </div>
+                </button>
+              ))
+            ) : (
+              <div className="rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center sm:col-span-2 lg:col-span-3">
+                <Users size={22} className="mx-auto text-slate-300" />
+                <p className="mt-2 text-sm font-medium text-slate-700">No children found</p>
+                <p className="mt-1 text-xs text-slate-400">
+                  Make sure active students are enrolled in the Creche class assigned to you.
+                </p>
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
+
+      {sectionType === "nursery" && (
+        <Card className="mb-6 min-w-0 p-4 sm:p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-900">Nursery classroom focus</h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Nursery teachers can use early-years learning, observations, routines and child-development workflows.
+              </p>
+            </div>
+            <GraduationCap size={20} className="shrink-0 text-indigo-500" />
+          </div>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              ["Children & classroom", "View children and their classroom assignments."],
+              ["Daily observations", "Record learning, behaviour and developmental observations."],
+              ["Activities", "Capture classroom activities and participation."],
+              ["Attendance", "Record daily attendance for the Nursery class."],
+              ["Wellbeing", "Record wellbeing or care notes when needed."],
+              ["Parent communication", "Keep notes for relevant parent communication and follow-up."],
+            ].map(([title, description]) => (
+              <div key={title} className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+                <p className="text-sm font-semibold text-slate-900">{title}</p>
+                <p className="mt-1 text-xs leading-5 text-slate-500">{description}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
       )}
 
       <div className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -657,11 +1205,13 @@ export default function TeacherDashboard() {
                 <Loader2 size={16} className="animate-spin" />
                 Loading assignments...
               </div>
-            ) : assignments.length > 0 ? (
-              assignments.slice(0, 6).map((assignment) => (
+            ) : selectedSectionAssignments.length > 0 ? (
+              selectedSectionAssignments.slice(0, 6).map((assignment) => (
                 <div key={assignment.id} className="rounded-lg border border-slate-200 p-3">
                   <p className="text-sm font-medium text-slate-900">{assignment.className}</p>
-                  <p className="mt-1 text-xs text-slate-500">{assignment.subjectName}</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {assignment.subjectName} • {assignment.sectionName}
+                  </p>
                 </div>
               ))
             ) : (
@@ -833,20 +1383,222 @@ export default function TeacherDashboard() {
             <ClipboardCheck size={15} />
             Take attendance
           </Button>
-          <Button type="button" size="sm" variant="secondary" onClick={() => navigate("/assessments")}>
-            <BookOpen size={15} />
-            Manage assessments
-          </Button>
-          <Button type="button" size="sm" variant="secondary" onClick={() => navigate("/student-results")}>
-            <GraduationCap size={15} />
-            Student results
-          </Button>
-          <Button type="button" size="sm" variant="secondary" onClick={() => navigate("/timetable")}>
-            <CalendarDays size={15} />
-            View timetable
-          </Button>
+          {sectionType !== "creche" && sectionType !== "nursery" && (
+            <>
+              <Button type="button" size="sm" variant="secondary" onClick={() => navigate("/assessments")}>
+                <BookOpen size={15} />
+                Manage assessments
+              </Button>
+              <Button type="button" size="sm" variant="secondary" onClick={() => navigate("/student-results")}>
+                <GraduationCap size={15} />
+                Student results
+              </Button>
+              <Button type="button" size="sm" variant="secondary" onClick={() => navigate("/timetable")}>
+                <CalendarDays size={15} />
+                View timetable
+              </Button>
+            </>
+          )}
         </div>
       </Card>
+
+      {careChild && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4">
+          <div className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4 sm:px-6">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Daily care record</p>
+                <h2 className="mt-1 truncate text-lg font-semibold text-slate-900">{careChild.name}</h2>
+                <p className="mt-1 text-xs text-slate-500">{careChild.studentId} • {careChild.className}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCareChild(null)}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                aria-label="Close daily care record"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto p-5 sm:p-6">
+              {careLoading ? (
+                <div className="flex min-h-64 items-center justify-center gap-2 text-sm text-slate-500">
+                  <Loader2 size={17} className="animate-spin" />
+                  Loading today's care record...
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {careError && (
+                    <div className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">
+                      {careError}
+                    </div>
+                  )}
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-slate-700">Record date</label>
+                      <input
+                        type="date"
+                        value={careDate}
+                        disabled
+                        className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600 outline-none"
+                      />
+                    </div>
+                    <CareSelect
+                      label="Mood"
+                      value={careForm.mood}
+                      onChange={(value) => setCareForm((current) => ({ ...current, mood: value }))}
+                      options={["Happy", "Calm", "Active", "Tired", "Sad", "Unwell"]}
+                      placeholder="Select mood"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-slate-700">Wellbeing</label>
+                    <textarea
+                      value={careForm.wellbeing}
+                      onChange={(event) => setCareForm((current) => ({ ...current, wellbeing: event.target.value }))}
+                      rows={2}
+                      placeholder="How is the child doing today?"
+                      className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                    />
+                  </div>
+
+                  <div className="rounded-xl border border-slate-200 p-4">
+                    <div className="flex items-center gap-2">
+                      <Utensils size={17} className="text-indigo-500" />
+                      <h3 className="text-sm font-semibold text-slate-900">Meals & feeding</h3>
+                    </div>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                      <CareCheckbox label="Breakfast" checked={careForm.breakfast} onChange={(value) => setCareForm((current) => ({ ...current, breakfast: value }))} />
+                      <CareCheckbox label="Morning snack" checked={careForm.morningSnack} onChange={(value) => setCareForm((current) => ({ ...current, morningSnack: value }))} />
+                      <CareCheckbox label="Lunch" checked={careForm.lunch} onChange={(value) => setCareForm((current) => ({ ...current, lunch: value }))} />
+                    </div>
+                    <textarea
+                      value={careForm.feedingNotes}
+                      onChange={(event) => setCareForm((current) => ({ ...current, feedingNotes: event.target.value }))}
+                      rows={2}
+                      placeholder="Feeding notes, appetite or special instructions..."
+                      className="mt-3 w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                    />
+                  </div>
+
+                  <div className="rounded-xl border border-slate-200 p-4">
+                    <div className="flex items-center gap-2">
+                      <Moon size={17} className="text-indigo-500" />
+                      <h3 className="text-sm font-semibold text-slate-900">Nap & rest</h3>
+                    </div>
+                    <div className="mt-4 grid gap-4 sm:grid-cols-3">
+                      <CareSelect label="Nap start" value={careForm.napStart} onChange={(value) => setCareForm((current) => ({ ...current, napStart: value }))} type="time" />
+                      <CareSelect label="Nap end" value={careForm.napEnd} onChange={(value) => setCareForm((current) => ({ ...current, napEnd: value }))} type="time" />
+                      <CareSelect label="Nap quality" value={careForm.napQuality} onChange={(value) => setCareForm((current) => ({ ...current, napQuality: value }))} options={["Good", "Restless", "Short", "Did not sleep"]} placeholder="Select quality" />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <CareTextArea label="Daily observation" value={careForm.observation} onChange={(value) => setCareForm((current) => ({ ...current, observation: value }))} placeholder="What did you observe today?" />
+                    <CareTextArea label="Activities" value={careForm.activityNotes} onChange={(value) => setCareForm((current) => ({ ...current, activityNotes: value }))} placeholder="Activities and participation..." />
+                    <CareTextArea label="Hygiene / personal care" value={careForm.hygieneNotes} onChange={(value) => setCareForm((current) => ({ ...current, hygieneNotes: value }))} placeholder="Relevant hygiene or personal-care notes..." />
+                    <CareTextArea label="Incident / health notes" value={careForm.incidentNotes} onChange={(value) => setCareForm((current) => ({ ...current, incidentNotes: value }))} placeholder="Record any incident, illness or health concern..." />
+                  </div>
+
+                  <CareTextArea label="Teacher notes" value={careForm.teacherNotes} onChange={(value) => setCareForm((current) => ({ ...current, teacherNotes: value }))} placeholder="Additional notes for the child's record or parent follow-up..." />
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-col-reverse gap-2 border-t border-slate-100 px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
+              <Button type="button" variant="secondary" onClick={() => setCareChild(null)}>Cancel</Button>
+              <Button type="button" onClick={() => void saveCareRecord()} disabled={careLoading || careSaving}>
+                {careSaving ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+                {careSaving ? "Saving..." : "Save daily care"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CareSelect({
+  label,
+  value,
+  onChange,
+  options,
+  placeholder,
+  type = "text",
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options?: string[];
+  placeholder?: string;
+  type?: string;
+}) {
+  return (
+    <div>
+      <label className="mb-1.5 block text-xs font-medium text-slate-700">{label}</label>
+      {options ? (
+        <select
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+        >
+          <option value="">{placeholder ?? "Select"}</option>
+          {options.map((option) => <option key={option} value={option}>{option}</option>)}
+        </select>
+      ) : (
+        <input
+          type={type}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className="h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+        />
+      )}
+    </div>
+  );
+}
+
+function CareCheckbox({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (value: boolean) => void;
+}) {
+  return (
+    <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50">
+      <input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+      {label}
+    </label>
+  );
+}
+
+function CareTextArea({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+}) {
+  return (
+    <div>
+      <label className="mb-1.5 block text-xs font-medium text-slate-700">{label}</label>
+      <textarea
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        rows={3}
+        placeholder={placeholder}
+        className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+      />
     </div>
   );
 }

@@ -15,7 +15,7 @@ import {
   Building2,
   ShieldCheck,
 } from "lucide-react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 
 import { supabase } from "../../lib/supabase";
 
@@ -38,6 +38,8 @@ interface ApplicationRow {
   requested_by_user_id: string;
   school_name: string;
   school_type: string | null;
+  ownership_type: string | null;
+  sections: Array<{ key: string; name: string; enabled: boolean; display_order: number }> | null;
   school_email: string | null;
   school_phone: string | null;
   country: string;
@@ -74,6 +76,73 @@ const ASSIGNABLE_ROLES: { value: SchoolRole; label: string }[] = [
   { value: "secretary", label: "Secretary" },
   { value: "teacher", label: "Teacher" },
 ];
+
+const REVIEW_SCHOOL_TYPES = [
+  "Early Childhood School",
+  "Primary School",
+  "Secondary School",
+  "Combined School",
+  "International School",
+  "Other",
+];
+
+const OWNERSHIP_TYPE_OPTIONS = [
+  { value: "not_specified", label: "Not specified" },
+  { value: "private", label: "Private" },
+  { value: "public", label: "Public" },
+  { value: "government_aided", label: "Government-aided" },
+  { value: "other", label: "Other" },
+];
+
+const REVIEW_SECTION_PRESETS = [
+  { key: "creche", name: "Crèche", description: "Care routines, wellbeing, meals and rest." },
+  { key: "nursery", name: "Nursery", description: "Early-years learning and flexible routines." },
+  { key: "primary", name: "Primary", description: "Formal primary academic timetable." },
+  { key: "lower_secondary", name: "Lower Secondary", description: "Lower secondary academic timetable." },
+  { key: "upper_secondary", name: "Upper Secondary", description: "Upper secondary academic timetable." },
+];
+
+type ReviewSection = {
+  key: string;
+  name: string;
+  enabled: boolean;
+  display_order: number;
+};
+
+function normalizeReviewSchoolType(value: string | null | undefined) {
+  const normalized = (value ?? "").trim().toLowerCase();
+  if (["crèche", "creche", "nursery", "crèche & nursery", "creche & nursery", "early childhood school"].includes(normalized)) return "Early Childhood School";
+  if (["primary", "primary school"].includes(normalized)) return "Primary School";
+  if (["secondary", "secondary school"].includes(normalized)) return "Secondary School";
+  if (["primary & secondary", "combined", "combined school"].includes(normalized)) return "Combined School";
+  if (normalized === "international school") return "International School";
+  if (["private school", "school", ""].includes(normalized)) return "Other";
+  return REVIEW_SCHOOL_TYPES.find((type) => type.toLowerCase() === normalized) ?? "Other";
+}
+
+function buildReviewSections(application: ApplicationRow): ReviewSection[] {
+  const supplied = application.sections ?? [];
+  let enabledKeys = new Set(
+    supplied.filter((section) => section.enabled).map((section) => section.key),
+  );
+
+  if (enabledKeys.size === 0) {
+    const schoolType = normalizeReviewSchoolType(application.school_type);
+    if (schoolType === "Early Childhood School") enabledKeys = new Set(["creche", "nursery"]);
+    else if (schoolType === "Primary School") enabledKeys = new Set(["primary"]);
+    else if (schoolType === "Secondary School") enabledKeys = new Set(["lower_secondary", "upper_secondary"]);
+    else if (schoolType === "Combined School") enabledKeys = new Set(["primary", "lower_secondary", "upper_secondary"]);
+    else if (schoolType === "International School") enabledKeys = new Set(["primary", "lower_secondary", "upper_secondary"]);
+    else enabledKeys = new Set(["primary"]);
+  }
+
+  return REVIEW_SECTION_PRESETS.map((section, index) => ({
+    key: section.key,
+    name: section.name,
+    enabled: enabledKeys.has(section.key),
+    display_order: index + 1,
+  }));
+}
 
 function getReadableError(error: unknown, fallback: string) {
   if (error instanceof Error && error.message) {
@@ -163,7 +232,6 @@ function getApplicantName(application: ApplicationRow) {
 }
 
 export default function AdminApplications() {
-  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const selectedApplicationId = searchParams.get("id");
@@ -182,6 +250,9 @@ export default function AdminApplications() {
   const [success, setSuccess] = useState("");
   const [rejectionReason, setRejectionReason] = useState("");
   const [assignedRole, setAssignedRole] = useState<SchoolRole>("principal");
+  const [reviewSchoolType, setReviewSchoolType] = useState("Other");
+  const [reviewOwnershipType, setReviewOwnershipType] = useState("not_specified");
+  const [reviewSections, setReviewSections] = useState<ReviewSection[]>([]);
 
   async function loadApplications(showRefreshState = false) {
     if (showRefreshState) setRefreshing(true);
@@ -193,7 +264,7 @@ export default function AdminApplications() {
       let query = supabase
         .from("school_applications")
         .select(
-          "id, requested_by_user_id, school_name, school_type, school_email, school_phone, country, city, address, website, applicant_first_name, applicant_last_name, applicant_email, applicant_phone, requested_role, assigned_role, status, reviewed_by, reviewed_at, rejection_reason, school_id, created_at, updated_at",
+          "id, requested_by_user_id, school_name, school_type, ownership_type, sections, school_email, school_phone, country, city, address, website, applicant_first_name, applicant_last_name, applicant_email, applicant_phone, requested_role, assigned_role, status, reviewed_by, reviewed_at, rejection_reason, school_id, created_at, updated_at",
         )
         .order("created_at", { ascending: false });
 
@@ -216,6 +287,9 @@ export default function AdminApplications() {
             selected.assigned_role ?? selected.requested_role ?? "principal",
           );
           setRejectionReason(selected.rejection_reason ?? "");
+          setReviewSchoolType(normalizeReviewSchoolType(selected.school_type));
+          setReviewOwnershipType(selected.ownership_type ?? "not_specified");
+          setReviewSections(buildReviewSections(selected));
         } else {
           setSelectedApplication(null);
         }
@@ -266,6 +340,9 @@ export default function AdminApplications() {
       application.assigned_role ?? application.requested_role ?? "principal",
     );
     setRejectionReason(application.rejection_reason ?? "");
+    setReviewSchoolType(normalizeReviewSchoolType(application.school_type));
+    setReviewOwnershipType(application.ownership_type ?? "not_specified");
+    setReviewSections(buildReviewSections(application));
     setSuccess("");
     setError("");
     setSearchParams((current) => {
@@ -328,11 +405,29 @@ export default function AdminApplications() {
     }
   }
 
+  function toggleReviewSection(sectionKey: string) {
+    setReviewSections((current) => {
+      const existing = current.find((section) => section.key === sectionKey);
+      if (existing) {
+        return current.map((section) =>
+          section.key === sectionKey ? { ...section, enabled: !section.enabled } : section,
+        );
+      }
+      const preset = REVIEW_SECTION_PRESETS.find((section) => section.key === sectionKey);
+      if (!preset) return current;
+      return [...current, { ...preset, enabled: true, display_order: current.length + 1 }];
+    });
+  }
+
   async function approveApplication() {
     if (!selectedApplication) return;
+    if (!reviewSections.some((section) => section.enabled)) {
+      setError("Enable at least one educational section before approving this school.");
+      return;
+    }
 
     const confirmed = window.confirm(
-      `Approve ${selectedApplication.school_name} and create the school account with the ${formatRole(assignedRole)} role?`,
+      `Approve ${selectedApplication.school_name} as ${reviewSchoolType} (${OWNERSHIP_TYPE_OPTIONS.find((item) => item.value === reviewOwnershipType)?.label ?? "ownership not specified"}) with ${reviewSections.filter((section) => section.enabled).map((section) => section.name).join(", ")} enabled, and assign the ${formatRole(assignedRole)} role?`,
     );
 
     if (!confirmed) return;
@@ -347,32 +442,47 @@ export default function AdminApplications() {
         {
           p_application_id: selectedApplication.id,
           p_assigned_role: assignedRole,
+          p_school_type: reviewSchoolType,
+          p_ownership_type: reviewOwnershipType,
+          p_sections: reviewSections,
         },
       );
 
       if (approvalError) throw approvalError;
 
       const result = data as {
-        success?: boolean;
-        application_id?: string;
         school_id?: string;
         membership_id?: string;
         assigned_role?: string;
         status?: string;
       };
 
-      if (!result.school_id) {
-        throw new Error(
-          "The application was approved, but no school ID was returned. The school configuration cannot be opened.",
+      setSuccess(
+        `Application approved. The school and its initial ${formatRole(
+          result.assigned_role ?? assignedRole,
+        )} membership have been created.`,
+      );
+      await loadApplications(true);
+
+      const refreshed = applications.find(
+        (application) => application.id === selectedApplication.id,
+      );
+      if (refreshed) {
+        setSelectedApplication({
+          ...refreshed,
+          status: "approved",
+          assigned_role: assignedRole,
+          school_type: reviewSchoolType,
+          ownership_type: reviewOwnershipType,
+          sections: reviewSections,
+        });
+      } else {
+        setSelectedApplication((current) =>
+          current
+            ? { ...current, status: "approved", assigned_role: assignedRole, school_type: reviewSchoolType, ownership_type: reviewOwnershipType, sections: reviewSections }
+            : current,
         );
       }
-
-      // The approval RPC already creates the school, platform account,
-      // membership, and default configuration. Open that configuration
-      // workspace immediately after a successful approval.
-      navigate(`/admin/schools/${result.school_id}/configuration`, {
-        replace: true,
-      });
     } catch (processError) {
       console.error("Failed to approve application:", processError);
 
@@ -434,6 +544,12 @@ export default function AdminApplications() {
         application={selectedApplication}
         assignedRole={assignedRole}
         setAssignedRole={setAssignedRole}
+        reviewSchoolType={reviewSchoolType}
+        setReviewSchoolType={setReviewSchoolType}
+        reviewOwnershipType={reviewOwnershipType}
+        setReviewOwnershipType={setReviewOwnershipType}
+        reviewSections={reviewSections}
+        onToggleSection={toggleReviewSection}
         rejectionReason={rejectionReason}
         setRejectionReason={setRejectionReason}
         actionable={Boolean(actionable)}
@@ -610,6 +726,12 @@ function ApplicationDetail({
   application,
   assignedRole,
   setAssignedRole,
+  reviewSchoolType,
+  setReviewSchoolType,
+  reviewOwnershipType,
+  setReviewOwnershipType,
+  reviewSections,
+  onToggleSection,
   rejectionReason,
   setRejectionReason,
   actionable,
@@ -624,6 +746,12 @@ function ApplicationDetail({
   application: ApplicationRow;
   assignedRole: SchoolRole;
   setAssignedRole: (value: SchoolRole) => void;
+  reviewSchoolType: string;
+  setReviewSchoolType: (value: string) => void;
+  reviewOwnershipType: string;
+  setReviewOwnershipType: (value: string) => void;
+  reviewSections: ReviewSection[];
+  onToggleSection: (key: string) => void;
   rejectionReason: string;
   setRejectionReason: (value: string) => void;
   actionable: boolean;
@@ -686,8 +814,8 @@ function ApplicationDetail({
             <InfoGrid>
               <InfoItem label="School name" value={application.school_name} />
               <InfoItem
-                label="School type"
-                value={application.school_type || "School"}
+                label="Requested school type"
+                value={application.school_type || "Not specified"}
               />
               <InfoItem label="Email" value={application.school_email || "—"} />
               <InfoItem label="Phone" value={application.school_phone || "—"} />
@@ -775,6 +903,53 @@ function ApplicationDetail({
             </div>
 
             <div className="space-y-5 p-5">
+              {actionable && (
+                <div className="space-y-4 rounded-xl border border-MojaSchoolr-100 bg-violet-50/40 p-4">
+                  <div>
+                    <h3 className="text-sm font-semibold text-MojaSchoolr-text">School configuration</h3>
+                    <p className="mt-1 text-xs leading-5 text-MojaSchoolr-text-secondary">
+                      Confirm the institution type and choose the sections the school actually operates. The enabled sections determine its timetable workflows.
+                    </p>
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-xs font-semibold text-MojaSchoolr-text-secondary">School type (set by Super Admin)</label>
+                    <select value={reviewSchoolType} onChange={(event) => setReviewSchoolType(event.target.value)} disabled={processing}
+                      className="h-10 w-full rounded-lg border border-MojaSchoolr-border bg-white px-3 text-sm text-MojaSchoolr-text outline-none focus:border-MojaSchoolr-500 focus:ring-2 focus:ring-MojaSchoolr-100 disabled:bg-slate-50">
+                      {REVIEW_SCHOOL_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-xs font-semibold text-MojaSchoolr-text-secondary">Ownership</label>
+                    <select value={reviewOwnershipType} onChange={(event) => setReviewOwnershipType(event.target.value)} disabled={processing}
+                      className="h-10 w-full rounded-lg border border-MojaSchoolr-border bg-white px-3 text-sm text-MojaSchoolr-text outline-none focus:border-MojaSchoolr-500 focus:ring-2 focus:ring-MojaSchoolr-100 disabled:bg-slate-50">
+                      {OWNERSHIP_TYPE_OPTIONS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <label className="text-xs font-semibold text-MojaSchoolr-text-secondary">Educational sections</label>
+                      <span className="text-[11px] text-MojaSchoolr-text-secondary">{reviewSections.filter((section) => section.enabled).length} enabled</span>
+                    </div>
+                    <div className="space-y-2">
+                      {REVIEW_SECTION_PRESETS.map((preset) => {
+                        const section = reviewSections.find((item) => item.key === preset.key);
+                        const checked = section?.enabled ?? false;
+                        return (
+                          <label key={preset.key} className={`flex cursor-pointer items-start gap-2.5 rounded-lg border p-3 transition ${checked ? "border-violet-200 bg-white" : "border-slate-200 bg-white"}`}>
+                            <input type="checkbox" checked={checked} onChange={() => onToggleSection(preset.key)} disabled={processing}
+                              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500 disabled:opacity-50" />
+                            <span className="min-w-0">
+                              <span className="block text-xs font-semibold text-MojaSchoolr-text">{preset.name}</span>
+                              <span className="mt-0.5 block text-[11px] leading-4 text-MojaSchoolr-text-secondary">{preset.description}</span>
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="mb-1.5 block text-xs font-semibold text-MojaSchoolr-text-secondary">
                   Assign school role

@@ -23,6 +23,8 @@ import Card from "../components/ui/Card";
 import PageHeader from "../components/ui/PageHeader";
 import StatCard from "../components/ui/StatCard";
 import { supabase } from "../lib/supabase";
+import { getStudents } from "../lib/students";
+import { getClasses } from "../lib/classes";
 import { useSchool } from "../context/SchoolContext";
 
 interface PrincipalStats {
@@ -75,13 +77,6 @@ interface AdmissionItem {
   createdAt: string;
 }
 
-interface SchoolSection {
-  id: string;
-  academic_year_id: string;
-  name: string;
-  display_order: number;
-  is_active: boolean;
-}
 
 interface AnnouncementItem {
   id: string;
@@ -585,8 +580,6 @@ export default function PrincipalDashboard() {
 
   const [firstName, setFirstName] = useState("Principal");
   const [academicYearName, setAcademicYearName] = useState("");
-  const [academicYearId, setAcademicYearId] = useState("");
-  const [schoolSections, setSchoolSections] = useState<SchoolSection[]>([]);
   const [selectedSectionId, setSelectedSectionId] = useState("all");
   const [stats, setStats] = useState<PrincipalStats>(initialStats);
   const [attendanceTrend, setAttendanceTrend] = useState<AttendanceTrendPoint[]>([]);
@@ -622,7 +615,6 @@ export default function PrincipalDashboard() {
     if (!school?.id) {
       setBaseLoading(false);
       setSupplementalLoading(false);
-      setSchoolSections([]);
       setSelectedSectionId("all");
       (Object.keys(initialSectionStatus) as SectionKey[]).forEach((key) =>
         setSection(key, "empty"),
@@ -633,6 +625,7 @@ export default function PrincipalDashboard() {
     setBaseLoading(true);
     setSupplementalLoading(true);
     setError("");
+    setStats(initialStats);
     setSectionStatus(initialSectionStatus);
     setSectionErrors(initialSectionErrors);
     setAttendanceTrend([]);
@@ -666,13 +659,10 @@ export default function PrincipalDashboard() {
       ] = await Promise.all([
         supabase
           .from("academic_years")
-          .select("id, name, start_date, end_date, is_active, is_current")
+          .select("id, name, start_date, end_date, is_active")
           .eq("school_id", school.id)
           .order("start_date", { ascending: false }),
-        supabase
-          .from("students")
-          .select("id", { count: "exact", head: true })
-          .eq("school_id", school.id),
+        getStudents(school.id),
         supabase
           .from("teachers")
           .select("id, status")
@@ -682,11 +672,7 @@ export default function PrincipalDashboard() {
           .select("id", { count: "exact", head: true })
           .eq("school_id", school.id)
           .eq("is_active", true),
-        supabase
-          .from("classes")
-          .select("id, name, academic_year_id, academic_section_id, is_active")
-          .eq("school_id", school.id)
-          .eq("is_active", true),
+        getClasses(school.id),
         supabase
           .from("academic_sections")
           .select("id, academic_year_id, name, display_order, is_active")
@@ -716,26 +702,29 @@ export default function PrincipalDashboard() {
 
       const academicYears = academicYearsResult.data ?? [];
       const currentYear =
-        academicYears.find((year) => year.is_current) ??
         academicYears.find((year) => year.is_active) ??
-        academicYears[0] ??
         null;
 
       setAcademicYearName(currentYear?.name ?? "");
-      setAcademicYearId(currentYear?.id ?? "");
 
       const teachers = teachersResult.data ?? [];
+      const students = studentsResult.data ?? [];
       const activeTeachers = teachers.filter(
         (teacher) => teacher.status !== "Inactive",
       );
       const allActiveClasses = (classesResult.data ?? []).filter((item) =>
-        currentYear ? item.academic_year_id === currentYear.id : true,
+        item.is_active &&
+        (currentYear ? item.academic_year_id === currentYear.id : false),
       );
       const yearSections = (academicSectionsResult.data ?? [])
         .filter((section) => currentYear && section.academic_year_id === currentYear.id)
         .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
 
-      setSchoolSections(yearSections);
+      const currentYearStudents = students.filter(
+        (student) =>
+          student.status === "Active" &&
+          student.academicYearId === currentYear?.id,
+      );
 
       const validSectionId =
         selectedSectionId !== "all" &&
@@ -756,6 +745,14 @@ export default function PrincipalDashboard() {
           .map((item) => item.id),
       );
       const activeClasses = allActiveClasses.filter((item) => selectedClassIds.has(item.id));
+      const sectionStudents =
+        validSectionId === "all"
+          ? currentYearStudents
+          : currentYearStudents.filter((student) =>
+              activeClasses.some(
+                (schoolClass) => schoolClass.name === student.className,
+              ),
+            );
       const selectedSubjectIds = new Set(
         (classSubjectsResult.data ?? [])
           .filter((item) => selectedClassIds.has(item.class_id))
@@ -765,7 +762,7 @@ export default function PrincipalDashboard() {
 
       setStats((current) => ({
         ...current,
-        students: validSectionId === "all" ? studentsResult.count ?? 0 : 0,
+        students: sectionStudents.length,
         teachers: validSectionId === "all" ? activeTeachers.length : 0,
         classes: activeClasses.length,
         subjects:
@@ -857,7 +854,7 @@ export default function PrincipalDashboard() {
         if (!currentYear) {
           setStats((current) => ({
             ...current,
-            enrolledStudents: studentsResult.count ?? 0,
+            enrolledStudents: sectionStudents.length,
             assignedTeachers: 0,
             coveredClasses: 0,
           }));
@@ -925,7 +922,7 @@ export default function PrincipalDashboard() {
 
           setStats((current) => ({
             ...current,
-            students: validSectionId === "all" ? studentsResult.count ?? 0 : enrolledStudents,
+            students: enrolledStudents || sectionStudents.length,
             teachers: validSectionId === "all" ? activeTeachers.length : assignedTeachers,
             classes: activeClasses.length,
             subjects: validSectionId === "all" ? subjectsResult.count ?? 0 : selectedSubjectIds.size,
@@ -933,7 +930,7 @@ export default function PrincipalDashboard() {
 
           setStats((current) => ({
             ...current,
-            enrolledStudents: enrolledStudents || studentsResult.count || 0,
+            enrolledStudents: enrolledStudents || sectionStudents.length,
             assignedTeachers,
             coveredClasses,
           }));
@@ -1163,7 +1160,9 @@ export default function PrincipalDashboard() {
               .limit(5),
             supabase
               .from("students")
-              .select("id, name, student_id, created_at")
+              .select(
+                "id, student_id, first_name, middle_name, last_name, created_at",
+              )
               .eq("school_id", school.id)
               .order("created_at", { ascending: false })
               .limit(4),
@@ -1186,7 +1185,12 @@ export default function PrincipalDashboard() {
             nextActivities.push({
               id: `student-${student.id}`,
               title: "New student record",
-              description: student.name || student.student_id || "Student added",
+              description:
+                [student.first_name, student.middle_name, student.last_name]
+                  .filter(Boolean)
+                  .join(" ") ||
+                student.student_id ||
+                "Student added",
               createdAt: student.created_at,
               time: formatRelativeTime(student.created_at),
             });
@@ -1245,6 +1249,17 @@ export default function PrincipalDashboard() {
 
   useEffect(() => {
     void loadDashboard();
+
+    if (!school?.id) {
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => {
+      // Refresh the currently selected section without changing its selection.
+      void loadDashboard();
+    }, 5 * 60 * 1000);
+
+    return () => window.clearInterval(intervalId);
   }, [school?.id, selectedSectionId]);
 
   async function refreshDashboard() {
@@ -1388,90 +1403,6 @@ export default function PrincipalDashboard() {
           {error}
         </div>
       )}
-
-      <Card className="mb-6 min-w-0 p-4 sm:p-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <School size={18} className="shrink-0 text-MojaSchoolr-600" />
-              <h2 className="text-sm font-semibold text-slate-900">School sections</h2>
-            </div>
-            <p className="mt-1 text-sm text-slate-500">
-              View students, classes, teachers, attendance and academic activity by section.
-            </p>
-          </div>
-
-          <div className="flex min-w-0 flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setSelectedSectionId("all")}
-              className={[
-                "inline-flex min-h-9 items-center rounded-lg border px-3 py-2 text-xs font-semibold transition",
-                selectedSectionId === "all"
-                  ? "border-MojaSchoolr-600 bg-MojaSchoolr-600 text-white"
-                  : "border-slate-200 bg-white text-slate-600 hover:border-MojaSchoolr-200 hover:bg-MojaSchoolr-50 hover:text-MojaSchoolr-700",
-              ].join(" ")}
-            >
-              All sections
-            </button>
-            {schoolSections.map((section) => (
-              <button
-                key={section.id}
-                type="button"
-                onClick={() => setSelectedSectionId(section.id)}
-                className={[
-                  "inline-flex min-h-9 items-center rounded-lg border px-3 py-2 text-xs font-semibold transition",
-                  selectedSectionId === section.id
-                    ? "border-MojaSchoolr-600 bg-MojaSchoolr-600 text-white"
-                    : "border-slate-200 bg-white text-slate-600 hover:border-MojaSchoolr-200 hover:bg-MojaSchoolr-50 hover:text-MojaSchoolr-700",
-                ].join(" ")}
-              >
-                {section.name}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {selectedSectionId !== "all" && (
-          <div className="mt-4 flex flex-col gap-3 rounded-xl border border-MojaSchoolr-100 bg-MojaSchoolr-50/50 p-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-MojaSchoolr-600 shadow-sm">
-                <GraduationCap size={17} />
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-slate-900">
-                  {schoolSections.find((section) => section.id === selectedSectionId)?.name ?? "Selected section"}
-                </p>
-                <p className="mt-0.5 text-xs text-slate-500">
-                  Section-specific dashboard data is active.
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                size="sm"
-                variant="secondary"
-                type="button"
-                onClick={() =>
-                  navigate(
-                    `/academics?academicYearId=${encodeURIComponent(academicYearId)}&sectionId=${encodeURIComponent(selectedSectionId)}`,
-                  )
-                }
-              >
-                Manage classes
-              </Button>
-              <Button
-                size="sm"
-                variant="secondary"
-                type="button"
-                onClick={() => navigate(`/teachers?sectionId=${encodeURIComponent(selectedSectionId)}`)}
-              >
-                Manage teachers
-              </Button>
-            </div>
-          </div>
-        )}
-      </Card>
 
       <div className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
         {statCards.map((stat) => (

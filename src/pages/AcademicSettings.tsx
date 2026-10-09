@@ -6,7 +6,7 @@ import { supabase } from "../lib/supabase";
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
 
-interface AcademicYear { id:string; name:string; start_date:string|null; end_date:string|null; is_active:boolean; is_current?:boolean|null; }
+interface AcademicYear { id:string; name:string; start_date:string|null; end_date:string|null; is_active:boolean; }
 interface AcademicSection { id:string; academic_year_id:string; name:string; display_order:number; is_active:boolean; }
 const DEFAULT_SECTIONS=["Creche","Nursery","Primary","Lower Secondary"];
 
@@ -34,7 +34,7 @@ export default function AcademicSettings(){
     if(!school){setYears([]);setSections([]);setLoading(false);return;}
     setLoading(true);setError("");
     const [yr,sec]=await Promise.all([
-      supabase.from("academic_years").select("id,name,start_date,end_date,is_active,is_current").eq("school_id",school.id).order("start_date",{ascending:false}),
+      supabase.from("academic_years").select("id,name,start_date,end_date,is_active").eq("school_id",school.id).order("start_date",{ascending:false}),
       supabase.from("academic_sections").select("id,academic_year_id,name,display_order,is_active").eq("school_id",school.id).order("display_order",{ascending:true})
     ]);
     if(yr.error){setError(yr.error.message);setLoading(false);return;}
@@ -55,19 +55,52 @@ export default function AcademicSettings(){
     if(!name){setError("Academic year name is required.");return;} if(!startDate||!endDate){setError("Start date and end date are required.");return;} if(endDate<startDate){setError("End date cannot be before the start date.");return;}
     setSaving(true);setError("");
     try{
-      if(makeActive){const {error}=await supabase.from("academic_years").update({is_active:false,is_current:false}).eq("school_id",school.id);if(error)throw error;}
-      const payload={name,start_date:startDate,end_date:endDate,is_active:makeActive,is_current:makeActive};
+      if(makeActive){const {error}=await supabase.from("academic_years").update({is_active:false}).eq("school_id",school.id);if(error)throw error;}
+      const payload={name,start_date:startDate,end_date:endDate,is_active:makeActive};
       if(editingYear){const {error}=await supabase.from("academic_years").update(payload).eq("id",editingYear.id).eq("school_id",school.id);if(error)throw error;}
       else{
-        const {data,error}=await supabase.from("academic_years").insert({school_id:school.id,...payload}).select("id").single(); if(error)throw error;
-        if(data){const rows=DEFAULT_SECTIONS.map((name,i)=>({school_id:school.id,academic_year_id:data.id,name,display_order:i+1,is_active:true}));const {error:e}=await supabase.from("academic_sections").insert(rows);if(e)throw e;}
+        const {data,error}=await supabase
+          .from("academic_years")
+          .insert({school_id:school.id,...payload})
+          .select("id")
+          .single();
+        if(error)throw error;
+
+        if(data){
+          const rows=DEFAULT_SECTIONS.map((name,i)=>({
+            school_id:school.id,
+            academic_year_id:data.id,
+            name,
+            display_order:i+1,
+            is_active:true,
+          }));
+          const {error:e}=await supabase.from("academic_sections").insert(rows);
+          if(e){
+            // Do not leave a half-created academic year if its default
+            // sections cannot be created.
+            await supabase
+              .from("academic_years")
+              .delete()
+              .eq("id",data.id)
+              .eq("school_id",school.id);
+            throw new Error(`Academic year was created, but the default sections could not be created: ${e.message}`);
+          }
+        }
       }
       setShowYearModal(false);await loadData();
-    }catch(e){setError(e instanceof Error?e.message:"Unable to save academic year.");}finally{setSaving(false);}
+    }catch(e){
+      const message =
+        e instanceof Error
+          ? e.message
+          : typeof e === "object" && e !== null && "message" in e
+            ? String((e as {message?:unknown}).message ?? "Unable to save academic year.")
+            : "Unable to save academic year.";
+      setError(message);
+    }finally{setSaving(false);}
   }
   async function setActiveYear(y:AcademicYear){
     if(!school||y.is_active)return;setSaving(true);setError("");
-    try{let r=await supabase.from("academic_years").update({is_active:false,is_current:false}).eq("school_id",school.id);if(r.error)throw r.error;r=await supabase.from("academic_years").update({is_active:true,is_current:true}).eq("id",y.id).eq("school_id",school.id);if(r.error)throw r.error;await loadData();}
+    try{let r=await supabase.from("academic_years").update({is_active:false}).eq("school_id",school.id);if(r.error)throw r.error;r=await supabase.from("academic_years").update({is_active:true}).eq("id",y.id).eq("school_id",school.id);if(r.error)throw r.error;await loadData();}
     catch(e){setError(e instanceof Error?e.message:"Unable to activate academic year.");}finally{setSaving(false);}
   }
   async function deleteYear(y:AcademicYear){

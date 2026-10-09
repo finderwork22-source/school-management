@@ -36,6 +36,7 @@ interface SchoolClass {
   id: string;
   name: string;
   academic_year_id: string | null;
+  academic_section_id?: string | null;
   is_active: boolean;
 }
 interface Subject {
@@ -166,6 +167,101 @@ const DEFAULT_BREAKS: BreakRule[] = [
   { name: "Lunch Break", after_period: 5, duration_minutes: 50 },
 ];
 
+interface AcademicSectionRecord {
+  id: string;
+  academic_year_id: string;
+  name: string;
+  display_order: number;
+  is_active: boolean;
+}
+
+type TimetableMode = "routine" | "academic";
+
+function canonicalSectionKey(value: string | null | undefined) {
+  const normalized = String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ");
+
+  if (normalized === "creche" || normalized === "crèche") return "creche";
+  if (normalized === "nursery" || normalized === "preschool") return "nursery";
+  if (normalized === "primary" || normalized === "primary school") return "primary";
+  if (["lower secondary", "junior secondary", "lower sec"].includes(normalized)) return "lower_secondary";
+  if (["upper secondary", "senior secondary", "upper sec"].includes(normalized)) return "upper_secondary";
+  if (normalized === "secondary" || normalized === "secondary school") return "secondary";
+  return normalized;
+}
+
+function isRoutineSectionName(value: string | null | undefined) {
+  const key = canonicalSectionKey(value);
+  return key === "creche" || key === "nursery";
+}
+
+function sectionTabLabel(value: string) {
+  const key = canonicalSectionKey(value);
+  if (key === "creche") return "Creche";
+  if (key === "nursery") return "Nursery";
+  if (key === "primary") return "Primary";
+  if (key === "lower_secondary") return "Lower Secondary";
+  if (key === "upper_secondary") return "Upper Secondary";
+  if (key === "secondary") return "Secondary";
+  return value;
+}
+
+function explicitSectionKeysForSchoolType(schoolType: string): Set<string> | null {
+  const type = canonicalSectionKey(schoolType);
+  if (type === "creche") return new Set(["creche"]);
+  if (type === "nursery") return new Set(["nursery"]);
+  if (["creche & nursery", "crèche & nursery"].includes(type)) return new Set(["creche", "nursery"]);
+  if (type === "primary") return new Set(["primary"]);
+  if (type === "secondary") return new Set(["lower_secondary", "upper_secondary", "secondary"]);
+  if (["primary & secondary", "combined primary secondary"].includes(type)) {
+    return new Set(["primary", "lower_secondary", "upper_secondary", "secondary"]);
+  }
+  return null;
+}
+
+type CrecheRoutineDefinition = {
+  key: string;
+  title: string;
+  detail: string;
+};
+
+interface CrecheRoutineRecord {
+  routine_key: string;
+  start_time: string | null;
+  end_time: string | null;
+}
+
+const CRECHE_ROUTINES: CrecheRoutineDefinition[] = [
+  { key: "arrival", title: "Arrival & wellbeing check", detail: "Welcome children, check wellbeing and note anything important." },
+  { key: "breakfast", title: "Breakfast / morning snack", detail: "Meal and feeding period; record intake in Daily Care." },
+  { key: "learning_play", title: "Learning & play activities", detail: "Indoor play, guided activities and age-appropriate learning." },
+  { key: "outdoor", title: "Outdoor / movement time", detail: "Supervised outdoor play or movement activities." },
+  { key: "lunch_care", title: "Lunch & personal care", detail: "Lunch, hygiene and personal-care routines." },
+  { key: "nap", title: "Nap & quiet rest", detail: "Rest period; record nap start/end and quality in Daily Care." },
+  { key: "afternoon", title: "Afternoon care & activities", detail: "Afternoon snack, calm play and individual care needs." },
+  { key: "departure", title: "Departure & handover", detail: "Prepare children for collection and note parent handover details." },
+];
+
+const NURSERY_ROUTINES: CrecheRoutineDefinition[] = [
+  { key: "arrival", title: "Arrival & settling in", detail: "Welcome children, support transitions and note any important handover." },
+  { key: "breakfast", title: "Breakfast / morning snack", detail: "Record the meal or snack routine and relevant notes." },
+  { key: "learning_play", title: "Circle time & early learning", detail: "Language, numbers, stories and guided early-learning activities." },
+  { key: "outdoor", title: "Outdoor & movement activities", detail: "Supervised outdoor play, movement and group games." },
+  { key: "lunch_care", title: "Lunch & personal care", detail: "Lunch, hygiene and supported independence routines." },
+  { key: "nap", title: "Quiet time / rest", detail: "A flexible quiet period; configure a fixed time only when needed." },
+  { key: "afternoon", title: "Creative & afternoon activities", detail: "Art, music, imaginative play and small-group activities." },
+  { key: "departure", title: "Departure & parent handover", detail: "Prepare children for collection and record relevant handover notes." },
+];
+
+function normalizeTimeInput(value: string | null | undefined) {
+  return value ? value.slice(0, 5) : "";
+}
+
 function getFullName(person: {
   first_name?: string | null;
   middle_name?: string | null;
@@ -181,6 +277,28 @@ function formatTime(value: string) {
   if (Number.isNaN(hours) || Number.isNaN(minutes)) return value;
   const suffix = hours >= 12 ? "PM" : "AM";
   return `${hours % 12 || 12}:${String(minutes).padStart(2, "0")} ${suffix}`;
+}
+
+function timeToMinutes(value: string) {
+  const [hours, minutes] = value.slice(0, 5).split(":").map(Number);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+  return hours * 60 + minutes;
+}
+
+function timeRangesOverlap(
+  firstStart: string,
+  firstEnd: string,
+  secondStart: string,
+  secondEnd: string,
+) {
+  const aStart = timeToMinutes(firstStart);
+  const aEnd = timeToMinutes(firstEnd);
+  const bStart = timeToMinutes(secondStart);
+  const bEnd = timeToMinutes(secondEnd);
+  if (aStart === null || aEnd === null || bStart === null || bEnd === null) {
+    return false;
+  }
+  return aStart < bEnd && bStart < aEnd;
 }
 function minutesFromTime(value: string) {
   const [h, m] = value.slice(0, 5).split(":").map(Number);
@@ -672,7 +790,6 @@ function preValidateGeneration({
 
 export default function Timetable() {
   const [schoolId, setSchoolId] = useState("");
-  const [teacherId, setTeacherId] = useState("");
   const [role, setRole] = useState<ReturnType<typeof normalizeRole>>("Teacher");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -683,6 +800,12 @@ export default function Timetable() {
 
   const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
   const [selectedAcademicYearId, setSelectedAcademicYearId] = useState("");
+  const [schoolType, setSchoolType] = useState("School");
+  const [configuredSectionNames, setConfiguredSectionNames] = useState<string[]>([]);
+  const [hasExplicitSectionConfig, setHasExplicitSectionConfig] = useState(false);
+  const [academicSections, setAcademicSections] = useState<AcademicSectionRecord[]>([]);
+  const [timetableMode, setTimetableMode] = useState<TimetableMode>("academic");
+  const [selectedSectionId, setSelectedSectionId] = useState("");
   const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
@@ -734,6 +857,8 @@ export default function Timetable() {
       teachersResult,
       assignmentsResult,
       classSubjectsResult,
+      academicSectionsResult,
+      schoolConfigResult,
     ] = await Promise.all([
       supabase
         .from("academic_years")
@@ -742,7 +867,7 @@ export default function Timetable() {
         .order("name", { ascending: false }),
       supabase
         .from("classes")
-        .select("id, name, academic_year_id, is_active")
+        .select("id, name, academic_year_id, academic_section_id, is_active")
         .eq("school_id", currentSchoolId)
         .eq("is_active", true)
         .order("name"),
@@ -768,6 +893,16 @@ export default function Timetable() {
         .from("class_subjects")
         .select("class_id, subject_id")
         .eq("school_id", currentSchoolId),
+      supabase
+        .from("academic_sections")
+        .select("id, academic_year_id, name, display_order, is_active")
+        .eq("school_id", currentSchoolId)
+        .order("display_order", { ascending: true }),
+      supabase
+        .from("school_configurations")
+        .select("school_type, sections")
+        .eq("school_id", currentSchoolId)
+        .maybeSingle(),
     ]);
     const firstError =
       yearsResult.error ??
@@ -775,7 +910,9 @@ export default function Timetable() {
       subjectsResult.error ??
       teachersResult.error ??
       assignmentsResult.error ??
-      classSubjectsResult.error;
+      classSubjectsResult.error ??
+      academicSectionsResult.error ??
+      schoolConfigResult.error;
     if (firstError) {
       setError(getErrorMessage(firstError));
       return;
@@ -820,6 +957,19 @@ export default function Timetable() {
       : loadedClasses;
     setAcademicYears(scopedYears);
     setClasses(scopedClasses);
+    setAcademicSections((academicSectionsResult.data ?? []) as AcademicSectionRecord[]);
+    const configuration = schoolConfigResult.data as any;
+    setSchoolType(String(configuration?.school_type ?? "School"));
+    const rawSectionConfig = Array.isArray(configuration?.sections)
+      ? configuration.sections
+      : [];
+    setHasExplicitSectionConfig(rawSectionConfig.length > 0);
+    setConfiguredSectionNames(
+      rawSectionConfig
+        .filter((item: any) => item && item.enabled !== false)
+        .map((item: any) => String(item.name ?? item.key ?? "").trim())
+        .filter(Boolean),
+    );
     setSubjects((subjectsResult.data ?? []) as Subject[]);
     setTeachers((teachersResult.data ?? []) as Teacher[]);
     setTeacherAssignments(mappedAssignments);
@@ -836,14 +986,57 @@ export default function Timetable() {
           scopedYears[0]?.id ??
           "");
     setSelectedAcademicYearId(usableYearId);
-    if (usableYearId)
-      await loadSavedConfiguration(currentSchoolId, usableYearId);
   }
 
   async function loadSavedConfiguration(
     currentSchoolId: string,
     yearId: string,
+    sectionId: string | null = selectedSectionId || null,
   ) {
+    // Academic timing, breaks and blocked periods belong to one academic
+    // section. The SQL migration keeps legacy school-wide rows as null while
+    // copying them into section-specific starter settings.
+    let settingsQuery = supabase
+      .from("timetable_settings")
+      .select(
+        "study_days, periods_per_day, period_duration_minutes, gap_minutes, first_period_start",
+      )
+      .eq("school_id", currentSchoolId)
+      .eq("academic_year_id", yearId);
+    settingsQuery = sectionId
+      ? settingsQuery.eq("academic_section_id", sectionId)
+      : settingsQuery.is("academic_section_id", null);
+
+    let breaksQuery = supabase
+      .from("timetable_breaks")
+      .select("id, name, after_period, duration_minutes")
+      .eq("school_id", currentSchoolId)
+      .eq("academic_year_id", yearId);
+    breaksQuery = sectionId
+      ? breaksQuery.eq("academic_section_id", sectionId)
+      : breaksQuery.is("academic_section_id", null);
+
+    let blockedQuery = supabase
+      .from("timetable_blocked_periods")
+      .select("id, day_of_week, period_number, reason")
+      .eq("school_id", currentSchoolId)
+      .eq("academic_year_id", yearId);
+    blockedQuery = sectionId
+      ? blockedQuery.eq("academic_section_id", sectionId)
+      : blockedQuery.is("academic_section_id", null);
+
+    const sectionClassIds = sectionId
+      ? new Set(
+          classes
+            .filter(
+              (item) =>
+                item.academic_year_id === yearId &&
+                item.academic_section_id === sectionId,
+            )
+            .map((item) => item.id),
+        )
+      : null;
+
     const [
       settingsResult,
       breaksResult,
@@ -851,27 +1044,9 @@ export default function Timetable() {
       requirementsResult,
       entriesResult,
     ] = await Promise.all([
-      supabase
-        .from("timetable_settings")
-        .select(
-          "study_days, periods_per_day, period_duration_minutes, gap_minutes, first_period_start",
-        )
-        .eq("school_id", currentSchoolId)
-        .eq("academic_year_id", yearId)
-        .maybeSingle(),
-      supabase
-        .from("timetable_breaks")
-        .select("id, name, after_period, duration_minutes")
-        .eq("school_id", currentSchoolId)
-        .eq("academic_year_id", yearId)
-        .order("after_period"),
-      supabase
-        .from("timetable_blocked_periods")
-        .select("id, day_of_week, period_number, reason")
-        .eq("school_id", currentSchoolId)
-        .eq("academic_year_id", yearId)
-        .order("day_of_week")
-        .order("period_number"),
+      settingsQuery.maybeSingle(),
+      breaksQuery.order("after_period"),
+      blockedQuery.order("day_of_week").order("period_number"),
       supabase
         .from("timetable_lesson_requirements")
         .select(
@@ -928,22 +1103,26 @@ export default function Timetable() {
     );
     setBlockedPeriods((blockedResult.data ?? []) as BlockedPeriod[]);
     setRequirements(
-      (requirementsResult.data ?? []).map((item: any) => ({
-        id: item.id,
-        class_id: item.class_id,
-        subject_id: item.subject_id,
-        teacher_assignment_id: item.teacher_assignment_id ?? null,
-        teacher_id: item.teacher_id ?? null,
-        lessons_per_week: Number(item.lessons_per_week ?? 0),
-        priority_level: item.priority_level ?? "normal",
-        preferred_day: item.preferred_day ?? null,
-        preferred_period: item.preferred_period
-          ? Number(item.preferred_period)
-          : null,
-      })),
+      (requirementsResult.data ?? [])
+        .filter((item: any) => !sectionClassIds || sectionClassIds.has(item.class_id))
+        .map((item: any) => ({
+          id: item.id,
+          class_id: item.class_id,
+          subject_id: item.subject_id,
+          teacher_assignment_id: item.teacher_assignment_id ?? null,
+          teacher_id: item.teacher_id ?? null,
+          lessons_per_week: Number(item.lessons_per_week ?? 0),
+          priority_level: item.priority_level ?? "normal",
+          preferred_day: item.preferred_day ?? null,
+          preferred_period: item.preferred_period
+            ? Number(item.preferred_period)
+            : null,
+        })),
     );
     setGeneratedEntries(
-      (entriesResult.data ?? []).map((item: any) => {
+      (entriesResult.data ?? [])
+        .filter((item: any) => !sectionClassIds || sectionClassIds.has(item.class_id))
+        .map((item: any) => {
         const schoolClass = Array.isArray(item.classes)
           ? item.classes[0]
           : item.classes;
@@ -1025,8 +1204,7 @@ export default function Timetable() {
           setLoading(false);
           return;
         }
-        setTeacherId(teacher.id);
-        const { error: teacherAssignmentsError } =
+        const { data: teacherAssignments, error: teacherAssignmentsError } =
           await supabase
             .from("teacher_assignments")
             .select("class_id, academic_year_id")
@@ -1037,35 +1215,118 @@ export default function Timetable() {
           setLoading(false);
           return;
         }
-        // Load the school's academic years/classes for the teacher view.
-        // The timetable query itself is restricted to this teacher below, so
-        // showing the available school structure here does not expose another
-        // teacher's timetable.
-        await loadSetupData(membership.school_id);
+        await loadSetupData(membership.school_id, undefined, {
+          classIds: Array.from(
+            new Set((teacherAssignments ?? []).map((item) => item.class_id)),
+          ),
+          academicYearIds: Array.from(
+            new Set(
+              (teacherAssignments ?? []).map((item) => item.academic_year_id),
+            ),
+          ),
+        });
       } else await loadSetupData(membership.school_id);
       setLoading(false);
     }
     void initialize();
   }, []);
 
-  useEffect(() => {
-    if (schoolId && selectedAcademicYearId)
-      void loadSavedConfiguration(schoolId, selectedAcademicYearId);
-  }, [schoolId, selectedAcademicYearId]);
-
-  const yearClasses = useMemo(
+  const yearSections = useMemo(
     () =>
-      classes.filter(
-        (item) => item.academic_year_id === selectedAcademicYearId,
-      ),
+      academicSections
+        .filter((section) => section.academic_year_id === selectedAcademicYearId && section.is_active !== false)
+        .sort((a, b) => a.display_order - b.display_order),
+    [academicSections, selectedAcademicYearId],
+  );
+
+  const eligibleSectionKeys = useMemo(() => {
+    const schoolTypeKeys = explicitSectionKeysForSchoolType(schoolType);
+    const configuredKeys = new Set(configuredSectionNames.map(canonicalSectionKey));
+
+    if (schoolTypeKeys) {
+      return hasExplicitSectionConfig
+        ? new Set(Array.from(schoolTypeKeys).filter((key) => configuredKeys.has(key)))
+        : schoolTypeKeys;
+    }
+
+    if (hasExplicitSectionConfig) return configuredKeys;
+    return null;
+  }, [schoolType, configuredSectionNames, hasExplicitSectionConfig]);
+
+  const sectionTabs = useMemo(
+    () =>
+      yearSections
+        .filter((section) => !eligibleSectionKeys || eligibleSectionKeys.has(canonicalSectionKey(section.name)))
+        .map((section) => ({ ...section, label: sectionTabLabel(section.name) })),
+    [yearSections, eligibleSectionKeys],
+  );
+
+  const routineSectionTabs = useMemo(
+    () => sectionTabs.filter((section) => isRoutineSectionName(section.name)),
+    [sectionTabs],
+  );
+  const academicSectionTabs = useMemo(
+    () => sectionTabs.filter((section) => !isRoutineSectionName(section.name)),
+    [sectionTabs],
+  );
+  const activeModeSections = timetableMode === "routine" ? routineSectionTabs : academicSectionTabs;
+  const activeSection =
+    activeModeSections.find((section) => section.id === selectedSectionId) ??
+    activeModeSections[0] ??
+    null;
+
+  useEffect(() => {
+    if (
+      !canManage ||
+      !schoolId ||
+      !selectedAcademicYearId ||
+      timetableMode !== "academic" ||
+      !activeSection?.id
+    ) {
+      return;
+    }
+    void loadSavedConfiguration(schoolId, selectedAcademicYearId, activeSection.id);
+  }, [
+    canManage,
+    schoolId,
+    selectedAcademicYearId,
+    timetableMode,
+    activeSection?.id,
+  ]);
+
+  useEffect(() => {
+    if (!canManage) return;
+    if (timetableMode === "routine" && routineSectionTabs.length === 0 && academicSectionTabs.length > 0) {
+      setTimetableMode("academic");
+      return;
+    }
+    if (timetableMode === "academic" && academicSectionTabs.length === 0 && routineSectionTabs.length > 0) {
+      setTimetableMode("routine");
+      return;
+    }
+    if (!activeModeSections.some((section) => section.id === selectedSectionId)) {
+      setSelectedSectionId(activeModeSections[0]?.id ?? "");
+    }
+  }, [canManage, timetableMode, routineSectionTabs, academicSectionTabs, activeModeSections, selectedSectionId]);
+
+  const allYearClasses = useMemo(
+    () => classes.filter((item) => item.academic_year_id === selectedAcademicYearId),
     [classes, selectedAcademicYearId],
   );
+  const yearClasses = useMemo(
+    () =>
+      activeSection
+        ? allYearClasses.filter((item) => item.academic_section_id === activeSection.id)
+        : [],
+    [allYearClasses, activeSection?.id],
+  );
+  const scopedClassIds = useMemo(() => new Set(yearClasses.map((item) => item.id)), [yearClasses]);
   const yearAssignments = useMemo(
     () =>
       teacherAssignments.filter(
-        (item) => item.academic_year_id === selectedAcademicYearId,
+        (item) => item.academic_year_id === selectedAcademicYearId && scopedClassIds.has(item.class_id),
       ),
-    [teacherAssignments, selectedAcademicYearId],
+    [teacherAssignments, selectedAcademicYearId, scopedClassIds],
   );
   const assignmentRows = useMemo<AssignmentRow[]>(() => {
     const rows = new Map<string, AssignmentRow>();
@@ -1482,6 +1743,10 @@ export default function Timetable() {
       setError("Select an academic year first.");
       return false;
     }
+    if (timetableMode !== "academic" || !activeSection?.id) {
+      setError("Select an academic section before saving timetable settings.");
+      return false;
+    }
     if (settings.study_days.length === 0) {
       setError("Select at least one study day.");
       return false;
@@ -1505,20 +1770,34 @@ export default function Timetable() {
     setSaving(true);
     setError("");
     if (showMessage) setSuccess("");
-    const settingsResult = await supabase
+    const sectionSettingsPayload = {
+      school_id: schoolId,
+      academic_year_id: selectedAcademicYearId,
+      academic_section_id: activeSection.id,
+      study_days: settings.study_days,
+      periods_per_day: settings.periods_per_day,
+      period_duration_minutes: settings.period_duration_minutes,
+      gap_minutes: settings.gap_minutes,
+      first_period_start: settings.first_period_start,
+    };
+    const existingSettingsResult = await supabase
       .from("timetable_settings")
-      .upsert(
-        {
-          school_id: schoolId,
-          academic_year_id: selectedAcademicYearId,
-          study_days: settings.study_days,
-          periods_per_day: settings.periods_per_day,
-          period_duration_minutes: settings.period_duration_minutes,
-          gap_minutes: settings.gap_minutes,
-          first_period_start: settings.first_period_start,
-        },
-        { onConflict: "school_id,academic_year_id" },
-      );
+      .select("id")
+      .eq("school_id", schoolId)
+      .eq("academic_year_id", selectedAcademicYearId)
+      .eq("academic_section_id", activeSection.id)
+      .maybeSingle();
+    if (existingSettingsResult.error) {
+      setError(getErrorMessage(existingSettingsResult.error));
+      setSaving(false);
+      return false;
+    }
+    const settingsResult = existingSettingsResult.data?.id
+      ? await supabase
+          .from("timetable_settings")
+          .update(sectionSettingsPayload)
+          .eq("id", existingSettingsResult.data.id)
+      : await supabase.from("timetable_settings").insert(sectionSettingsPayload);
     if (settingsResult.error) {
       setError(getErrorMessage(settingsResult.error));
       setSaving(false);
@@ -1528,7 +1807,8 @@ export default function Timetable() {
       .from("timetable_breaks")
       .delete()
       .eq("school_id", schoolId)
-      .eq("academic_year_id", selectedAcademicYearId);
+      .eq("academic_year_id", selectedAcademicYearId)
+      .eq("academic_section_id", activeSection.id);
     if (deleteBreak.error) {
       setError(getErrorMessage(deleteBreak.error));
       setSaving(false);
@@ -1541,6 +1821,7 @@ export default function Timetable() {
           breaks.map((item, index) => ({
             school_id: schoolId,
             academic_year_id: selectedAcademicYearId,
+            academic_section_id: activeSection.id,
             name: item.name.trim() || `Break ${index + 1}`,
             after_period: Math.min(
               Math.max(1, Number(item.after_period) || 1),
@@ -1559,7 +1840,8 @@ export default function Timetable() {
       .from("timetable_blocked_periods")
       .delete()
       .eq("school_id", schoolId)
-      .eq("academic_year_id", selectedAcademicYearId);
+      .eq("academic_year_id", selectedAcademicYearId)
+      .eq("academic_section_id", activeSection.id);
     if (deleteBlocked.error) {
       setError(getErrorMessage(deleteBlocked.error));
       setSaving(false);
@@ -1572,6 +1854,7 @@ export default function Timetable() {
           blockedPeriods.map((item) => ({
             school_id: schoolId,
             academic_year_id: selectedAcademicYearId,
+            academic_section_id: activeSection.id,
             day_of_week: item.day_of_week,
             period_number: Math.min(
               Math.max(1, Number(item.period_number) || 1),
@@ -1658,7 +1941,7 @@ export default function Timetable() {
         }
       }
     }
-    await loadSavedConfiguration(schoolId, selectedAcademicYearId);
+    await loadSavedConfiguration(schoolId, selectedAcademicYearId, activeSection.id);
     if (showMessage) setSuccess("Timetable setup saved successfully.");
     setSaving(false);
     return true;
@@ -1728,6 +2011,10 @@ export default function Timetable() {
     setGenerationGuidance([]);
 
     if (!validateForStep(5)) return;
+    if (!activeSection?.id) {
+      setError("Select an academic section before generating its timetable.");
+      return;
+    }
 
     const preflight = preValidateGeneration({
       yearClasses,
@@ -1790,6 +2077,38 @@ export default function Timetable() {
 
       const occupiedClass = new Set<string>();
       const occupiedTeacher = new Set<string>();
+      const currentSectionClassIds = new Set(yearClasses.map((item) => item.id));
+      const externalTeacherEntries = new Map<
+        string,
+        Array<{ day_of_week: string; start_time: string; end_time: string }>
+      >();
+      const existingEntriesResult = await supabase
+        .from("timetable_entries")
+        .select("class_id, teacher_id, day_of_week, period_number, start_time, end_time")
+        .eq("school_id", schoolId)
+        .eq("academic_year_id", selectedAcademicYearId);
+      if (existingEntriesResult.error) throw existingEntriesResult.error;
+      for (const existing of existingEntriesResult.data ?? []) {
+        // The selected section is regenerated as a unit; entries in other
+        // sections stay in place. Different sections may use different period
+        // lengths/start times, so cross-section teacher conflicts are checked
+        // by overlapping clock times rather than by matching period numbers.
+        if (currentSectionClassIds.has(existing.class_id)) continue;
+        if (
+          existing.teacher_id &&
+          existing.day_of_week &&
+          existing.start_time &&
+          existing.end_time
+        ) {
+          const teacherEntries = externalTeacherEntries.get(existing.teacher_id) ?? [];
+          teacherEntries.push({
+            day_of_week: existing.day_of_week,
+            start_time: String(existing.start_time),
+            end_time: String(existing.end_time),
+          });
+          externalTeacherEntries.set(existing.teacher_id, teacherEntries);
+        }
+      }
       const result: GeneratedEntry[] = [];
       const classDayCounts = new Map<string, Map<string, number>>();
       const subjectDayCounts = new Map<string, Map<string, number>>();
@@ -1847,9 +2166,17 @@ export default function Timetable() {
         if (!times || !row.teacherId) return false;
         if (blockedSet.has(`${slot.day}:${slot.period}`)) return false;
         if (!settings.study_days.includes(slot.day)) return false;
+        const overlapsAnotherSection = (
+          externalTeacherEntries.get(row.teacherId) ?? []
+        ).some(
+          (entry) =>
+            entry.day_of_week === slot.day &&
+            timeRangesOverlap(times.start, times.end, entry.start_time, entry.end_time),
+        );
         if (
           occupiedClass.has(classKey(row.classId, slot.day, slot.period)) ||
-          occupiedTeacher.has(teacherKey(row.teacherId, slot.day, slot.period))
+          occupiedTeacher.has(teacherKey(row.teacherId, slot.day, slot.period)) ||
+          overlapsAnotherSection
         ) {
           return false;
         }
@@ -2037,7 +2364,8 @@ export default function Timetable() {
           "school_id, academic_year_id, class_id, subject_id, teacher_id, day_of_week, period_number, start_time, end_time",
         )
         .eq("school_id", schoolId)
-        .eq("academic_year_id", selectedAcademicYearId);
+        .eq("academic_year_id", selectedAcademicYearId)
+        .in("class_id", yearClasses.map((item) => item.id));
 
       if (previousEntriesResult.error) throw previousEntriesResult.error;
 
@@ -2047,7 +2375,8 @@ export default function Timetable() {
         .from("timetable_entries")
         .delete()
         .eq("school_id", schoolId)
-        .eq("academic_year_id", selectedAcademicYearId);
+        .eq("academic_year_id", selectedAcademicYearId)
+        .in("class_id", yearClasses.map((item) => item.id));
 
       if (deletePreviousResult.error) throw deletePreviousResult.error;
 
@@ -2082,7 +2411,8 @@ export default function Timetable() {
             .from("timetable_entries")
             .delete()
             .eq("school_id", schoolId)
-            .eq("academic_year_id", selectedAcademicYearId);
+            .eq("academic_year_id", selectedAcademicYearId)
+            .in("class_id", yearClasses.map((item) => item.id));
         }
 
         if (previousEntries.length > 0) {
@@ -2104,7 +2434,7 @@ export default function Timetable() {
 
       // The database now contains exactly the validated candidate. Reload it
       // so the UI uses the same records that teachers/principals will see.
-      await loadSavedConfiguration(schoolId, selectedAcademicYearId);
+      await loadSavedConfiguration(schoolId, selectedAcademicYearId, activeSection.id);
       setGeneratedEntries(
         result.map((entry, index) => ({
           ...entry,
@@ -2157,7 +2487,6 @@ export default function Timetable() {
     return (
       <TeacherTimetableView
         schoolId={schoolId}
-        teacherId={teacherId}
         role={role}
         isTeacher={isTeacher}
         academicYears={academicYears}
@@ -2175,11 +2504,12 @@ export default function Timetable() {
             Academic planning
           </p>
           <h1 className="mt-1 text-2xl font-semibold text-slate-900">
-            Timetable Setup
+            School Timetable
           </h1>
           <p className="mt-1 max-w-3xl text-sm text-slate-500">
-            Prepare the school structure, scheduling rules and constraints, then
-            generate the whole-school timetable.
+            {timetableMode === "routine"
+              ? "Configure daily care and learning routines for Creche and Nursery classes."
+              : "Manage formal subject timetables for the selected academic section."}
           </p>
         </div>
         <div className="flex flex-wrap items-end gap-3">
@@ -2192,59 +2522,92 @@ export default function Timetable() {
               label: `${year.name}${year.is_active ? " • Active" : ""}`,
             }))}
           />
-          <button
-            type="button"
-            onClick={() => void saveSetup()}
-            disabled={saving || !selectedAcademicYearId}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
-          >
-            <Save size={16} />
-            {saving ? "Saving..." : "Save Setup"}
-          </button>
+          {timetableMode === "academic" && (
+            <button
+              type="button"
+              onClick={() => void saveSetup()}
+              disabled={saving || !selectedAcademicYearId || yearClasses.length === 0}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50"
+            >
+              <Save size={16} />
+              {saving ? "Saving..." : "Save Setup"}
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="mt-6 overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="grid min-w-[980px] grid-cols-5">
-          {[
-            {
-              n: 1,
-              title: "Academic Structure",
-              desc: "Classes, subjects, teachers",
-            },
-            {
-              n: 2,
-              title: "Lesson Assignments",
-              desc: "Teacher + weekly lessons",
-            },
-            {
-              n: 3,
-              title: "School Schedule",
-              desc: "Days, periods and breaks",
-            },
-            {
-              n: 4,
-              title: "Priority Lessons",
-              desc: "Fixed or preferred slots",
-            },
-            {
-              n: 5,
-              title: "Generate & Review",
-              desc: "Whole-school timetable",
-            },
-          ].map((item) => (
-            <Step
-              key={item.n}
-              number={String(item.n)}
-              title={item.title}
-              description={item.desc}
-              active={step === item.n}
-              completed={step > item.n}
-              onClick={() => void goToStep(item.n)}
-            />
-          ))}
-        </div>
-      </div>
+      {(routineSectionTabs.length > 0 || academicSectionTabs.length > 0) && (
+        <section className="mt-6 rounded-xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
+          <div className="grid gap-2 sm:grid-cols-2">
+            {routineSectionTabs.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setTimetableMode("routine");
+                  setSelectedSectionId(routineSectionTabs[0]?.id ?? "");
+                  setError("");
+                  setSuccess("");
+                }}
+                className={`flex items-center gap-3 rounded-lg border px-4 py-3 text-left transition ${timetableMode === "routine" ? "border-indigo-200 bg-indigo-50 text-indigo-700" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
+              >
+                <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${timetableMode === "routine" ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-500"}`}>
+                  <Clock3 size={19} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-semibold">Routine timetable</span>
+                  <span className="mt-0.5 block text-xs opacity-80">Creche and Nursery daily routines</span>
+                </span>
+                <span className="rounded-full bg-white/80 px-2 py-1 text-xs font-semibold">{routineSectionTabs.length}</span>
+              </button>
+            )}
+            {academicSectionTabs.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setTimetableMode("academic");
+                  setSelectedSectionId(academicSectionTabs[0]?.id ?? "");
+                  setError("");
+                  setSuccess("");
+                }}
+                className={`flex items-center gap-3 rounded-lg border px-4 py-3 text-left transition ${timetableMode === "academic" ? "border-indigo-200 bg-indigo-50 text-indigo-700" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}
+              >
+                <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${timetableMode === "academic" ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-500"}`}>
+                  <BookOpen size={19} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-semibold">Academic timetable</span>
+                  <span className="mt-0.5 block text-xs opacity-80">Subjects, teachers and lesson periods</span>
+                </span>
+                <span className="rounded-full bg-white/80 px-2 py-1 text-xs font-semibold">{academicSectionTabs.length}</span>
+              </button>
+            )}
+          </div>
+          {activeModeSections.length > 0 && (
+            <div className="mt-3 flex gap-2 overflow-x-auto border-t border-slate-100 pt-3">
+              {activeModeSections.map((section) => (
+                <button
+                  key={section.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedSectionId(section.id);
+                    setError("");
+                    setSuccess("");
+                  }}
+                  className={`shrink-0 rounded-lg px-4 py-2 text-sm font-semibold transition ${activeSection?.id === section.id ? "bg-indigo-600 text-white shadow-sm" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+                >
+                  {section.label}
+                </button>
+              ))}
+            </div>
+          )}
+          {activeSection && (
+            <p className="mt-3 text-xs text-slate-500">
+              Showing {activeSection.label} {timetableMode === "routine" ? "routine" : "academic schedule"} for {selectedAcademicYearId ? academicYears.find((year) => year.id === selectedAcademicYearId)?.name ?? "the selected academic year" : "the selected academic year"}.
+            </p>
+          )}
+        </section>
+      )}
+
       {error && (
         <div className="mt-5 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           <AlertCircle size={18} className="mt-0.5 shrink-0" />
@@ -2258,6 +2621,55 @@ export default function Timetable() {
         </div>
       )}
 
+      {sectionTabs.length === 0 ? (
+        <div className="mt-6 rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center">
+          <School size={28} className="mx-auto text-slate-400" />
+          <h2 className="mt-3 text-base font-semibold text-slate-800">No timetable sections configured</h2>
+          <p className="mx-auto mt-1 max-w-lg text-sm text-slate-500">MojaSchool could not find any enabled academic sections for {academicYears.find((year) => year.id === selectedAcademicYearId)?.name ?? "the selected academic year"}. Check the school's section configuration and Academic Settings.</p>
+        </div>
+      ) : timetableMode === "routine" ? (
+        activeSection ? (
+          <CrecheRoutineAdminSettings
+            schoolId={schoolId}
+            academicYearId={selectedAcademicYearId}
+            classes={yearClasses}
+            sectionName={activeSection.name}
+          />
+        ) : (
+          <div className="mt-6 rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center">
+            <Clock3 size={28} className="mx-auto text-slate-400" />
+            <h2 className="mt-3 text-base font-semibold text-slate-800">No routine sections configured</h2>
+            <p className="mt-1 text-sm text-slate-500">Ask the school administrator to enable Creche or Nursery in the school's section configuration for this academic year.</p>
+          </div>
+        )
+      ) : (
+        <>
+          <div className="mt-6 overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="grid min-w-[980px] grid-cols-5">
+              {[
+                { n: 1, title: "Academic Structure", desc: "Classes, subjects, teachers" },
+                { n: 2, title: "Lesson Assignments", desc: "Teacher + weekly lessons" },
+                { n: 3, title: "School Schedule", desc: "Days, periods and breaks" },
+                { n: 4, title: "Priority Lessons", desc: "Fixed or preferred slots" },
+                { n: 5, title: "Generate & Review", desc: "Section timetable" },
+              ].map((item) => (
+                <Step
+                  key={item.n}
+                  number={String(item.n)}
+                  title={item.title}
+                  description={item.desc}
+                  active={step === item.n}
+                  completed={step > item.n}
+                  onClick={() => void goToStep(item.n)}
+                />
+              ))}
+            </div>
+          </div>
+          {yearClasses.length === 0 && (
+            <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              No active classes are assigned to {activeSection?.label ?? "this academic section"} for the selected academic year. Create or assign classes to this section first.
+            </div>
+          )}
       {step === 1 && (
         <AcademicStructureStep
           yearClasses={yearClasses}
@@ -2342,11 +2754,13 @@ export default function Timetable() {
           generationIssues={generationIssues}
           generationGuidance={generationGuidance}
           onReload={() =>
-            selectedAcademicYearId && schoolId
-              ? void loadSavedConfiguration(schoolId, selectedAcademicYearId)
+            selectedAcademicYearId && schoolId && activeSection?.id
+              ? void loadSavedConfiguration(schoolId, selectedAcademicYearId, activeSection.id)
               : undefined
           }
         />
+      )}
+        </>
       )}
     </div>
   );
@@ -3707,7 +4121,6 @@ function GenerateReviewStep({
 
 function TeacherTimetableView({
   schoolId,
-  teacherId,
   role,
   isTeacher,
   academicYears,
@@ -3716,7 +4129,6 @@ function TeacherTimetableView({
   setSelectedAcademicYearId,
 }: {
   schoolId: string;
-  teacherId: string;
   role: ReturnType<typeof normalizeRole>;
   isTeacher: boolean;
   academicYears: AcademicYear[];
@@ -3726,135 +4138,83 @@ function TeacherTimetableView({
 }) {
   const [selectedClassId, setSelectedClassId] = useState("");
   const [entries, setEntries] = useState<any[]>([]);
-  const [teacherEntries, setTeacherEntries] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [sectionLoading, setSectionLoading] = useState(true);
   const [error, setError] = useState("");
-
-  // Teachers should only see classes/years for which they actually have
-  // timetable entries. This also prevents selecting another teacher's class
-  // and accidentally viewing that class's timetable.
-  const teacherYearIds = useMemo(
-    () =>
-      new Set(
-        teacherEntries
-          .map((entry) => entry.academic_year_id)
-          .filter((id): id is string => Boolean(id)),
-      ),
-    [teacherEntries],
-  );
-
-  const teacherClassIds = useMemo(
-    () =>
-      new Set(
-        teacherEntries
-          .filter(
-            (entry) =>
-              !selectedAcademicYearId ||
-              entry.academic_year_id === selectedAcademicYearId,
-          )
-          .map((entry) => entry.class_id)
-          .filter((id): id is string => Boolean(id)),
-      ),
-    [teacherEntries, selectedAcademicYearId],
-  );
-
-  const teacherAcademicYears = useMemo(
-    () =>
-      academicYears.filter((year) =>
-        teacherYearIds.size > 0 ? teacherYearIds.has(year.id) : true,
-      ),
-    [academicYears, teacherYearIds],
-  );
-
+  const [isRoutineClass, setIsRoutineClass] = useState(false);
+  const [selectedClassSectionName, setSelectedClassSectionName] = useState("Creche");
   const availableClasses = useMemo(
     () =>
       classes.filter(
-        (item) =>
-          item.academic_year_id === selectedAcademicYearId &&
-          (teacherClassIds.size > 0 ? teacherClassIds.has(item.id) : false),
+        (item) => item.academic_year_id === selectedAcademicYearId,
       ),
-    [classes, selectedAcademicYearId, teacherClassIds],
+    [classes, selectedAcademicYearId],
   );
-
-  // First load every timetable entry assigned to this teacher. This is what
-  // determines the academic years and classes that should appear in the
-  // teacher's selectors.
-  useEffect(() => {
-    async function loadTeacherEntries() {
-      if (!schoolId || !teacherId) {
-        setTeacherEntries([]);
-        return;
-      }
-
-      setLoading(true);
-      setError("");
-
-      const { data, error: queryError } = await supabase
-        .from("timetable_entries")
-        .select(
-          "id, school_id, academic_year_id, class_id, subject_id, teacher_id, day_of_week, start_time, end_time, subjects(name), teachers(first_name, middle_name, last_name)",
-        )
-        .eq("school_id", schoolId)
-        .eq("teacher_id", teacherId)
-        .order("academic_year_id")
-        .order("day_of_week")
-        .order("start_time");
-
-      if (queryError) {
-        setTeacherEntries([]);
-        setError(getErrorMessage(queryError));
-        setLoading(false);
-        return;
-      }
-
-      setTeacherEntries(data ?? []);
-      setLoading(false);
-    }
-
-    void loadTeacherEntries();
-  }, [schoolId, teacherId]);
-
-  useEffect(() => {
-    if (!teacherAcademicYears.length) {
-      if (selectedAcademicYearId) setSelectedAcademicYearId("");
-      return;
-    }
-
-    if (!teacherAcademicYears.some((year) => year.id === selectedAcademicYearId)) {
-      setSelectedAcademicYearId(
-        teacherAcademicYears.find((year) => year.is_active)?.id ??
-          teacherAcademicYears[0].id,
-      );
-    }
-  }, [
-    teacherAcademicYears,
-    selectedAcademicYearId,
-    setSelectedAcademicYearId,
-  ]);
-
   useEffect(() => {
     if (
       !selectedClassId ||
       !availableClasses.some((item) => item.id === selectedClassId)
-    ) {
+    )
       setSelectedClassId(availableClasses[0]?.id ?? "");
-    }
   }, [availableClasses, selectedClassId]);
+  useEffect(() => {
+    let cancelled = false;
+    async function loadSectionNames() {
+      setSectionLoading(true);
+      const sectionIds = Array.from(
+        new Set(availableClasses.map((item) => item.academic_section_id).filter(Boolean)),
+      ) as string[];
+      if (!schoolId || sectionIds.length === 0) {
+        setIsRoutineClass(false);
+        setSelectedClassSectionName("");
+        setSectionLoading(false);
+        return;
+      }
+      const { data, error: sectionError } = await supabase
+        .from("academic_sections")
+        .select("id, name")
+        .eq("school_id", schoolId)
+        .in("id", sectionIds);
+      if (cancelled) return;
+      if (sectionError) {
+        setError(getErrorMessage(sectionError));
+        setSectionLoading(false);
+        return;
+      }
+      const names = Object.fromEntries((data ?? []).map((section: any) => [section.id, section.name]));
+      const selected = availableClasses.find((item) => item.id === selectedClassId);
+      const sectionName = selected?.academic_section_id ? names[selected.academic_section_id] : "";
+      setSelectedClassSectionName(String(sectionName ?? ""));
+      setIsRoutineClass(isRoutineSectionName(sectionName));
+      setSectionLoading(false);
+    }
+    void loadSectionNames();
+    return () => { cancelled = true; };
+  }, [schoolId, availableClasses, selectedClassId]);
 
   useEffect(() => {
-    if (!selectedClassId || !selectedAcademicYearId) {
-      setEntries([]);
-      return;
+    async function load() {
+      if (!schoolId || !selectedAcademicYearId || !selectedClassId) {
+        setEntries([]);
+        return;
+      }
+      setLoading(true);
+      setError("");
+      const { data, error: queryError } = await supabase
+        .from("timetable_entries")
+        .select(
+          "id, class_id, subject_id, teacher_id, day_of_week, start_time, end_time, subjects(name), teachers(first_name, middle_name, last_name)",
+        )
+        .eq("school_id", schoolId)
+        .eq("academic_year_id", selectedAcademicYearId)
+        .eq("class_id", selectedClassId)
+        .order("start_time");
+      if (queryError) setError(getErrorMessage(queryError));
+      setEntries(data ?? []);
+      setLoading(false);
     }
-
-    setEntries(
-      teacherEntries.filter(
-        (entry) =>
-          entry.academic_year_id === selectedAcademicYearId &&
-          entry.class_id === selectedClassId,
-      ),
-    );
-  }, [teacherEntries, selectedAcademicYearId, selectedClassId]);
+    void load();
+  }, [schoolId, selectedAcademicYearId, selectedClassId]);
   const grouped = useMemo(() => {
     const result: Record<string, any[]> = {};
     DAYS.slice(0, 5).forEach((day) => {
@@ -3872,29 +4232,42 @@ function TeacherTimetableView({
           <h1 className="text-2xl font-semibold text-slate-900">Timetable</h1>
           <p className="mt-1 text-sm text-slate-500">
             {isTeacher
-              ? "View your assigned class timetable."
+              ? isRoutineClass
+                ? `View the schedule for your assigned ${sectionTabLabel(selectedClassSectionName)} class, including its daily routine.`
+                : "View your assigned class timetable."
               : `View the school's timetable as ${role}.`}
           </p>
         </div>
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <SelectField
-            label="Academic Year"
-            value={selectedAcademicYearId}
-            onChange={setSelectedAcademicYearId}
-            options={teacherAcademicYears.map((year) => ({
-              value: year.id,
-              label: `${year.name}${year.is_active ? " • Active" : ""}`,
-            }))}
-          />
-          <SelectField
-            label="Class"
-            value={selectedClassId}
-            onChange={setSelectedClassId}
-            options={availableClasses.map((schoolClass) => ({
-              value: schoolClass.id,
-              label: schoolClass.name,
-            }))}
-          />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          {academicYears.length > 1 && (
+            <SelectField
+              label="Academic Year"
+              value={selectedAcademicYearId}
+              onChange={setSelectedAcademicYearId}
+              options={academicYears.map((year) => ({
+                value: year.id,
+                label: year.name,
+              }))}
+            />
+          )}
+          {availableClasses.length > 1 ? (
+            <SelectField
+              label="Assigned class"
+              value={selectedClassId}
+              onChange={setSelectedClassId}
+              options={availableClasses.map((schoolClass) => ({
+                value: schoolClass.id,
+                label: schoolClass.name,
+              }))}
+            />
+          ) : (
+            <div className="min-w-[180px] rounded-lg border border-slate-200 bg-white px-3 py-2">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Assigned class</p>
+              <p className="mt-0.5 text-sm font-semibold text-slate-800">
+                {availableClasses[0]?.name ?? "No assigned class"}
+              </p>
+            </div>
+          )}
         </div>
       </div>
       {error && (
@@ -3902,11 +4275,31 @@ function TeacherTimetableView({
           {error}
         </div>
       )}
-      {loading ? (
+      {isRoutineClass && (
+        <section className="mt-5 rounded-xl border border-indigo-100 bg-white p-4 shadow-sm sm:p-5">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">{sectionTabLabel(selectedClassSectionName)} daily routine</p>
+              <h2 className="mt-1 text-lg font-semibold text-slate-900">Care periods for {availableClasses.find((item) => item.id === selectedClassId)?.name ?? "your class"}</h2>
+              <p className="mt-1 text-sm text-slate-500">Configured routine times for this assigned class. The school can update these periods in Timetable Setup.</p>
+            </div>
+            <span className="mt-2 inline-flex w-fit rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700">Assigned class only</span>
+          </div>
+          <CrecheRoutinePanel
+            schoolId={schoolId}
+            academicYearId={selectedAcademicYearId}
+            classId={selectedClassId}
+            sectionName={selectedClassSectionName}
+            canEdit={false}
+            compact
+          />
+        </section>
+      )}
+      {loading || sectionLoading ? (
         <div className="mt-6 flex min-h-[260px] items-center justify-center rounded-xl border border-slate-200 bg-white">
           <p className="text-sm text-slate-500">Loading timetable...</p>
         </div>
-      ) : (
+      ) : !isRoutineClass ? (
         <div className="mt-6 overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
           <div className="grid min-w-[1100px] grid-cols-5 divide-x divide-slate-200">
             {DAYS.slice(0, 5).map((day) => (
@@ -3914,7 +4307,7 @@ function TeacherTimetableView({
                 <div className="border-b border-slate-200 bg-slate-50 px-4 py-3">
                   <p className="text-sm font-semibold text-slate-800">{day}</p>
                   <p className="mt-0.5 text-xs text-slate-400">
-                    {grouped[day]?.length ?? 0} lessons
+                    {grouped[day]?.length ?? 0} {isRoutineClass ? "scheduled items" : "lessons"}
                   </p>
                 </div>
                 <div className="space-y-3 p-3">
@@ -3936,7 +4329,7 @@ function TeacherTimetableView({
                             {formatTime(entry.end_time)}
                           </p>
                           <p className="mt-2 text-sm font-semibold text-slate-800">
-                            {subject?.name ?? "Subject"}
+                            {subject?.name ?? (isRoutineClass ? "Scheduled activity" : "Subject")}
                           </p>
                           <p className="mt-1 text-xs text-slate-500">
                             {getFullName(teacher ?? {})}
@@ -3946,7 +4339,9 @@ function TeacherTimetableView({
                     })
                   ) : (
                     <div className="py-12 text-center text-xs text-slate-400">
-                      No lessons
+                      {isRoutineClass
+                        ? "No timetable entries for this day yet. Use the daily routine above as a guide."
+                        : "No lessons scheduled for this day."}
                     </div>
                   )}
                 </div>
@@ -3954,8 +4349,8 @@ function TeacherTimetableView({
             ))}
           </div>
         </div>
-      )}
-      <PrintableTimetable
+      ) : null}
+      {!isRoutineClass && <PrintableTimetable
         schoolName="HIGH GATE INTERNATIONAL ACADEMY"
         academicYear={
           academicYears.find((year) => year.id === selectedAcademicYearId)
@@ -3978,7 +4373,234 @@ function TeacherTimetableView({
           };
         })}
         logoUrl="/high-gate-logo.png"
-      />
+      />}
+    </div>
+  );
+}
+
+function CrecheRoutineAdminSettings({
+  schoolId,
+  academicYearId,
+  classes,
+  sectionName,
+}: {
+  schoolId: string;
+  academicYearId: string;
+  classes: SchoolClass[];
+  sectionName: string;
+}) {
+  const [selectedClassId, setSelectedClassId] = useState("");
+
+  useEffect(() => {
+    setSelectedClassId((current) =>
+      classes.some((item) => item.id === current) ? current : classes[0]?.id ?? "",
+    );
+  }, [classes]);
+
+  const activeClass = classes.find((item) => item.id === selectedClassId) ?? classes[0] ?? null;
+
+  return (
+    <section className="mt-6 rounded-xl border border-indigo-100 bg-white p-4 shadow-sm sm:p-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">{sectionTabLabel(sectionName)} routine settings</p>
+          <h2 className="mt-1 text-lg font-semibold text-slate-900">Configure daily routine periods</h2>
+          <p className="mt-1 max-w-2xl text-sm text-slate-500">Set the school's actual start and end times for this section. The saved routine is shown to teachers assigned to the selected class.</p>
+        </div>
+        {classes.length > 1 ? (
+          <label className="flex min-w-[200px] flex-col gap-1 text-xs font-medium text-slate-600">
+            {sectionTabLabel(sectionName)} class
+            <select
+              value={activeClass?.id ?? ""}
+              onChange={(event) => setSelectedClassId(event.target.value)}
+              className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-800 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+            >
+              {classes.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+            </select>
+          </label>
+        ) : (
+          <div className="min-w-[180px] rounded-lg border border-slate-200 bg-white px-3 py-2">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Assigned section</p>
+            <p className="mt-0.5 text-sm font-semibold text-slate-800">{activeClass?.name ?? "No class assigned"}</p>
+          </div>
+        )}
+      </div>
+      {activeClass ? (
+        <CrecheRoutinePanel
+          schoolId={schoolId}
+          academicYearId={academicYearId}
+          classId={activeClass.id}
+          sectionName={sectionName}
+          canEdit
+        />
+      ) : (
+        <div className="mt-5 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center">
+          <School size={26} className="mx-auto text-slate-400" />
+          <p className="mt-3 text-sm font-semibold text-slate-800">No {sectionTabLabel(sectionName)} classes yet</p>
+          <p className="mt-1 text-sm text-slate-500">Create a class and assign it to the {sectionTabLabel(sectionName)} section. It will appear here automatically.</p>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function CrecheRoutinePanel({
+  schoolId,
+  academicYearId,
+  classId,
+  sectionName = "Creche",
+  canEdit,
+  compact = false,
+}: {
+  schoolId: string;
+  academicYearId: string;
+  classId: string;
+  sectionName?: string;
+  canEdit: boolean;
+  compact?: boolean;
+}) {
+  const routines = canonicalSectionKey(sectionName) === "nursery" ? NURSERY_ROUTINES : CRECHE_ROUTINES;
+  const [records, setRecords] = useState<Record<string, CrecheRoutineRecord>>({});
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadRoutine() {
+      setError("");
+      setSuccess("");
+      if (!schoolId || !academicYearId || !classId) {
+        setRecords({});
+        return;
+      }
+      setLoading(true);
+      const { data, error: queryError } = await supabase
+        .from("creche_routine_periods")
+        .select("routine_key, start_time, end_time")
+        .eq("school_id", schoolId)
+        .eq("academic_year_id", academicYearId)
+        .eq("class_id", classId)
+        .eq("is_active", true);
+      if (cancelled) return;
+      setLoading(false);
+      if (queryError) {
+        setError(getErrorMessage(queryError));
+        setRecords({});
+        return;
+      }
+      const next: Record<string, CrecheRoutineRecord> = {};
+      for (const item of data ?? []) {
+        next[item.routine_key] = {
+          routine_key: item.routine_key,
+          start_time: normalizeTimeInput(item.start_time),
+          end_time: normalizeTimeInput(item.end_time),
+        };
+      }
+      setRecords(next);
+    }
+    void loadRoutine();
+    return () => { cancelled = true; };
+  }, [schoolId, academicYearId, classId]);
+
+  function updateTime(key: string, field: "start_time" | "end_time", value: string) {
+    setRecords((current) => ({
+      ...current,
+      [key]: {
+        routine_key: key,
+        start_time: current[key]?.start_time ?? "",
+        end_time: current[key]?.end_time ?? "",
+        [field]: value,
+      },
+    }));
+  }
+
+  async function saveRoutine() {
+    if (!schoolId || !academicYearId || !classId) return;
+    setError("");
+    setSuccess("");
+    for (const routine of routines) {
+      const row = records[routine.key];
+      const start = row?.start_time ?? "";
+      const end = row?.end_time ?? "";
+      if (Boolean(start) !== Boolean(end)) {
+        setError(`Enter both start and end times for “${routine.title}”, or leave both blank.`);
+        return;
+      }
+      if (start && end && end <= start) {
+        setError(`The end time for “${routine.title}” must be later than its start time.`);
+        return;
+      }
+    }
+    setSaving(true);
+    const payload = routines.map((routine, index) => {
+      const row = records[routine.key];
+      return {
+        school_id: schoolId,
+        academic_year_id: academicYearId,
+        class_id: classId,
+        routine_key: routine.key,
+        start_time: row?.start_time || null,
+        end_time: row?.end_time || null,
+        display_order: index + 1,
+        is_active: true,
+      };
+    });
+    const { error: saveError } = await supabase
+      .from("creche_routine_periods")
+      .upsert(payload, { onConflict: "school_id,academic_year_id,class_id,routine_key" });
+    setSaving(false);
+    if (saveError) {
+      setError(getErrorMessage(saveError));
+      return;
+    }
+    setSuccess(`${sectionTabLabel(sectionName)} routine times saved.`);
+  }
+
+  return (
+    <div className={compact ? "mt-4" : "mt-5"}>
+      {loading && <p className="mb-3 text-xs text-slate-500">Loading saved routine times...</p>}
+      {error && <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
+      {success && <div className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{success}</div>}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {routines.map((routine) => {
+          const record = records[routine.key];
+          const start = record?.start_time ?? "";
+          const end = record?.end_time ?? "";
+          const configured = Boolean(start && end);
+          return (
+            <div key={routine.key} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <p className="text-sm font-semibold text-slate-800">{routine.title}</p>
+              <p className="mt-1 text-xs leading-5 text-slate-500">{routine.detail}</p>
+              {canEdit ? (
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <label className="text-[11px] font-medium text-slate-600">
+                    Starts
+                    <input type="time" value={start} onChange={(event) => updateTime(routine.key, "start_time", event.target.value)} className="mt-1 h-9 w-full min-w-0 rounded-md border border-slate-200 bg-white px-2 text-sm text-slate-800" />
+                  </label>
+                  <label className="text-[11px] font-medium text-slate-600">
+                    Ends
+                    <input type="time" value={end} onChange={(event) => updateTime(routine.key, "end_time", event.target.value)} className="mt-1 h-9 w-full min-w-0 rounded-md border border-slate-200 bg-white px-2 text-sm text-slate-800" />
+                  </label>
+                </div>
+              ) : (
+                <p className="mt-2 text-xs font-medium text-indigo-600">
+                  {configured ? `${formatTime(start)} – ${formatTime(end)}` : "Time not configured"}
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {canEdit && (
+        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-slate-500">Leave both time fields blank when a period does not need a fixed time.</p>
+          <button type="button" onClick={() => void saveRoutine()} disabled={saving || loading || !classId || !academicYearId} className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+            <Save size={15} />{saving ? "Saving routine..." : "Save routine times"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
