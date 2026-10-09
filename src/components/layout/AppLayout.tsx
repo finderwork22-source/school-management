@@ -78,8 +78,6 @@ type NavigationChild = {
 
   path: string;
 
-  moduleKey?: string;
-
 };
 
 
@@ -95,8 +93,6 @@ type NavigationItem = {
   children?: NavigationChild[];
 
   allowedRoles?: string[];
-
-  moduleKey?: string;
 
 };
 
@@ -179,7 +175,6 @@ const navigation: NavigationSection[] = [
         icon: ShieldCheck,
 
         path: "/pickup-authorisations",
-        moduleKey: "pickup",
 
       },
 
@@ -222,7 +217,6 @@ const navigation: NavigationSection[] = [
         icon: GraduationCap,
 
         path: "/admissions",
-        moduleKey: "admissions",
 
       },
 
@@ -233,7 +227,6 @@ const navigation: NavigationSection[] = [
         icon: ShieldCheck,
 
         path: "/pickup-desk",
-        moduleKey: "pickup",
 
       },
 
@@ -244,7 +237,6 @@ const navigation: NavigationSection[] = [
         icon: History,
 
         path: "/pickup-history",
-        moduleKey: "pickup",
 
       },
 
@@ -255,7 +247,6 @@ const navigation: NavigationSection[] = [
         icon: Users,
 
         path: "/students",
-        moduleKey: "students",
 
       },
 
@@ -266,9 +257,8 @@ const navigation: NavigationSection[] = [
         icon: UserRound,
 
         path: "/parents",
-        moduleKey: "parents",
 
-        allowedRoles: ["Owner", "Principal", "Head of Academics", "Secretary"],
+        allowedRoles: ["Owner", "Principal", "Head of Academics", "Secretary", "Teacher"],
 
       },
 
@@ -279,7 +269,8 @@ const navigation: NavigationSection[] = [
         icon: GraduationCap,
 
         path: "/teachers",
-        moduleKey: "teachers",
+
+        allowedRoles: ["Owner", "Principal", "Head of Academics", "Secretary"],
 
       },
 
@@ -302,7 +293,6 @@ const navigation: NavigationSection[] = [
         icon: BookOpen,
 
         path: "/academics",
-        moduleKey: "academics",
 
       },
 
@@ -315,7 +305,6 @@ const navigation: NavigationSection[] = [
         icon: CalendarDays,
 
         path: "/timetable",
-        moduleKey: "timetable",
 
       },
 
@@ -328,7 +317,6 @@ const navigation: NavigationSection[] = [
         icon: ClipboardCheck,
 
         path: "/attendance",
-        moduleKey: "attendance",
 
         children: [
 
@@ -365,7 +353,6 @@ const navigation: NavigationSection[] = [
         icon: FileText,
 
         path: "/assessments",
-        moduleKey: "assessments",
 
         children: [
 
@@ -376,7 +363,6 @@ const navigation: NavigationSection[] = [
             icon: ClipboardCheck,
 
             path: "/student-results",
-            moduleKey: "student_results",
 
           },
 
@@ -405,7 +391,6 @@ const navigation: NavigationSection[] = [
         icon: Wallet,
 
         path: "/finance",
-        moduleKey: "finance",
 
         children: [
 
@@ -416,7 +401,6 @@ const navigation: NavigationSection[] = [
             icon: FileText,
 
             path: "/finance",
-            moduleKey: "finance",
 
           },
 
@@ -576,7 +560,7 @@ function Sidebar({
 
   const navigate = useNavigate();
 
-  const { membership, isModuleEnabled } = useSchool();
+  const { membership } = useSchool();
 
   const role = normalizeRole(membership?.role);
 
@@ -659,30 +643,13 @@ function Sidebar({
 
               if (!roleExplicitlyAllowed) return null;
 
-              if (
-                item.moduleKey &&
-                !isModuleEnabled(item.moduleKey)
-              ) {
-                return null;
-              }
-
               if (!item.children?.length) {
                 return canAccessPath(role, item.path) ? item : null;
               }
 
-              const visibleChildren = item.children.filter((child) => {
-                if (!canAccessPath(role, child.path)) {
-                  return false;
-                }
-
-                const childModuleKey =
-                  child.moduleKey ?? item.moduleKey;
-
-                return (
-                  !childModuleKey ||
-                  isModuleEnabled(childModuleKey)
-                );
-              });
+              const visibleChildren = item.children.filter((child) =>
+                canAccessPath(role, child.path),
+              );
 
               if (visibleChildren.length === 0) return null;
 
@@ -986,7 +953,7 @@ function Sidebar({
 
       </button>
 
-    </>
+    \</>
 
   );
 
@@ -1046,7 +1013,7 @@ function Sidebar({
 
       )}
 
-    </>
+    \</>
 
   );
 
@@ -1404,17 +1371,17 @@ function Header({ onOpenNavigation }: { onOpenNavigation: () => void }) {
 
     /*
 
-     * Parent announcements are loaded through the same RPC used by the
+     \* Parent announcements are loaded through the same RPC used by the
 
-     * Parent Announcements page. The RPC resolves the authenticated parent
+     \* Parent Announcements page. The RPC resolves the authenticated parent
 
-     * from auth.uid()/email, so the notification bell does not depend on
+     \* from auth.uid()/email, so the notification bell does not depend on
 
-     * reading the announcements table directly.
+     \* reading the announcements table directly.
 
-     *
+     \*
 
-     * Staff notifications still use the normal school-scoped table query.
+     \* Staff notifications still use the normal school-scoped table query.
 
      */
 
@@ -1456,17 +1423,17 @@ function Header({ onOpenNavigation }: { onOpenNavigation: () => void }) {
 
           /*
 
-           * IMPORTANT:
+           \* IMPORTANT:
 
-           * Announcements(4).tsx uses get_my_parent_announcements().
+           \* Announcements(4).tsx uses get_my_parent_announcements().
 
-           * Use the exact same RPC here. Do not use get_parent_announcements()
+           \* Use the exact same RPC here. Do not use get_parent_announcements()
 
-           * with a school_id parameter because that is a different function
+           \* with a school_id parameter because that is a different function
 
-           * signature and was causing the bell and announcement page to use
+           \* signature and was causing the bell and announcement page to use
 
-           * different data paths.
+           \* different data paths.
 
            */
 
@@ -1628,7 +1595,7 @@ function Header({ onOpenNavigation }: { onOpenNavigation: () => void }) {
 
         /*
 
-         * Staff users continue to use the normal announcements query.
+         \* Staff users continue to use the normal announcements query.
 
          */
 
@@ -1800,11 +1767,11 @@ function Header({ onOpenNavigation }: { onOpenNavigation: () => void }) {
 
     /*
 
-     * Realtime and periodic refresh are useful for staff. For parents, the
+     \* Realtime and periodic refresh are useful for staff. For parents, the
 
-     * RPC remains the source of truth; the same refresh triggers are still
+     \* RPC remains the source of truth; the same refresh triggers are still
 
-     * harmless and keep the bell current while the parent is logged in.
+     \* harmless and keep the bell current while the parent is logged in.
 
      */
 
@@ -1824,7 +1791,7 @@ function Header({ onOpenNavigation }: { onOpenNavigation: () => void }) {
 
           {
 
-            event: "*",
+            event: "\*",
 
             schema: "public",
 
@@ -2306,37 +2273,6 @@ function Header({ onOpenNavigation }: { onOpenNavigation: () => void }) {
 
 
 
-const MODULE_ROUTE_RULES: Array<{
-  prefix: string;
-  moduleKey: string;
-}> = [
-  { prefix: "/admissions", moduleKey: "admissions" },
-  { prefix: "/students", moduleKey: "students" },
-  { prefix: "/parents", moduleKey: "parents" },
-  { prefix: "/teachers", moduleKey: "teachers" },
-  { prefix: "/pickup-desk", moduleKey: "pickup" },
-  { prefix: "/pickup-history", moduleKey: "pickup" },
-  { prefix: "/pickup-authorisations", moduleKey: "pickup" },
-  { prefix: "/academic-years", moduleKey: "academics" },
-  { prefix: "/academics", moduleKey: "academics" },
-  { prefix: "/timetable", moduleKey: "timetable" },
-  { prefix: "/attendance", moduleKey: "attendance" },
-  { prefix: "/assessments", moduleKey: "assessments" },
-  { prefix: "/student-results", moduleKey: "student_results" },
-  { prefix: "/finance", moduleKey: "finance" },
-  { prefix: "/announcements", moduleKey: "announcements" },
-];
-
-function getRequiredModule(pathname: string): string | null {
-  const match = MODULE_ROUTE_RULES.find(
-    ({ prefix }) =>
-      pathname === prefix ||
-      pathname.startsWith(`${prefix}/`),
-  );
-
-  return match?.moduleKey ?? null;
-}
-
 function AccessDenied() {
 
   return (
@@ -2387,12 +2323,7 @@ function AccessDenied() {
 
 export default function AppLayout() {
 
-  const {
-    membership,
-    configuration,
-    loading: schoolLoading,
-    isModuleEnabled,
-  } = useSchool();
+  const { membership } = useSchool();
 
   const location = useLocation();
 
@@ -2400,18 +2331,7 @@ export default function AppLayout() {
 
   const hasLoadedRole = Boolean(membership?.role);
 
-  const roleAllowed =
-    !hasLoadedRole ||
-    canAccessPath(role, location.pathname);
-
-  const requiredModule = getRequiredModule(location.pathname);
-
-  const moduleAllowed =
-    !requiredModule ||
-    !configuration ||
-    isModuleEnabled(requiredModule);
-
-  const allowed = roleAllowed && moduleAllowed;
+  const allowed = !hasLoadedRole || canAccessPath(role, location.pathname);
 
 
 
@@ -2477,17 +2397,7 @@ export default function AppLayout() {
 
         <main className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-5 lg:p-8">
 
-          {schoolLoading ? (
-            <div className="flex min-h-[60vh] items-center justify-center">
-              <div className="text-sm text-slate-500">
-                Loading school configuration...
-              </div>
-            </div>
-          ) : allowed ? (
-            <Outlet />
-          ) : (
-            <AccessDenied />
-          )}
+          {allowed ? <Outlet /> : <AccessDenied />}
 
         </main>
 

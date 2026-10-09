@@ -109,14 +109,6 @@ interface Assessment {
   subjectName: string;
 }
 
-interface TeacherStats {
-  classes: number;
-  subjects: number;
-  students: number;
-  attendanceRecorded: number;
-  attendanceRate: number;
-}
-
 interface AcademicSection {
   id: string;
   name: string;
@@ -164,14 +156,6 @@ const emptyCareRecord: CareRecordForm = {
   incidentNotes: "",
   activityNotes: "",
   teacherNotes: "",
-};
-
-const initialStats: TeacherStats = {
-  classes: 0,
-  subjects: 0,
-  students: 0,
-  attendanceRecorded: 0,
-  attendanceRate: 0,
 };
 
 function getToday() {
@@ -267,10 +251,10 @@ export default function TeacherDashboard() {
   const [sectionOptions, setSectionOptions] = useState<AcademicSection[]>([]);
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
   const [activeAcademicYearId, setActiveAcademicYearId] = useState<string | null>(null);
-  const [crecheChildren, setCrecheChildren] = useState<CrecheChild[]>([]);
-  const [crecheChildrenLoading, setCrecheChildrenLoading] = useState(false);
-  const [crecheChildrenError, setCrecheChildrenError] = useState("");
-  const [crecheSearch, setCrecheSearch] = useState("");
+  const [sectionChildren, setSectionChildren] = useState<CrecheChild[]>([]);
+  const [sectionChildrenLoading, setSectionChildrenLoading] = useState(false);
+  const [sectionChildrenError, setSectionChildrenError] = useState("");
+  const [sectionChildrenSearch, setSectionChildrenSearch] = useState("");
   const [careChild, setCareChild] = useState<CrecheChild | null>(null);
   const [careDate, setCareDate] = useState(getToday());
   const [careForm, setCareForm] = useState<CareRecordForm>(emptyCareRecord);
@@ -278,10 +262,10 @@ export default function TeacherDashboard() {
   const [careSaving, setCareSaving] = useState(false);
   const [careError, setCareError] = useState("");
   const [timetable, setTimetable] = useState<TimetableEntry[]>([]);
-  const [, setAttendance] = useState<AttendanceRecord[]>([]);
+  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
+  const [enrollmentRows, setEnrollmentRows] = useState<Array<{ student_id: string; class_id: string }>>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [assessments, setAssessments] = useState<Assessment[]>([]);
-  const [stats, setStats] = useState<TeacherStats>(initialStats);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -367,12 +351,12 @@ export default function TeacherDashboard() {
         setSectionOptions([]);
         setSelectedSectionId(null);
         setActiveAcademicYearId(null);
-        setCrecheChildren([]);
+        setSectionChildren([]);
         setCareChild(null);
         setTimetable([]);
         setAttendance([]);
+        setEnrollmentRows([]);
         setAssessments([]);
-        setStats(initialStats);
         throw new Error(
           `Your account is signed in as ${user.email}, but no teacher profile in this school uses that email. ` +
             "Make sure the teacher record email matches the invited account email.",
@@ -495,9 +479,19 @@ export default function TeacherDashboard() {
 
       setAssignments(mappedAssignments);
 
+      const activeYear =
+        (yearsResult.data ?? []).find((year: any) => year.is_active) ??
+        (yearsResult.data ?? [])[0] ??
+        null;
+      const activeYearId = activeYear?.id ?? null;
+      setActiveAcademicYearId(activeYearId);
+
+      const sectionAssignments = activeYearId
+        ? mappedAssignments.filter((assignment) => assignment.academic_year_id === activeYearId)
+        : mappedAssignments;
       const distinctSectionIds = Array.from(
         new Set(
-          mappedAssignments
+          sectionAssignments
             .map((assignment) => assignment.academic_section_id)
             .filter(Boolean),
         ),
@@ -511,8 +505,8 @@ export default function TeacherDashboard() {
 
       // A teacher assigned to one section is automatically placed in that
       // section's workflow. If multiple sections are assigned, the first
-      // section is selected as the initial dashboard context and the teacher
-      // can switch context without changing assignments.
+      // section in the active academic year is selected; the teacher can
+      // switch context without changing their assignments.
       const initialSectionId =
         selectedSectionId && distinctSectionIds.includes(selectedSectionId)
           ? selectedSectionId
@@ -525,13 +519,6 @@ export default function TeacherDashboard() {
         : null;
 
       setSectionType(getDashboardSectionType(initialSectionName));
-
-      const activeYear =
-        (yearsResult.data ?? []).find((year: any) => year.is_active) ??
-        (yearsResult.data ?? [])[0] ??
-        null;
-      const activeYearId = activeYear?.id ?? null;
-      setActiveAcademicYearId(activeYearId);
 
       // These are intentionally loaded independently. A problem in an optional
       // dashboard section should not make the whole teacher dashboard unusable.
@@ -665,29 +652,12 @@ export default function TeacherDashboard() {
 
       setAssessments(mappedAssessments);
 
-      const uniqueClassIds = new Set(classIds);
-      const uniqueSubjectIds = new Set(subjectIds);
-      const uniqueStudentIds = new Set(
-        (enrollmentResult.data ?? []).map((enrollment: any) => enrollment.student_id),
+      setEnrollmentRows(
+        (enrollmentResult.data ?? []).map((enrollment: any) => ({
+          student_id: enrollment.student_id,
+          class_id: enrollment.class_id,
+        })),
       );
-      const attendanceRecords = (attendanceResult.data ?? []) as AttendanceRecord[];
-      const recordedStudents = new Set(
-        attendanceRecords.map((record) => record.student_id),
-      );
-      const present = attendanceRecords.filter(
-        (record) => record.status?.toLowerCase() === "present",
-      ).length;
-
-      setStats({
-        classes: uniqueClassIds.size,
-        subjects: uniqueSubjectIds.size,
-        students: uniqueStudentIds.size,
-        attendanceRecorded: recordedStudents.size,
-        attendanceRate:
-          recordedStudents.size > 0
-            ? (present / recordedStudents.size) * 100
-            : 0,
-      });
 
       if (optionalWarnings.length > 0) {
         setError(`Some dashboard sections could not be loaded: ${optionalWarnings.join(" • ")}`);
@@ -707,10 +677,10 @@ export default function TeacherDashboard() {
   useEffect(() => {
     let cancelled = false;
 
-    async function loadCrecheChildren() {
-      if (sectionType !== "creche" || !school?.id || !activeAcademicYearId) {
-        setCrecheChildren([]);
-        setCrecheChildrenError("");
+    async function loadAssignedChildren() {
+      if ((sectionType !== "creche" && sectionType !== "nursery") || !school?.id || !activeAcademicYearId) {
+        setSectionChildren([]);
+        setSectionChildrenError("");
         return;
       }
 
@@ -727,13 +697,13 @@ export default function TeacherDashboard() {
       );
 
       if (classIds.length === 0) {
-        setCrecheChildren([]);
-        setCrecheChildrenError("");
+        setSectionChildren([]);
+        setSectionChildrenError("");
         return;
       }
 
-      setCrecheChildrenLoading(true);
-      setCrecheChildrenError("");
+      setSectionChildrenLoading(true);
+      setSectionChildrenError("");
 
       try {
         const [enrollmentResult, classResult] = await Promise.all([
@@ -788,18 +758,18 @@ export default function TeacherDashboard() {
           new Map(children.map((child) => [child.id, child])).values(),
         ).sort((a, b) => a.name.localeCompare(b.name));
 
-        if (!cancelled) setCrecheChildren(uniqueChildren);
+        if (!cancelled) setSectionChildren(uniqueChildren);
       } catch (err) {
         if (!cancelled) {
-          setCrecheChildren([]);
-          setCrecheChildrenError(getErrorMessage(err));
+          setSectionChildren([]);
+          setSectionChildrenError(getErrorMessage(err));
         }
       } finally {
-        if (!cancelled) setCrecheChildrenLoading(false);
+        if (!cancelled) setSectionChildrenLoading(false);
       }
     }
 
-    void loadCrecheChildren();
+    void loadAssignedChildren();
     return () => {
       cancelled = true;
     };
@@ -897,26 +867,61 @@ export default function TeacherDashboard() {
     }
   }
 
-  const filteredCrecheChildren = useMemo(() => {
-    const query = crecheSearch.trim().toLowerCase();
-    if (!query) return crecheChildren;
-    return crecheChildren.filter(
+  const filteredSectionChildren = useMemo(() => {
+    const query = sectionChildrenSearch.trim().toLowerCase();
+    if (!query) return sectionChildren;
+    return sectionChildren.filter(
       (child) =>
         child.name.toLowerCase().includes(query) ||
         child.studentId.toLowerCase().includes(query) ||
         child.className.toLowerCase().includes(query),
     );
-  }, [crecheChildren, crecheSearch]);
+  }, [sectionChildren, sectionChildrenSearch]);
 
-  const selectedSectionAssignments = useMemo(() => {
-    if (!selectedSectionId) return assignments;
-    return assignments.filter(
-      (assignment) => assignment.academic_section_id === selectedSectionId,
-    );
-  }, [assignments, selectedSectionId]);
+  const selectedSectionAssignments = useMemo(
+    () => assignments.filter((assignment) =>
+      (!activeAcademicYearId || assignment.academic_year_id === activeAcademicYearId) &&
+      (!selectedSectionId || assignment.academic_section_id === selectedSectionId),
+    ),
+    [assignments, selectedSectionId, activeAcademicYearId],
+  );
+
+  const selectedClassIds = useMemo(
+    () => new Set(selectedSectionAssignments.map((assignment) => assignment.class_id)),
+    [selectedSectionAssignments],
+  );
+  const selectedSectionClassCount = selectedClassIds.size;
+  const selectedSectionSubjectCount = new Set(
+    selectedSectionAssignments.map((assignment) => assignment.subject_id).filter(Boolean),
+  ).size;
+  const selectedSectionStudentCount = new Set(
+    enrollmentRows.filter((enrollment) => selectedClassIds.has(enrollment.class_id))
+      .map((enrollment) => enrollment.student_id),
+  ).size;
+  const selectedSectionAttendance = useMemo(
+    () => attendance.filter((record) => selectedClassIds.has(record.class_id)),
+    [attendance, selectedClassIds],
+  );
+  const selectedAttendanceRecorded = new Set(
+    selectedSectionAttendance.map((record) => record.student_id),
+  ).size;
+  const selectedAttendancePresent = selectedSectionAttendance.filter(
+    (record) => record.status?.toLowerCase() === "present",
+  ).length;
+  const selectedAttendanceRate = selectedAttendanceRecorded > 0
+    ? (selectedAttendancePresent / selectedAttendanceRecorded) * 100
+    : 0;
+  const selectedSectionTimetable = useMemo(
+    () => timetable.filter((entry) => selectedClassIds.has(entry.class_id)),
+    [timetable, selectedClassIds],
+  );
+  const selectedSectionAssessments = useMemo(
+    () => assessments.filter((assessment) => selectedClassIds.has(assessment.class_id)),
+    [assessments, selectedClassIds],
+  );
 
   const sectionLabel = getSectionLabel(sectionType);
-
+  const isEarlyYears = sectionType === "creche" || sectionType === "nursery";
   const sectionDescription =
     sectionType === "creche"
       ? "Care, wellbeing, daily routines and activities for children in your care."
@@ -928,32 +933,55 @@ export default function TeacherDashboard() {
 
   const todayLessons = useMemo(
     () =>
-      timetable
+      selectedSectionTimetable
         .filter((entry) => entry.day_of_week.toLowerCase() === today.toLowerCase())
         .sort((a, b) => a.start_time.localeCompare(b.start_time)),
-    [timetable, today],
+    [selectedSectionTimetable, today],
   );
 
   const upcomingLessons = useMemo(
-    () => timetable.filter((entry) => entry.day_of_week.toLowerCase() !== today.toLowerCase()).slice(0, 5),
-    [timetable, today],
+    () => selectedSectionTimetable.filter((entry) => entry.day_of_week.toLowerCase() !== today.toLowerCase()).slice(0, 5),
+    [selectedSectionTimetable, today],
   );
 
   const attendanceLabel =
-    stats.attendanceRecorded > 0
-      ? `${stats.attendanceRecorded} students recorded today`
+    selectedAttendanceRecorded > 0
+      ? `${selectedAttendanceRecorded} students recorded today`
       : "No attendance recorded yet today";
 
-  const statCards = [
-    { label: "My classes", value: loading ? "—" : String(stats.classes), icon: GraduationCap },
-    { label: "Subjects", value: loading ? "—" : String(stats.subjects), icon: BookOpen },
-    { label: "Students", value: loading ? "—" : String(stats.students), icon: Users },
-    {
-      label: "Attendance",
-      value: loading ? "—" : `${stats.attendanceRate.toFixed(1)}%`,
-      icon: CheckCircle2,
-    },
-  ];
+  const statCards = isEarlyYears
+    ? [
+        {
+          label: sectionType === "creche" ? "Children under care" : "Nursery children",
+          value: loading || sectionChildrenLoading ? "—" : String(sectionChildren.length),
+          icon: Users,
+        },
+        {
+          label: "Assigned classes",
+          value: loading ? "—" : String(selectedSectionClassCount),
+          icon: GraduationCap,
+        },
+        {
+          label: "Attendance recorded",
+          value: loading ? "—" : String(selectedAttendanceRecorded),
+          icon: ClipboardCheck,
+        },
+        {
+          label: "Attendance rate",
+          value: loading ? "—" : `${selectedAttendanceRate.toFixed(1)}%`,
+          icon: CheckCircle2,
+        },
+      ]
+    : [
+        { label: "My classes", value: loading ? "—" : String(selectedSectionClassCount), icon: GraduationCap },
+        { label: "Subjects", value: loading ? "—" : String(selectedSectionSubjectCount), icon: BookOpen },
+        { label: "Students", value: loading ? "—" : String(selectedSectionStudentCount), icon: Users },
+        {
+          label: "Attendance",
+          value: loading ? "—" : `${selectedAttendanceRate.toFixed(1)}%`,
+          icon: CheckCircle2,
+        },
+      ];
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-[1400px]">
@@ -1015,20 +1043,24 @@ export default function TeacherDashboard() {
         </div>
       </Card>
 
-      {sectionType === "creche" && (
+      {(sectionType === "creche" || sectionType === "nursery") && (
         <Card className="mb-6 min-w-0 p-4 sm:p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <div className="flex items-center gap-2">
                 <Users size={18} className="text-indigo-500" />
-                <h2 className="text-sm font-semibold text-slate-900">Children under care</h2>
+                <h2 className="text-sm font-semibold text-slate-900">
+                  {sectionType === "creche" ? "Children under care" : "My Nursery children"}
+                </h2>
               </div>
               <p className="mt-1 text-sm text-slate-500">
-                Children currently enrolled in the Creche classes assigned to you. Open a child to record today's care.
+                {sectionType === "creche"
+                  ? "Children enrolled in your assigned Creche classes. Open a child to record today's care."
+                  : "Children enrolled in your assigned Nursery classes. Open a child to review their student profile."}
               </p>
             </div>
             <span className="inline-flex w-fit items-center rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700">
-              {crecheChildren.length} {crecheChildren.length === 1 ? "child" : "children"}
+              {sectionChildren.length} {sectionChildren.length === 1 ? "child" : "children"}
             </span>
           </div>
 
@@ -1036,32 +1068,35 @@ export default function TeacherDashboard() {
             <div className="relative min-w-0 flex-1">
               <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
-                value={crecheSearch}
-                onChange={(event) => setCrecheSearch(event.target.value)}
+                value={sectionChildrenSearch}
+                onChange={(event) => setSectionChildrenSearch(event.target.value)}
                 placeholder="Search by child name, student ID or class"
                 className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-900 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
               />
             </div>
           </div>
 
-          {crecheChildrenError && (
+          {sectionChildrenError && (
             <div className="mt-4 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">
-              {crecheChildrenError}
+              {sectionChildrenError}
             </div>
           )}
 
           <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {crecheChildrenLoading ? (
+            {sectionChildrenLoading ? (
               <div className="flex items-center gap-2 rounded-xl border border-dashed border-slate-200 px-4 py-8 text-sm text-slate-500 sm:col-span-2 lg:col-span-3">
                 <Loader2 size={16} className="animate-spin" />
                 Loading children under care...
               </div>
-            ) : filteredCrecheChildren.length > 0 ? (
-              filteredCrecheChildren.map((child) => (
+            ) : filteredSectionChildren.length > 0 ? (
+              filteredSectionChildren.map((child) => (
                 <button
                   key={child.id}
                   type="button"
-                  onClick={() => void openCareRecord(child)}
+                  onClick={() => {
+                    if (sectionType === "creche") void openCareRecord(child);
+                    else navigate(`/students/${child.id}`);
+                  }}
                   className="group flex min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 text-left transition hover:border-indigo-200 hover:bg-indigo-50/40 hover:shadow-sm"
                 >
                   {child.photoUrl ? (
@@ -1077,7 +1112,7 @@ export default function TeacherDashboard() {
                       {child.studentId} • {child.className}
                     </p>
                     <span className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-indigo-600 group-hover:text-indigo-700">
-                      Open daily care <ArrowUpRight size={12} />
+                      {sectionType === "creche" ? "Open daily care" : "View child profile"} <ArrowUpRight size={12} />
                     </span>
                   </div>
                 </button>
@@ -1131,6 +1166,39 @@ export default function TeacherDashboard() {
         ))}
       </div>
 
+      {isEarlyYears && (
+        <Card className="mt-6 min-w-0 p-4 sm:p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Today's focus</p>
+              <h2 className="mt-1 text-base font-semibold text-slate-900">
+                {sectionType === "creche" ? "Care, comfort and daily routines" : "Early learning and child development"}
+              </h2>
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-500">
+                {sectionType === "creche"
+                  ? "Record attendance, mood, meals, rest, activities and handover notes for children assigned to your class."
+                  : "Focus on attendance, play-based learning, classroom activities and observations for children assigned to your class."}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" onClick={() => navigate("/attendance")}>
+                <ClipboardCheck size={15} />
+                Take attendance
+              </Button>
+              <Button type="button" variant="secondary" onClick={() => navigate("/timetable")}>
+                <CalendarDays size={15} />
+                View daily routine
+              </Button>
+              <Button type="button" variant="secondary" onClick={() => navigate("/parents")}>
+                <Users size={15} />
+                Parents & guardians
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {!isEarlyYears && (
       <div className="mt-6 grid min-w-0 gap-6 xl:grid-cols-3">
         <Card className="min-w-0 p-4 sm:p-6 xl:col-span-2">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -1223,6 +1291,9 @@ export default function TeacherDashboard() {
         </Card>
       </div>
 
+      )}
+
+      {!isEarlyYears && (
       <div className="mt-6 grid min-w-0 gap-6 lg:grid-cols-2">
         <Card className="min-w-0 p-4 sm:p-6">
           <div className="flex items-start justify-between gap-4">
@@ -1236,7 +1307,7 @@ export default function TeacherDashboard() {
           <div className="mt-6 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <div className="text-4xl font-semibold tracking-tight text-slate-900">
-                {loading ? "—" : `${stats.attendanceRate.toFixed(1)}%`}
+                {loading ? "—" : `${selectedAttendanceRate.toFixed(1)}%`}
               </div>
               <p className="mt-1 text-sm text-slate-500">{loading ? "Loading..." : attendanceLabel}</p>
             </div>
@@ -1248,7 +1319,7 @@ export default function TeacherDashboard() {
           <div className="mt-5 h-2 overflow-hidden rounded-full bg-slate-100">
             <div
               className="h-full rounded-full bg-indigo-600 transition-all duration-500"
-              style={{ width: `${Math.min(100, Math.max(0, stats.attendanceRate))}%` }}
+              style={{ width: `${Math.min(100, Math.max(0, selectedAttendanceRate))}%` }}
             />
           </div>
         </Card>
@@ -1268,8 +1339,8 @@ export default function TeacherDashboard() {
                 <Loader2 size={16} className="animate-spin" />
                 Loading assessments...
               </div>
-            ) : assessments.length > 0 ? (
-              assessments.slice(0, 4).map((assessment) => (
+            ) : selectedSectionAssessments.length > 0 ? (
+              selectedSectionAssessments.slice(0, 4).map((assessment) => (
                 <div key={assessment.id} className="flex min-w-0 items-center gap-3 rounded-lg border border-slate-200 p-3">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
                     <BookOpen size={16} />
@@ -1303,7 +1374,10 @@ export default function TeacherDashboard() {
         </Card>
       </div>
 
+      )}
+
       <div className="mt-6 grid min-w-0 gap-6 xl:grid-cols-3">
+        {!isEarlyYears && (
         <Card className="min-w-0 p-4 sm:p-6 xl:col-span-2">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
@@ -1334,6 +1408,7 @@ export default function TeacherDashboard() {
             )}
           </div>
         </Card>
+        )}
 
         <Card className="min-w-0 p-4 sm:p-6">
           <div className="flex items-start justify-between gap-4">
@@ -1383,7 +1458,7 @@ export default function TeacherDashboard() {
             <ClipboardCheck size={15} />
             Take attendance
           </Button>
-          {sectionType !== "creche" && sectionType !== "nursery" && (
+          {!isEarlyYears && (
             <>
               <Button type="button" size="sm" variant="secondary" onClick={() => navigate("/assessments")}>
                 <BookOpen size={15} />

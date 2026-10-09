@@ -32,6 +32,74 @@ import Card from "../components/ui/Card";
 import Avatar from "../components/ui/Avatar";
 import PageHeader from "../components/ui/PageHeader";
 
+
+async function getParentsForTeacherAssignments(schoolId: string): Promise<{
+  data: Parent[];
+  error: Error | null;
+}> {
+  const { data, error } = await supabase.rpc("get_teacher_parent_contacts", {
+    p_school_id: schoolId,
+  });
+
+  if (error) {
+    return {
+      data: [],
+      error,
+    };
+  }
+
+  type ParentContactRow = {
+    parent_id: string;
+    parent_name: string;
+    parent_user_id: string | null;
+    parent_phone: string | null;
+    parent_email: string | null;
+    parent_address: string | null;
+    child_id: string;
+    child_name: string;
+    student_id: string | null;
+    class_name: string | null;
+  };
+
+  const grouped = new Map<string, Parent>();
+  for (const row of (data ?? []) as ParentContactRow[]) {
+    if (!row.parent_id || !row.child_id) continue;
+
+    let parent = grouped.get(row.parent_id);
+    if (!parent) {
+      parent = {
+        id: row.parent_id,
+        user_id: row.parent_user_id ?? null,
+        name: row.parent_name || "Parent / Guardian",
+        phone: row.parent_phone ?? null,
+        email: row.parent_email ?? null,
+        address: row.parent_address ?? null,
+        childrenCount: 0,
+        children: [],
+      };
+      grouped.set(row.parent_id, parent);
+    }
+
+    if (!parent.children.some((child) => child.id === row.child_id)) {
+      parent.children.push({
+        id: row.child_id,
+        name: row.child_name || "Student",
+        studentId: row.student_id ?? "—",
+        className: row.class_name ?? "Assigned class",
+      });
+    }
+  }
+
+  const parents = Array.from(grouped.values()).map((parent) => ({
+    ...parent,
+    childrenCount: parent.children.length,
+    children: parent.children.sort((a, b) => a.name.localeCompare(b.name)),
+  }));
+  parents.sort((a, b) => a.name.localeCompare(b.name));
+
+  return { data: parents, error: null };
+}
+
 export default function Parents() {
   const { school } = useSchool();
 
@@ -52,8 +120,17 @@ export default function Parents() {
   const [invitingParentId, setInvitingParentId] = useState<string | null>(null);
 
   const [inviteMessage, setInviteMessage] = useState("");
+  const [currentRole, setCurrentRole] = useState("");
+  const [roleResolved, setRoleResolved] = useState(false);
+  const normalizedRole = currentRole.trim().toLowerCase().replaceAll("_", " ");
+  const isTeacher = normalizedRole === "teacher";
+  const canManageParents = ["owner", "principal", "head of academics", "secretary"].includes(normalizedRole);
 
   async function handleInviteParent(parent: Parent) {
+    if (!canManageParents) {
+      setError("You do not have permission to manage parent accounts.");
+      return;
+    }
     setError("");
     setInviteMessage("");
 
@@ -155,15 +232,54 @@ export default function Parents() {
       setLoading(true);
       setError("");
 
-      const { data, error: parentsError } = await getParents(school.id);
+      setRoleResolved(false);
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError) {
+        setError(authError.message);
+        setParents([]);
+        setLoading(false);
+        setRoleResolved(true);
+        return;
+      }
+      if (!authData.user) {
+        setError("You must be signed in to view parents.");
+        setParents([]);
+        setLoading(false);
+        setRoleResolved(true);
+        return;
+      }
 
-      if (parentsError) {
-        console.error("Failed to load parents:", parentsError);
+      const { data: membership, error: membershipError } = await supabase
+        .from("school_members")
+        .select("role")
+        .eq("school_id", school.id)
+        .eq("user_id", authData.user.id)
+        .maybeSingle();
+      if (membershipError) {
+        setError(membershipError.message);
+        setParents([]);
+        setLoading(false);
+        setRoleResolved(true);
+        return;
+      }
 
-        setError(parentsError.message);
+      const role = membership?.role ?? "";
+      setCurrentRole(role);
+      setRoleResolved(true);
+      const normalizedRole = role.trim().toLowerCase().replaceAll("_", " ");
+      const managementRoles = ["owner", "principal", "head of academics", "secretary"];
+      const result = normalizedRole === "teacher"
+        ? await getParentsForTeacherAssignments(school.id)
+        : managementRoles.includes(normalizedRole)
+          ? await getParents(school.id)
+          : { data: [], error: new Error("You do not have permission to view parent contacts.") };
+
+      if (result.error) {
+        console.error("Failed to load parents:", result.error);
+        setError(result.error.message);
         setParents([]);
       } else {
-        setParents(data);
+        setParents(result.data);
       }
 
       setLoading(false);
@@ -199,17 +315,19 @@ export default function Parents() {
         <PageHeader
           eyebrow="School"
           title="Parents"
-          description="Manage parents and guardians linked to your students."
+          description={isTeacher
+            ? "View contact details for the parents and guardians of students in your assigned classes."
+            : "Manage parents and guardians linked to your students."}
         />
 
-        <button
+        {roleResolved && canManageParents && <button
           type="button"
           onClick={() => setShowAddParent(true)}
           className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-indigo-700"
         >
           <UserPlus size={17} />
           Add parent
-        </button>
+        </button>}
       </div>
 
       <Card className="overflow-hidden">
@@ -249,7 +367,7 @@ export default function Parents() {
           </div>
         )}
 
-        {inviteMessage && (
+        {roleResolved && canManageParents && inviteMessage && (
           <div className="border-b border-emerald-100 bg-emerald-50 px-5 py-3">
             <div className="flex items-center gap-2 text-sm text-emerald-700">
               <CheckCircle2 size={16} />
@@ -313,37 +431,39 @@ export default function Parents() {
                     </span>
                   </div>
 
-                  {parent.user_id ? (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
-                      <CheckCircle2 size={13} />
-                      Active
-                    </span>
-                  ) : parent.email ? (
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        void handleInviteParent(parent);
-                      }}
-                      disabled={invitingParentId === parent.id}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {invitingParentId === parent.id ? (
-                        <>
-                          <Loader2 size={13} className="animate-spin" />
-                          Sending...
-                        </>
-                      ) : (
-                        <>
-                          <Send size={13} />
-                          Invite Parent
-                        </>
-                      )}
-                    </button>
-                  ) : (
-                    <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
-                      No email
-                    </span>
+                  {roleResolved && canManageParents && (
+                    parent.user_id ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
+                        <CheckCircle2 size={13} />
+                        Active
+                      </span>
+                    ) : parent.email ? (
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void handleInviteParent(parent);
+                        }}
+                        disabled={invitingParentId === parent.id}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {invitingParentId === parent.id ? (
+                          <>
+                            <Loader2 size={13} className="animate-spin" />
+                            Sending...
+                          </>
+                        ) : (
+                          <>
+                            <Send size={13} />
+                            Invite Parent
+                          </>
+                        )}
+                      </button>
+                    ) : (
+                      <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
+                        No email
+                      </span>
+                    )
                   )}
                 </div>
 
@@ -365,7 +485,7 @@ export default function Parents() {
                 </h3>
 
                 <p className="mt-1 text-sm text-slate-500">
-                  Try changing your search.
+                  {isTeacher ? "No parent contacts are linked to students in your active class assignments." : "Try changing your search."}
                 </p>
               </div>
             )}
@@ -373,7 +493,7 @@ export default function Parents() {
         )}
       </Card>
 
-      {showAddParent && school && (
+      {roleResolved && canManageParents && showAddParent && school && (
         <AddParentModal
           schoolId={school.id}
           onClose={() => setShowAddParent(false)}
@@ -397,11 +517,14 @@ export default function Parents() {
         <ParentDetails
           parent={selectedParent}
           onClose={() => setSelectedParent(null)}
-          onEdit={() => setEditingParent(selectedParent)}
+          readOnly={isTeacher}
+          onEdit={() => {
+            if (!isTeacher) setEditingParent(selectedParent);
+          }}
         />
       )}
 
-      {editingParent && school && (
+      {roleResolved && canManageParents && editingParent && school && (
         <EditParentModal
           parent={editingParent}
           schoolId={school.id}
@@ -1123,10 +1246,12 @@ function ParentDetails({
   parent,
   onClose,
   onEdit,
+  readOnly = false,
 }: {
   parent: Parent;
   onClose: () => void;
   onEdit: () => void;
+  readOnly?: boolean;
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
@@ -1146,14 +1271,16 @@ function ParentDetails({
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onEdit}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-sm font-medium text-slate-600 hover:bg-slate-50"
-            >
-              <Edit3 size={14} />
-              Edit
-            </button>
+            {!readOnly && (
+              <button
+                type="button"
+                onClick={onEdit}
+                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-sm font-medium text-slate-600 hover:bg-slate-50"
+              >
+                <Edit3 size={14} />
+                Edit
+              </button>
+            )}
 
             <button
               type="button"

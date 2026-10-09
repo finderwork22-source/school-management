@@ -80,13 +80,37 @@ const REQUESTED_ROLES = [
   { value: "teacher", label: "Teacher" },
 ];
 
+function normalizeSchoolType(value: string | null | undefined) {
+  const normalized = (value ?? "").trim().toLowerCase();
+  if (["crèche", "creche", "nursery", "crèche & nursery", "creche & nursery", "early childhood school"].includes(normalized)) return "Early Childhood School";
+  if (["primary", "primary school"].includes(normalized)) return "Primary School";
+  if (["secondary", "secondary school"].includes(normalized)) return "Secondary School";
+  if (["primary & secondary", "combined", "combined school"].includes(normalized)) return "Combined School";
+  if (normalized === "international school") return "International School";
+  if (["school", "private school", "other", ""].includes(normalized)) return "Other";
+  return "Other";
+}
+
+function suggestedSectionsForSchoolType(value: string): string[] {
+  switch (value) {
+    case "Early Childhood School": return ["creche", "nursery"];
+    case "Primary School": return ["primary"];
+    case "Secondary School": return ["lower_secondary", "upper_secondary"];
+    case "Combined School": return ["primary", "lower_secondary", "upper_secondary"];
+    case "International School":
+      // Suggested starting point only. Creche and Nursery remain optional.
+      return ["primary", "lower_secondary", "upper_secondary"];
+    default: return [];
+  }
+}
+
 export default function SetupSchool() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
   const [schoolName, setSchoolName] = useState("");
-  const [schoolType, setSchoolType] = useState("School");
-  const [selectedSections, setSelectedSections] = useState<string[]>(["primary"]);
+  const [schoolType, setSchoolType] = useState("");
+  const [selectedSections, setSelectedSections] = useState<string[]>([]);
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [address, setAddress] = useState("");
@@ -135,6 +159,20 @@ export default function SetupSchool() {
 
       if (data) {
         setApplication(data);
+        setSchoolName(data.school_name ?? "");
+        setSchoolType(normalizeSchoolType(data.school_type));
+        setPhone(data.school_phone ?? "");
+        setEmail(data.school_email ?? "");
+        setAddress(data.address ?? "");
+        setCity(data.city ?? "Kigali");
+        setCountry(data.country ?? "Rwanda");
+        setRequestedRole(data.requested_role ?? "");
+        const savedSections = Array.isArray(data.sections)
+          ? data.sections.filter((section) => section.enabled).map((section) => section.key)
+          : [];
+        setSelectedSections(savedSections.length > 0
+          ? savedSections
+          : suggestedSectionsForSchoolType(normalizeSchoolType(data.school_type)));
 
         if (data.status === "approved" && data.school_id) {
           navigate("/", { replace: true });
@@ -162,23 +200,7 @@ export default function SetupSchool() {
 
   function handleSchoolTypeChange(value: string) {
     setSchoolType(value);
-
-    if (value === "Primary School") {
-      setSelectedSections(["primary"]);
-    } else if (value === "Secondary School") {
-      setSelectedSections(["lower_secondary", "upper_secondary"]);
-    } else if (value === "Primary & Secondary") {
-      setSelectedSections(["primary", "lower_secondary", "upper_secondary"]);
-    } else if (value === "International School") {
-      setSelectedSections([
-        "creche",
-        "nursery",
-        "primary",
-        "lower_secondary",
-      ]);
-    } else if (value === "School") {
-      setSelectedSections(["primary"]);
-    }
+    setSelectedSections(suggestedSectionsForSchoolType(value));
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -193,6 +215,11 @@ export default function SetupSchool() {
 
     if (!schoolName.trim()) {
       setError("School name is required.");
+      return;
+    }
+
+    if (!schoolType) {
+      setError("Please choose a school type.");
       return;
     }
 
@@ -231,11 +258,16 @@ export default function SetupSchool() {
         city,
         address,
         requestedRole: requestedRole || null,
-        sections: selectedSections.map((key, index) => ({
-          ...SCHOOL_SECTION_PRESETS.find((section) => section.key === key)!,
-          enabled: true,
-          display_order: index + 1,
-        })),
+        sections: selectedSections.map((key, index) => {
+          const section = SCHOOL_SECTION_PRESETS.find((item) => item.key === key)!;
+          return {
+            key: section.key,
+            name: section.name,
+            description: section.description,
+            enabled: true,
+            display_order: index + 1,
+          };
+        }),
       });
 
     if (submissionError) {
@@ -415,10 +447,11 @@ export default function SetupSchool() {
                   onChange={handleSchoolTypeChange}
                   disabled={loading}
                   options={[
-                    ["School", "School"],
+                    ["", "Choose school type"],
+                    ["Early Childhood School", "Early Childhood School"],
                     ["Primary School", "Primary School"],
                     ["Secondary School", "Secondary School"],
-                    ["Primary & Secondary", "Primary & Secondary"],
+                    ["Combined School", "Combined School"],
                     ["International School", "International School"],
                     ["Other", "Other"],
                   ]}
@@ -429,7 +462,7 @@ export default function SetupSchool() {
             <OnboardingSection
               number="2"
               title="School sections / levels offered"
-              description="Select every educational section your school operates. You can have multiple sections."
+              description="Choose every section your school operates. School type suggests a starting set, but you can enable or disable any section to match your school."
               badge={`${selectedSections.length} selected`}
             >
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

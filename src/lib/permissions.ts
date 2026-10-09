@@ -52,7 +52,7 @@ export const ROLE_ACCESS: Record<UserRole, string[]> = {
     "/profile",
     "/students",
     "/students/:id",
-    "/teachers",
+    "/parents",
     "/academics",
     "/timetable",
     "/attendance",
