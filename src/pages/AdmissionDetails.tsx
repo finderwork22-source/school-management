@@ -243,6 +243,13 @@ export default function AdmissionDetails() {
   const [savingNote, setSavingNote] =
     useState(false);
 
+  const [success, setSuccess] = useState("");
+  const [showEnrollModal, setShowEnrollModal] = useState(false);
+  const [enrolling, setEnrolling] = useState(false);
+  const [parentName, setParentName] = useState("");
+  const [parentPhone, setParentPhone] = useState("");
+  const [parentEmail, setParentEmail] = useState("");
+
   const [documentType, setDocumentType] =
     useState("Birth Certificate");
 
@@ -448,6 +455,11 @@ export default function AdmissionDetails() {
       return;
     }
 
+    if (status === "Enrolled" && !application.student_id) {
+      setError("Use the Enroll Student workflow to create the student record and enrollment.");
+      return;
+    }
+
     setSavingStatus(true);
     setError("");
 
@@ -499,6 +511,64 @@ export default function AdmissionDetails() {
       );
     } finally {
       setSavingStatus(false);
+    }
+  }
+
+  async function enrollApplicant() {
+    if (!school?.id || !applicationId || !application) return;
+
+    if (application.status !== "Accepted" && application.status !== "Enrolled") {
+      setError("Accept the admission application before enrolling the student.");
+      return;
+    }
+
+    if (!application.class_id) {
+      setError("Assign the applicant to an active class before enrolling.");
+      return;
+    }
+
+    if (!parentName.trim()) {
+      setError("Parent or guardian name is required to create the student record.");
+      return;
+    }
+
+    if (parentEmail.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(parentEmail.trim())) {
+      setError("Enter a valid parent or guardian email address.");
+      return;
+    }
+
+    setEnrolling(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const { error: enrollmentError } = await supabase.rpc(
+        "enroll_admission_application",
+        {
+          p_application_id: applicationId,
+          p_parent_name: parentName.trim(),
+          p_parent_phone: parentPhone.trim() || null,
+          p_parent_email: parentEmail.trim() || null,
+        },
+      );
+
+      if (enrollmentError) throw enrollmentError;
+
+      setShowEnrollModal(false);
+      setParentName("");
+      setParentPhone("");
+      setParentEmail("");
+      setSuccess("Student record and class enrollment created successfully.");
+      await loadData();
+    } catch (caughtError) {
+      console.error("Failed to enroll admission applicant:", caughtError);
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Unable to enroll this applicant.",
+      );
+    } finally {
+      setEnrolling(false);
     }
   }
 
@@ -1071,6 +1141,13 @@ export default function AdmissionDetails() {
           />
         )}
 
+        {success && (
+          <div className="mb-5 flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+            <CheckCircle2 size={17} className="mt-0.5 shrink-0" />
+            <span>{success}</span>
+          </div>
+        )}
+
         {/* Header */}
         <div className="mb-6 rounded-xl border border-slate-200 bg-white shadow-sm">
           <div className="p-6">
@@ -1361,7 +1438,7 @@ export default function AdmissionDetails() {
                   </button>
                 </div>
               ) : (
-                <div className="overflow-hidden rounded-xl border border-slate-200">
+                <div className="relative rounded-xl border border-slate-200">
                   <div className="divide-y divide-slate-100">
                     {documents.map(
                       (document) => (
@@ -1654,43 +1731,54 @@ export default function AdmissionDetails() {
             )}
 
             {/* Enrollment */}
-            {application.status ===
-              "Accepted" && (
+            {application.status === "Accepted" && !application.student_id && (
               <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
                 <div className="flex items-start gap-3">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-emerald-600 shadow-sm">
-                    <GraduationCap
-                      size={18}
-                    />
+                    <GraduationCap size={18} />
                   </div>
-
-                  <div>
-                    <h3 className="text-sm font-semibold text-emerald-900">
-                      Ready for Enrollment
-                    </h3>
-
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-sm font-semibold text-emerald-900">Ready for Enrollment</h3>
                     <p className="mt-1 text-xs leading-5 text-emerald-700">
-                      This application has been
-                      accepted. The next step is to
-                      create the official student
-                      record and enrollment.
+                      Create the official student record, link the parent or guardian, and enroll the student in {schoolClass?.name ?? "the assigned class"}.
                     </p>
-
+                    {!application.class_id && (
+                      <p className="mt-2 text-xs font-medium text-amber-800">Assign an active class before enrollment.</p>
+                    )}
                     <button
                       type="button"
-                      disabled
-                      className="mt-4 inline-flex h-9 items-center gap-2 rounded-lg bg-emerald-600 px-3 text-xs font-semibold text-white opacity-60"
+                      onClick={() => {
+                        setParentName("");
+                        setParentPhone("");
+                        setParentEmail("");
+                        setError("");
+                        setShowEnrollModal(true);
+                      }}
+                      disabled={!application.class_id}
+                      className="mt-4 inline-flex h-9 items-center gap-2 rounded-lg bg-emerald-600 px-3 text-xs font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      <GraduationCap
-                        size={14}
-                      />
+                      <GraduationCap size={14} />
                       Enroll Student
                     </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
-                    <p className="mt-2 text-[10px] text-emerald-600">
-                      Enrollment workflow will be
-                      enabled in the next step.
-                    </p>
+            {application.status === "Enrolled" && application.student_id && (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 size={20} className="mt-0.5 shrink-0 text-emerald-600" />
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-sm font-semibold text-emerald-900">Student enrolled</h3>
+                    <p className="mt-1 text-xs leading-5 text-emerald-700">The official student record and class enrollment have been created.</p>
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/students/${application.student_id}`)}
+                      className="mt-4 inline-flex h-9 items-center gap-2 rounded-lg border border-emerald-300 bg-white px-3 text-xs font-semibold text-emerald-800 hover:bg-emerald-100"
+                    >
+                      View Student Record <ExternalLink size={13} />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -1703,29 +1791,103 @@ export default function AdmissionDetails() {
       {showUploadModal && (
         <UploadDocumentModal
           documentType={documentType}
-          setDocumentType={
-            setDocumentType
-          }
+          setDocumentType={documentTypeValue => setDocumentType(documentTypeValue)}
           documentFile={documentFile}
-          onFileChange={
-            handleDocumentFileChange
-          }
-          documentNotes={
-            documentNotes
-          }
-          setDocumentNotes={
-            setDocumentNotes
-          }
+          onFileChange={handleDocumentFileChange}
+          documentNotes={documentNotes}
+          setDocumentNotes={value => setDocumentNotes(value)}
           uploading={uploading}
-          onClose={
-            closeUploadModal
-          }
-          onUpload={() =>
-            void uploadDocument()
-          }
+          onClose={closeUploadModal}
+          onUpload={() => void uploadDocument()}
+        />
+      )}
+
+      {showEnrollModal && application && (
+        <EnrollmentModal
+          applicantName={applicantName}
+          className={schoolClass?.name ?? "Unassigned class"}
+          parentName={parentName}
+          parentPhone={parentPhone}
+          parentEmail={parentEmail}
+          setParentName={setParentName}
+          setParentPhone={setParentPhone}
+          setParentEmail={setParentEmail}
+          saving={enrolling}
+          onClose={() => setShowEnrollModal(false)}
+          onSubmit={() => void enrollApplicant()}
         />
       )}
     </>
+  );
+}
+
+/* =========================================================
+   ENROLLMENT MODAL
+========================================================= */
+
+function EnrollmentModal({
+  applicantName,
+  className,
+  parentName,
+  parentPhone,
+  parentEmail,
+  setParentName,
+  setParentPhone,
+  setParentEmail,
+  saving,
+  onClose,
+  onSubmit,
+}: {
+  applicantName: string;
+  className: string;
+  parentName: string;
+  parentPhone: string;
+  parentEmail: string;
+  setParentName: (value: string) => void;
+  setParentPhone: (value: string) => void;
+  setParentEmail: (value: string) => void;
+  saving: boolean;
+  onClose: () => void;
+  onSubmit: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-slate-950/40 p-0 sm:items-center sm:p-4">
+      <div className="flex max-h-[95vh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl">
+        <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-5 py-4 sm:px-6">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Admission enrollment</p>
+            <h2 className="mt-1 text-lg font-semibold text-slate-900">Enroll {applicantName}</h2>
+            <p className="mt-1 text-sm text-slate-500">Class: {className}</p>
+          </div>
+          <button type="button" onClick={onClose} disabled={saving} className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 disabled:opacity-50" aria-label="Close enrollment form">
+            <X size={17} />
+          </button>
+        </div>
+        <div className="space-y-4 overflow-y-auto p-5 sm:p-6">
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs leading-5 text-amber-800">
+            Enrolling creates the student record and class enrollment and links the parent/guardian. Confirm the contact details before continuing.
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-slate-700">Parent / guardian full name <span className="text-red-500">*</span></label>
+            <input value={parentName} onChange={event => setParentName(event.target.value)} required disabled={saving} autoFocus placeholder="Full name" className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 disabled:bg-slate-50" />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-slate-700">Parent / guardian phone</label>
+            <input value={parentPhone} onChange={event => setParentPhone(event.target.value)} disabled={saving} placeholder="e.g. +250 7XX XXX XXX" className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 disabled:bg-slate-50" />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-slate-700">Parent / guardian email</label>
+            <input type="email" value={parentEmail} onChange={event => setParentEmail(event.target.value)} disabled={saving} placeholder="parent@example.com" className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 disabled:bg-slate-50" />
+          </div>
+        </div>
+        <div className="flex flex-col-reverse gap-2 border-t border-slate-100 px-5 py-4 sm:flex-row sm:justify-end sm:px-6">
+          <button type="button" onClick={onClose} disabled={saving} className="h-10 rounded-lg border border-slate-200 px-4 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50">Cancel</button>
+          <button type="button" onClick={onSubmit} disabled={saving || !parentName.trim()} className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50">
+            {saving ? <><Loader2 size={15} className="animate-spin" /> Enrolling…</> : <><GraduationCap size={15} /> Create student & enroll</>}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -1850,7 +2012,11 @@ function DocumentRow({
     useState(false);
 
   return (
-    <div className="relative flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
+    <div
+      className={`relative flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between ${
+        showActions ? "z-30" : "z-0"
+      }`}
+    >
       <div className="flex min-w-0 items-start gap-3">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
           {getFileIcon(
@@ -1935,7 +2101,7 @@ function DocumentRow({
           </button>
 
           {showActions && (
-            <div className="absolute right-0 top-10 z-20 w-48 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl">
+            <div className="absolute right-0 top-10 z-[60] w-48 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl">
               {document.status !==
                 "Verified" && (
                 <button

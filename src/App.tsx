@@ -16,6 +16,7 @@ import Dashboard from "./pages/Dashboard";
 
 // School
 import Admissions from "./pages/Admissions";
+import AdmissionDetails from "./pages/AdmissionDetails";
 import Students from "./pages/Students";
 import StudentProfile from "./pages/StudentProfile";
 import Parents from "./pages/Parents";
@@ -52,7 +53,7 @@ import AcademicSettings from "./pages/AcademicSettings";
 import UsersRoles from "./pages/UsersRoles";
 import MyProfile from "./pages/MyProfile";
 
-// MojaSchool Admin
+// WISE Admin
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminApplications from "./pages/admin/AdminApplications";
 import AdminBilling from "./pages/admin/AdminBilling";
@@ -134,6 +135,7 @@ export default function App() {
 
           {/* School */}
           <Route path="admissions" element={<Admissions />} />
+          <Route path="admissions/:id" element={<AdmissionDetails />} />
           <Route path="students" element={<Students />} />
           <Route path="students/:id" element={<StudentProfile />} />
           <Route path="parents" element={<Parents />} />
