@@ -15,7 +15,7 @@ import {
   Building2,
   ShieldCheck,
 } from "lucide-react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { supabase } from "../../lib/supabase";
 
@@ -232,6 +232,7 @@ function getApplicantName(application: ApplicationRow) {
 }
 
 export default function AdminApplications() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const selectedApplicationId = searchParams.get("id");
@@ -560,6 +561,12 @@ export default function AdminApplications() {
         onUnderReview={() => void markUnderReview()}
         onApprove={() => void approveApplication()}
         onReject={() => void rejectApplication()}
+        onOpenSchoolConfiguration={() => {
+          if (!selectedApplication.school_id) return;
+          navigate(
+            `/admin/schools/${selectedApplication.school_id}/configuration?applicationId=${encodeURIComponent(selectedApplication.id)}`,
+          );
+        }}
       />
     );
   }
@@ -742,6 +749,7 @@ function ApplicationDetail({
   onUnderReview,
   onApprove,
   onReject,
+  onOpenSchoolConfiguration,
 }: {
   application: ApplicationRow;
   assignedRole: SchoolRole;
@@ -762,6 +770,7 @@ function ApplicationDetail({
   onUnderReview: () => void;
   onApprove: () => void;
   onReject: () => void;
+  onOpenSchoolConfiguration: () => void;
 }) {
   const applicantName = getApplicantName(application);
 
@@ -1027,9 +1036,21 @@ function ApplicationDetail({
                   </button>
                 </div>
               ) : (
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-                  This application has already been processed. No further action
-                  is available.
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-sm text-slate-600">
+                    This application has already been processed. You can still
+                    manage the approved school configuration.
+                  </p>
+                  {application.school_id && (
+                    <button
+                      type="button"
+                      onClick={onOpenSchoolConfiguration}
+                      className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-MojaSchoolr-600 px-4 text-sm font-semibold text-white transition hover:bg-MojaSchoolr-700"
+                    >
+                      <Building2 size={16} />
+                      Open school configuration
+                    </button>
+                  )}
                 </div>
               )}
 
