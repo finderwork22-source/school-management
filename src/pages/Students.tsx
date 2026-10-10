@@ -532,6 +532,11 @@ export default function Students() {
                         <div className="mt-0.5 break-words text-xs text-slate-400">
                           {student.parentPhone}
                         </div>
+                        {student.parentEmail && (
+                          <div className="mt-0.5 break-words text-xs text-slate-400">
+                            {student.parentEmail}
+                          </div>
+                        )}
                       </td>
 
                       <td className="px-5 py-4">
@@ -649,6 +654,10 @@ export default function Students() {
                       label="Phone"
                       value={student.parentPhone || "—"}
                     />
+                    <MobileStudentDetail
+                      label="Parent email"
+                      value={student.parentEmail || "—"}
+                    />
                   </div>
                 </div>
               ))}
@@ -730,6 +739,7 @@ type AddStudentDraft = {
   classId: string;
   parent: string;
   parentPhone: string;
+  parentEmail: string;
   gender: "Male" | "Female";
   savedAt: number;
 };
@@ -760,6 +770,7 @@ function readAddStudentDraft(storageKey: string): AddStudentDraft | null {
       classId: typeof parsed.classId === "string" ? parsed.classId : "",
       parent: typeof parsed.parent === "string" ? parsed.parent : "",
       parentPhone: typeof parsed.parentPhone === "string" ? parsed.parentPhone : "",
+      parentEmail: typeof parsed.parentEmail === "string" ? parsed.parentEmail : "",
       gender: parsed.gender === "Female" ? "Female" : "Male",
       savedAt: parsed.savedAt,
     };
@@ -804,6 +815,7 @@ function AddStudentModal({
   const [classId, setClassId] = useState(initialDraft?.classId ?? "");
   const [parent, setParent] = useState(initialDraft?.parent ?? "");
   const [parentPhone, setParentPhone] = useState(initialDraft?.parentPhone ?? "");
+  const [parentEmail, setParentEmail] = useState(initialDraft?.parentEmail ?? "");
   const [gender, setGender] = useState<"Male" | "Female">(initialDraft?.gender ?? "Male");
 
   const [saving, setSaving] = useState(false);
@@ -822,6 +834,7 @@ function AddStudentModal({
           classId ||
           parent.trim() ||
           parentPhone.trim() ||
+          parentEmail.trim() ||
           nationality.trim() !== "Rwandan" ||
           gender !== "Male",
       );
@@ -841,6 +854,7 @@ function AddStudentModal({
         classId,
         parent,
         parentPhone,
+        parentEmail,
         gender,
         savedAt: Date.now(),
       };
@@ -859,6 +873,7 @@ function AddStudentModal({
     classId,
     parent,
     parentPhone,
+    parentEmail,
     gender,
   ]);
 
@@ -879,6 +894,7 @@ function AddStudentModal({
     setClassId("");
     setParent("");
     setParentPhone("");
+    setParentEmail("");
     setGender("Male");
     setDraftRestored(false);
     setError("");
@@ -976,6 +992,7 @@ function AddStudentModal({
       p_photo_url: uploadedPhotoUrl || null,
       p_parent_name: parent.trim(),
       p_parent_phone: parentPhone.trim() || "",
+      p_parent_email: parentEmail.trim() || "",
     });
 
     if (createError) {
@@ -1250,6 +1267,15 @@ function AddStudentModal({
                   value={parentPhone}
                   onChange={setParentPhone}
                   placeholder="+250 7XX XXX XXX"
+                  type="tel"
+                />
+
+                <Field
+                  label="Email address"
+                  value={parentEmail}
+                  onChange={setParentEmail}
+                  placeholder="parent@example.com"
+                  type="email"
                 />
               </div>
             </div>
