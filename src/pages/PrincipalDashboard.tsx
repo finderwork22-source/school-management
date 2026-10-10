@@ -77,6 +77,13 @@ interface AdmissionItem {
   createdAt: string;
 }
 
+interface SchoolSection {
+  id: string;
+  academic_year_id: string;
+  name: string;
+  display_order: number;
+  is_active: boolean;
+}
 
 interface AnnouncementItem {
   id: string;
@@ -576,11 +583,35 @@ function statusClasses(status: string) {
 
 export default function PrincipalDashboard() {
   const navigate = useNavigate();
-  const { school } = useSchool();
+  const { school, configuration, isModuleEnabled } = useSchool();
+
+  const showAdmissions = isModuleEnabled("admissions");
+  const showStudents = isModuleEnabled("students");
+  const showTeachers = isModuleEnabled("teachers");
+  const showAcademics = isModuleEnabled("academics");
+  const showTimetable = isModuleEnabled("timetable");
+  const showAttendance = isModuleEnabled("attendance");
+  const showAssessments = isModuleEnabled("assessments");
+  const showStudentResults = isModuleEnabled("student_results");
+  const showAnnouncements = isModuleEnabled("announcements");
+  const moduleStateKey = JSON.stringify(configuration?.enabled_modules ?? {});
+  const showStaffCoverage = showTeachers || showAcademics;
+  const showSectionsOverview =
+    showStudents || showTeachers || showAcademics || showAttendance || showAssessments;
+  const sectionOverviewItems = [
+    showStudents ? "students" : null,
+    showAcademics ? "classes and subjects" : null,
+    showTeachers ? "teachers" : null,
+    showAttendance ? "attendance" : null,
+    showAssessments ? "academic activity" : null,
+  ].filter((item): item is string => Boolean(item));
 
   const [firstName, setFirstName] = useState("Principal");
   const [academicYearName, setAcademicYearName] = useState("");
+  const [academicYearId, setAcademicYearId] = useState("");
+  const [schoolSections, setSchoolSections] = useState<SchoolSection[]>([]);
   const [selectedSectionId, setSelectedSectionId] = useState("all");
+  const [dashboardRefreshKey, setDashboardRefreshKey] = useState(0);
   const [stats, setStats] = useState<PrincipalStats>(initialStats);
   const [attendanceTrend, setAttendanceTrend] = useState<AttendanceTrendPoint[]>([]);
   const [assessmentStatusCounts, setAssessmentStatusCounts] = useState<StatusCount[]>([]);
@@ -615,6 +646,7 @@ export default function PrincipalDashboard() {
     if (!school?.id) {
       setBaseLoading(false);
       setSupplementalLoading(false);
+      setSchoolSections([]);
       setSelectedSectionId("all");
       (Object.keys(initialSectionStatus) as SectionKey[]).forEach((key) =>
         setSection(key, "empty"),
@@ -706,6 +738,7 @@ export default function PrincipalDashboard() {
         null;
 
       setAcademicYearName(currentYear?.name ?? "");
+      setAcademicYearId(currentYear?.id ?? "");
 
       const teachers = teachersResult.data ?? [];
       const students = studentsResult.data ?? [];
@@ -725,6 +758,8 @@ export default function PrincipalDashboard() {
           student.status === "Active" &&
           student.academicYearId === currentYear?.id,
       );
+
+      setSchoolSections(yearSections);
 
       const validSectionId =
         selectedSectionId !== "all" &&
@@ -1181,7 +1216,7 @@ export default function PrincipalDashboard() {
 
           const nextActivities: ActivityItem[] = [];
 
-          for (const student of recentStudentsResult.data ?? []) {
+          for (const student of (showStudents ? recentStudentsResult.data ?? [] : [])) {
             nextActivities.push({
               id: `student-${student.id}`,
               title: "New student record",
@@ -1196,7 +1231,7 @@ export default function PrincipalDashboard() {
             });
           }
 
-          for (const announcement of announcementsResult.data ?? []) {
+          for (const announcement of (showAnnouncements ? announcementsResult.data ?? [] : [])) {
             nextActivities.push({
               id: `announcement-${announcement.id}`,
               title: "School announcement",
@@ -1260,7 +1295,14 @@ export default function PrincipalDashboard() {
     }, 5 * 60 * 1000);
 
     return () => window.clearInterval(intervalId);
-  }, [school?.id, selectedSectionId]);
+  }, [school?.id, selectedSectionId, dashboardRefreshKey, moduleStateKey]);
+
+  function handleOverviewClick() {
+    // Always return to the all-sections view. Incrementing the refresh key
+    // also forces a reload when Overview is already selected.
+    setSelectedSectionId("all");
+    setDashboardRefreshKey((current) => current + 1);
+  }
 
   async function refreshDashboard() {
     setRefreshing(true);
@@ -1292,7 +1334,7 @@ export default function PrincipalDashboard() {
   const attentionItems = useMemo<AttentionItem[]>(() => {
     const items: AttentionItem[] = [];
 
-    if (sectionStatus.attendance === "ready") {
+    if (showAttendance && sectionStatus.attendance === "ready") {
       const totalStudents = stats.enrolledStudents || stats.students;
       const unrecorded = Math.max(0, totalStudents - stats.attendanceRecorded);
 
@@ -1308,7 +1350,7 @@ export default function PrincipalDashboard() {
       }
     }
 
-    if (sectionStatus.assessments === "ready" && stats.draftAssessments > 0) {
+    if (showAssessments && sectionStatus.assessments === "ready" && stats.draftAssessments > 0) {
       items.push({
         id: "assessments",
         title: "Draft assessments",
@@ -1319,7 +1361,7 @@ export default function PrincipalDashboard() {
       });
     }
 
-    if (sectionStatus.admissions === "ready" && stats.pendingAdmissions > 0) {
+    if (showAdmissions && sectionStatus.admissions === "ready" && stats.pendingAdmissions > 0) {
       items.push({
         id: "admissions",
         title: "Admissions awaiting review",
@@ -1330,7 +1372,7 @@ export default function PrincipalDashboard() {
       });
     }
 
-    if (sectionStatus.coverage === "ready" && stats.classes > stats.coveredClasses) {
+    if (showTeachers && showAcademics && sectionStatus.coverage === "ready" && stats.classes > stats.coveredClasses) {
       const uncoveredClasses = stats.classes - stats.coveredClasses;
 
       items.push({
@@ -1346,6 +1388,11 @@ export default function PrincipalDashboard() {
     return items;
   }, [
     navigate,
+    showAttendance,
+    showAssessments,
+    showAdmissions,
+    showTeachers,
+    showAcademics,
     sectionStatus.attendance,
     sectionStatus.assessments,
     sectionStatus.admissions,
@@ -1360,12 +1407,12 @@ export default function PrincipalDashboard() {
   ]);
 
   const statCards = [
-    { label: "Students", value: baseLoading ? "—" : String(stats.enrolledStudents || stats.students), icon: Users },
-    { label: "Teachers", value: baseLoading ? "—" : String(stats.teachers), icon: GraduationCap },
-    { label: "Classes", value: baseLoading ? "—" : String(stats.classes), icon: School },
-    { label: "Attendance today", value: sectionStatus.attendance === "loading" ? "—" : sectionStatus.attendance === "error" ? "!" : formatPercent(stats.attendanceRate), icon: UserCheck },
-    { label: "Assessments", value: sectionStatus.assessments === "loading" ? "—" : sectionStatus.assessments === "error" ? "!" : String(stats.assessments), icon: ClipboardCheck },
-    { label: "Pending admissions", value: sectionStatus.admissions === "loading" ? "—" : sectionStatus.admissions === "error" ? "!" : String(stats.pendingAdmissions), icon: UserPlus },
+    ...(showStudents ? [{ label: "Students", value: baseLoading ? "—" : String(stats.enrolledStudents || stats.students), icon: Users }] : []),
+    ...(showTeachers ? [{ label: "Teachers", value: baseLoading ? "—" : String(stats.teachers), icon: GraduationCap }] : []),
+    ...(showAcademics ? [{ label: "Classes", value: baseLoading ? "—" : String(stats.classes), icon: School }] : []),
+    ...(showAttendance ? [{ label: "Attendance today", value: sectionStatus.attendance === "loading" ? "—" : sectionStatus.attendance === "error" ? "!" : formatPercent(stats.attendanceRate), icon: UserCheck }] : []),
+    ...(showAssessments ? [{ label: "Assessments", value: sectionStatus.assessments === "loading" ? "—" : sectionStatus.assessments === "error" ? "!" : String(stats.assessments), icon: ClipboardCheck }] : []),
+    ...(showAdmissions ? [{ label: "Pending admissions", value: sectionStatus.admissions === "loading" ? "—" : sectionStatus.admissions === "error" ? "!" : String(stats.pendingAdmissions), icon: UserPlus }] : []),
   ];
 
   return (
@@ -1373,7 +1420,7 @@ export default function PrincipalDashboard() {
       <PageHeader
         eyebrow={academicYearName || "Principal overview"}
         title={`${getGreeting()}, ${firstName}`}
-        description="Monitor students, staff, attendance, academic activity and daily school operations from one place."
+        description="Monitor the features enabled for your school from one place."
         actions={
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             {lastUpdatedAt && (
@@ -1390,10 +1437,12 @@ export default function PrincipalDashboard() {
               <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
               {refreshing ? "Refreshing..." : "Refresh"}
             </Button>
-            <Button type="button" onClick={() => navigate("/students")}>
-              <Users size={16} />
-              View students
-            </Button>
+            {showStudents && (
+              <Button type="button" onClick={() => navigate("/students")}>
+                <Users size={16} />
+                View students
+              </Button>
+            )}
           </div>
         }
       />
@@ -1403,6 +1452,94 @@ export default function PrincipalDashboard() {
           {error}
         </div>
       )}
+
+      <Card className={`mb-6 min-w-0 p-4 sm:p-5 ${!showSectionsOverview ? "hidden" : ""}`}>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <School size={18} className="shrink-0 text-MojaSchoolr-600" />
+              <h2 className="text-sm font-semibold text-slate-900">School sections</h2>
+            </div>
+            <p className="mt-1 text-sm text-slate-500">
+              View {sectionOverviewItems.join(", ")} by section.
+            </p>
+          </div>
+
+          <div className="flex min-w-0 flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={handleOverviewClick}
+              className={[
+                "inline-flex min-h-9 items-center rounded-lg border px-3 py-2 text-xs font-semibold transition",
+                selectedSectionId === "all"
+                  ? "border-MojaSchoolr-600 bg-MojaSchoolr-600 text-white"
+                  : "border-slate-200 bg-white text-slate-600 hover:border-MojaSchoolr-200 hover:bg-MojaSchoolr-50 hover:text-MojaSchoolr-700",
+              ].join(" ")}
+            >
+              Overview
+            </button>
+            {schoolSections.map((section) => (
+              <button
+                key={section.id}
+                type="button"
+                onClick={() => setSelectedSectionId(section.id)}
+                className={[
+                  "inline-flex min-h-9 items-center rounded-lg border px-3 py-2 text-xs font-semibold transition",
+                  selectedSectionId === section.id
+                    ? "border-MojaSchoolr-600 bg-MojaSchoolr-600 text-white"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-MojaSchoolr-200 hover:bg-MojaSchoolr-50 hover:text-MojaSchoolr-700",
+                ].join(" ")}
+              >
+                {section.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {selectedSectionId !== "all" && (
+          <div className="mt-4 flex flex-col gap-3 rounded-xl border border-MojaSchoolr-100 bg-MojaSchoolr-50/50 p-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-MojaSchoolr-600 shadow-sm">
+                <GraduationCap size={17} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-slate-900">
+                  {schoolSections.find((section) => section.id === selectedSectionId)?.name ?? "Selected section"}
+                </p>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  Section-specific dashboard data is active.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <div hidden={!showAcademics}>
+              <Button
+                size="sm"
+                variant="secondary"
+                type="button"
+                onClick={() =>
+                  navigate(
+                    `/academics?academicYearId=${encodeURIComponent(academicYearId)}&sectionId=${encodeURIComponent(selectedSectionId)}`,
+                  )
+                }
+              >
+                Manage classes
+              </Button>
+              </div>
+              <div hidden={!showTeachers}>
+              <Button
+                size="sm"
+                variant="secondary"
+                type="button"
+                onClick={() => navigate(`/teachers?sectionId=${encodeURIComponent(selectedSectionId)}`)}
+              >
+                Manage teachers
+              </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </Card>
 
       <div className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
         {statCards.map((stat) => (
@@ -1464,10 +1601,10 @@ export default function PrincipalDashboard() {
       )}
 
       {!baseLoading &&
-        sectionStatus.attendance === "ready" &&
-        sectionStatus.assessments === "ready" &&
-        sectionStatus.admissions === "ready" &&
-        sectionStatus.coverage === "ready" &&
+        (!showAttendance || sectionStatus.attendance === "ready" || sectionStatus.attendance === "empty") &&
+        (!showAssessments || sectionStatus.assessments === "ready" || sectionStatus.assessments === "empty") &&
+        (!showAdmissions || sectionStatus.admissions === "ready" || sectionStatus.admissions === "empty") &&
+        (!(showTeachers && showAcademics) || sectionStatus.coverage === "ready" || sectionStatus.coverage === "empty") &&
         attentionItems.length === 0 && (
           <Card className="mt-6 min-w-0 border-emerald-200/70 bg-emerald-50/40 p-4 sm:p-5">
             <div className="flex items-start gap-3">
@@ -1479,15 +1616,15 @@ export default function PrincipalDashboard() {
                   No pending dashboard actions
                 </h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  There are no attendance, assessment, admission or coverage items currently surfaced by this dashboard.
+                  There are no pending actions in the enabled modules currently surfaced by this dashboard.
                 </p>
               </div>
             </div>
           </Card>
         )}
 
-      <div className="mt-6 grid min-w-0 gap-6 xl:grid-cols-3">
-        <Card className="min-w-0 p-4 sm:p-6 xl:col-span-2">
+      <div hidden={!showAttendance && !showStaffCoverage} className={`mt-6 grid min-w-0 gap-6 ${showAttendance && showStaffCoverage ? "xl:grid-cols-3" : "xl:grid-cols-1"}`}>
+        <Card className={`min-w-0 p-4 sm:p-6 ${!showAttendance ? "hidden" : ""} ${showStaffCoverage ? "xl:col-span-2" : ""}`}>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0">
               <h2 className="text-sm font-semibold text-slate-900">Attendance trend</h2>
@@ -1540,11 +1677,23 @@ export default function PrincipalDashboard() {
           </div>
         </Card>
 
-        <Card className="min-w-0 p-4 sm:p-6">
+        <Card className={`min-w-0 p-4 sm:p-6 ${!showStaffCoverage ? "hidden" : ""}`}>
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <h2 className="text-sm font-semibold text-slate-900">Staff & class coverage</h2>
-              <p className="mt-1 text-sm text-slate-500">Current academic-year teaching coverage from teacher assignments.</p>
+              <h2 className="text-sm font-semibold text-slate-900">
+                {showTeachers && showAcademics
+                  ? "Staff & class coverage"
+                  : showTeachers
+                    ? "Staff coverage"
+                    : "Class coverage"}
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                {showTeachers && showAcademics
+                  ? "Current academic-year teacher assignments and class coverage."
+                  : showTeachers
+                    ? "Teacher assignments for the current academic year."
+                    : "Class coverage for the current academic year."}
+              </p>
             </div>
             <UserRoundCheck size={20} className="shrink-0 text-MojaSchoolr-600" />
           </div>
@@ -1552,16 +1701,20 @@ export default function PrincipalDashboard() {
           <div className="mt-6">
             {sectionStatus.coverage === "ready" ? (
               <div className="space-y-5">
-                <CoverageRow
-                  label="Teachers assigned"
-                  value={`${stats.assignedTeachers} of ${stats.teachers}`}
-                  percent={assignmentCoverage}
-                />
-                <CoverageRow
-                  label="Classes covered"
-                  value={`${stats.coveredClasses} of ${stats.classes}`}
-                  percent={classCoverage}
-                />
+                <div hidden={!showTeachers}>
+                  <CoverageRow
+                    label="Teachers assigned"
+                    value={`${stats.assignedTeachers} of ${stats.teachers}`}
+                    percent={assignmentCoverage}
+                  />
+                </div>
+                <div hidden={!showAcademics}>
+                  <CoverageRow
+                    label="Classes covered"
+                    value={`${stats.coveredClasses} of ${stats.classes}`}
+                    percent={classCoverage}
+                  />
+                </div>
               </div>
             ) : (
               <SectionMessage
@@ -1575,23 +1728,23 @@ export default function PrincipalDashboard() {
           </div>
 
           <div className="mt-6 grid grid-cols-2 gap-3">
-            <MiniMetric label="Subjects" value={baseLoading ? "—" : String(stats.subjects)} />
-            <MiniMetric label="Active teachers" value={baseLoading ? "—" : String(stats.teachers)} />
+            <div hidden={!showAcademics}><MiniMetric label="Subjects" value={baseLoading ? "—" : String(stats.subjects)} /></div>
+            <div hidden={!showTeachers}><MiniMetric label="Active teachers" value={baseLoading ? "—" : String(stats.teachers)} /></div>
           </div>
 
           <div className="mt-6 flex flex-wrap gap-2">
-            <Button size="sm" variant="secondary" type="button" onClick={() => navigate("/teachers")}>
+            <div hidden={!showTeachers}><Button size="sm" variant="secondary" type="button" onClick={() => navigate("/teachers")}>
               Manage teachers
-            </Button>
-            <Button size="sm" variant="secondary" type="button" onClick={() => navigate("/academics")}>
+            </Button></div>
+            <div hidden={!showAcademics}><Button size="sm" variant="secondary" type="button" onClick={() => navigate("/academics")}>
               Academics
-            </Button>
+            </Button></div>
           </div>
         </Card>
       </div>
 
-      <div className="mt-6 grid min-w-0 gap-6 lg:grid-cols-2">
-        <Card className="min-w-0 p-4 sm:p-6">
+      <div hidden={!showAssessments && !showAdmissions} className={`mt-6 grid min-w-0 gap-6 ${showAssessments && showAdmissions ? "lg:grid-cols-2" : "grid-cols-1"}`}>
+        <Card className={`min-w-0 p-4 sm:p-6 ${!showAssessments ? "hidden" : ""}`}>
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <h2 className="text-sm font-semibold text-slate-900">Academic oversight</h2>
@@ -1710,7 +1863,7 @@ export default function PrincipalDashboard() {
           </div>
         </Card>
 
-        <Card className="min-w-0 p-4 sm:p-6">
+        <Card className={`min-w-0 p-4 sm:p-6 ${!showAdmissions ? "hidden" : ""}`}>
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <h2 className="text-sm font-semibold text-slate-900">School operations</h2>
@@ -1785,8 +1938,8 @@ export default function PrincipalDashboard() {
         </Card>
       </div>
 
-      <div className="mt-6 grid min-w-0 gap-6 lg:grid-cols-2">
-        <Card className="min-w-0 p-4 sm:p-6">
+      <div hidden={!showStudents && !showAnnouncements} className={`mt-6 grid min-w-0 gap-6 ${showStudents && showAnnouncements ? "lg:grid-cols-2" : "grid-cols-1"}`}>
+        <Card className={`min-w-0 p-4 sm:p-6 ${!showStudents && !showAnnouncements ? "hidden" : ""}`}>
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <h2 className="text-sm font-semibold text-slate-900">Recent activity</h2>
@@ -1820,7 +1973,7 @@ export default function PrincipalDashboard() {
           </div>
         </Card>
 
-        <Card className="min-w-0 p-4 sm:p-6">
+        <Card className={`min-w-0 p-4 sm:p-6 ${!showAnnouncements ? "hidden" : ""}`}>
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <h2 className="text-sm font-semibold text-slate-900">School notices</h2>
@@ -1865,7 +2018,7 @@ export default function PrincipalDashboard() {
         </Card>
       </div>
 
-      <Card className="mt-6 min-w-0 p-4 sm:p-6">
+      <Card className={`mt-6 min-w-0 p-4 sm:p-6 ${!(showStudents || showTeachers || showAttendance || showAssessments || showTimetable || showStudentResults || showAdmissions || showAnnouncements) ? "hidden" : ""}`}>
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
             <h2 className="text-sm font-semibold text-slate-900">Principal quick access</h2>
@@ -1875,14 +2028,14 @@ export default function PrincipalDashboard() {
         </div>
 
         <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
-          <ActionButton label="Students" icon={<Users size={15} />} onClick={() => navigate("/students")} />
-          <ActionButton label="Teachers" icon={<GraduationCap size={15} />} onClick={() => navigate("/teachers")} />
-          <ActionButton label="Attendance" icon={<ClipboardCheck size={15} />} onClick={() => navigate("/attendance")} />
-          <ActionButton label="Assessments" icon={<BookOpen size={15} />} onClick={() => navigate("/assessments")} />
-          <ActionButton label="Timetable" icon={<CalendarDays size={15} />} onClick={() => navigate("/timetable")} />
-          <ActionButton label="Student results" icon={<CheckCircle2 size={15} />} onClick={() => navigate("/student-results")} />
-          <ActionButton label="Admissions" icon={<UserPlus size={15} />} onClick={() => navigate("/admissions")} />
-          <ActionButton label="Announcements" icon={<Megaphone size={15} />} onClick={() => navigate("/announcements")} />
+          {showStudents && <ActionButton label="Students" icon={<Users size={15} />} onClick={() => navigate("/students")} />}
+          {showTeachers && <ActionButton label="Teachers" icon={<GraduationCap size={15} />} onClick={() => navigate("/teachers")} />}
+          {showAttendance && <ActionButton label="Attendance" icon={<ClipboardCheck size={15} />} onClick={() => navigate("/attendance")} />}
+          {showAssessments && <ActionButton label="Assessments" icon={<BookOpen size={15} />} onClick={() => navigate("/assessments")} />}
+          {showTimetable && <ActionButton label="Timetable" icon={<CalendarDays size={15} />} onClick={() => navigate("/timetable")} />}
+          {showStudentResults && <ActionButton label="Student results" icon={<CheckCircle2 size={15} />} onClick={() => navigate("/student-results")} />}
+          {showAdmissions && <ActionButton label="Admissions" icon={<UserPlus size={15} />} onClick={() => navigate("/admissions")} />}
+          {showAnnouncements && <ActionButton label="Announcements" icon={<Megaphone size={15} />} onClick={() => navigate("/announcements")} />}
         </div>
       </Card>
 

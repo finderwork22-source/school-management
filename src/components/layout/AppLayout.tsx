@@ -536,6 +536,35 @@ const navigation: NavigationSection[] = [
 
 
 
+const MODULE_ROUTE_RULES: Array<{ prefix: string; moduleKey: string }> = [
+  { prefix: "/admissions", moduleKey: "admissions" },
+  { prefix: "/students", moduleKey: "students" },
+  { prefix: "/parents", moduleKey: "parents" },
+  { prefix: "/teachers", moduleKey: "teachers" },
+  { prefix: "/pickup-desk", moduleKey: "pickup" },
+  { prefix: "/pickup-history", moduleKey: "pickup" },
+  { prefix: "/pickup-authorisations", moduleKey: "pickup" },
+  { prefix: "/academics", moduleKey: "academics" },
+  { prefix: "/academic-years", moduleKey: "academics" },
+  { prefix: "/timetable", moduleKey: "timetable" },
+  { prefix: "/attendance", moduleKey: "attendance" },
+  { prefix: "/assessments", moduleKey: "assessments" },
+  { prefix: "/student-results", moduleKey: "student_results" },
+  { prefix: "/finance", moduleKey: "finance" },
+  { prefix: "/announcements", moduleKey: "announcements" },
+  { prefix: "/communications", moduleKey: "announcements" },
+  { prefix: "/library", moduleKey: "library" },
+  { prefix: "/transport", moduleKey: "transport" },
+  { prefix: "/ai-assistant", moduleKey: "ai_assistant" },
+];
+
+function getRequiredModule(pathname: string): string | null {
+  const match = MODULE_ROUTE_RULES.find(
+    ({ prefix }) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+  return match?.moduleKey ?? null;
+}
+
 function Sidebar({
 
   mobileOpen,
@@ -560,7 +589,7 @@ function Sidebar({
 
   const navigate = useNavigate();
 
-  const { membership } = useSchool();
+  const { membership, isModuleEnabled } = useSchool();
 
   const role = normalizeRole(membership?.role);
 
@@ -640,25 +669,32 @@ function Sidebar({
             .map((item) => {
               const roleExplicitlyAllowed =
                 !item.allowedRoles || item.allowedRoles.includes(role);
-
               if (!roleExplicitlyAllowed) return null;
 
+              const parentModule = getRequiredModule(item.path);
+              const parentModuleAllowed =
+                !parentModule || isModuleEnabled(parentModule);
+
               if (!item.children?.length) {
-                return canAccessPath(role, item.path) ? item : null;
+                if (!canAccessPath(role, item.path) || !parentModuleAllowed) return null;
+                return item;
               }
 
-              const visibleChildren = item.children.filter((child) =>
-                canAccessPath(role, child.path),
-              );
+              const visibleChildren = item.children.filter((child) => {
+                if (!canAccessPath(role, child.path)) return false;
+                const requiredModule = getRequiredModule(child.path) ?? parentModule;
+                return !requiredModule || isModuleEnabled(requiredModule);
+              });
 
               if (visibleChildren.length === 0) return null;
 
               return {
                 ...item,
                 children: visibleChildren,
-                path: canAccessPath(role, item.path)
-                  ? item.path
-                  : visibleChildren[0].path,
+                path:
+                  parentModuleAllowed && canAccessPath(role, item.path)
+                    ? item.path
+                    : visibleChildren[0].path,
               };
             })
             .filter(Boolean) as NavigationItem[];
@@ -2323,15 +2359,17 @@ function AccessDenied() {
 
 export default function AppLayout() {
 
-  const { membership } = useSchool();
+  const { membership, loading: schoolLoading, isModuleEnabled } = useSchool();
 
   const location = useLocation();
 
   const role = normalizeRole(membership?.role);
 
   const hasLoadedRole = Boolean(membership?.role);
-
-  const allowed = !hasLoadedRole || canAccessPath(role, location.pathname);
+  const roleAllowed = !hasLoadedRole || canAccessPath(role, location.pathname);
+  const requiredModule = getRequiredModule(location.pathname);
+  const moduleAllowed = !requiredModule || isModuleEnabled(requiredModule);
+  const allowed = roleAllowed && moduleAllowed;
 
 
 
@@ -2397,7 +2435,15 @@ export default function AppLayout() {
 
         <main className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-5 lg:p-8">
 
-          {allowed ? <Outlet /> : <AccessDenied />}
+          {schoolLoading ? (
+            <div className="flex min-h-[60vh] items-center justify-center">
+              <p className="text-sm text-slate-500">Loading school configuration...</p>
+            </div>
+          ) : allowed ? (
+            <Outlet />
+          ) : (
+            <AccessDenied />
+          )}
 
         </main>
 

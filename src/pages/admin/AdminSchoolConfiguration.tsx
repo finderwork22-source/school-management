@@ -4,7 +4,6 @@ import {
   ArrowLeft,
   Bot,
   Building2,
-  Check,
   CheckCircle2,
   GraduationCap,
   LayoutGrid,
@@ -841,7 +840,12 @@ export default function AdminSchoolConfiguration() {
             type="button"
             onClick={() => void saveConfiguration()}
             disabled={saving}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-wiser-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-wiser-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold text-white shadow-sm transition hover:brightness-95 disabled:cursor-not-allowed"
+            style={{
+              backgroundColor: saving ? "#94a3b8" : "#4f46e5",
+              color: "#ffffff",
+              opacity: saving ? 0.7 : 1,
+            }}
           >
             {saving ? (
               <Loader2 size={16} className="animate-spin" />
@@ -959,29 +963,25 @@ export default function AdminSchoolConfiguration() {
                         );
 
                         return (
-                          <button
+                          <label
                             key={module.key}
-                            type="button"
-                            onClick={() =>
-                              updateModule(module.key, !enabled)
-                            }
                             className={[
-                              "flex items-start gap-3 rounded-xl border p-4 text-left transition",
+                              "flex cursor-pointer items-start gap-3 rounded-xl border p-4 text-left transition focus-within:ring-2 focus-within:ring-emerald-500 focus-within:ring-offset-2",
                               enabled
-                                ? "border-wiser-200 bg-wiser-50/60"
-                                : "border-slate-200 bg-white hover:bg-slate-50",
+                                ? "border-emerald-300 bg-emerald-50 ring-1 ring-emerald-100"
+                                : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50",
                             ].join(" ")}
                           >
-                            <span
-                              className={[
-                                "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border",
-                                enabled
-                                  ? "border-wiser-600 bg-wiser-600 text-white"
-                                  : "border-slate-300 bg-white text-transparent",
-                              ].join(" ")}
-                            >
-                              <Check size={13} strokeWidth={3} />
-                            </span>
+                            <input
+                              type="checkbox"
+                              checked={enabled}
+                              onChange={(event) =>
+                                updateModule(module.key, event.currentTarget.checked)
+                              }
+                              aria-label={`Enable ${module.name}`}
+                              className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer accent-emerald-600 focus-visible:outline-none"
+                              style={{ accentColor: "#16a34a" }}
+                            />
 
                             <span className="min-w-0 flex-1">
                               <span className="flex items-center gap-2">
@@ -989,17 +989,14 @@ export default function AdminSchoolConfiguration() {
                                   {module.name}
                                 </span>
                                 {module.key === "ai_assistant" && (
-                                  <Sparkles
-                                    size={14}
-                                    className="text-wiser-600"
-                                  />
+                                  <Sparkles size={14} className="text-emerald-600" />
                                 )}
                               </span>
-                              <span className="mt-1 block text-xs leading-5 text-slate-500">
+                              <span className="mt-1 block text-xs leading-5 text-slate-600">
                                 {module.description}
                               </span>
                             </span>
-                          </button>
+                          </label>
                         );
                       })}
                     </div>
@@ -1069,36 +1066,32 @@ export default function AdminSchoolConfiguration() {
                       const enabled = config.sections.find((item) => item.key === section.key)?.enabled ?? false;
 
                       return (
-                        <button
+                        <label
                           key={section.key}
-                          type="button"
-                          onClick={() => toggleSchoolSection(section.key)}
                           className={[
-                            "flex items-start gap-3 rounded-xl border p-4 text-left transition",
+                            "flex cursor-pointer items-start gap-3 rounded-xl border p-4 text-left transition focus-within:ring-2 focus-within:ring-emerald-500 focus-within:ring-offset-2",
                             enabled
-                              ? "border-wiser-200 bg-white ring-1 ring-wiser-100"
-                              : "border-slate-200 bg-slate-50 hover:bg-white",
+                              ? "border-emerald-300 bg-emerald-50 ring-1 ring-emerald-100"
+                              : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50",
                           ].join(" ")}
                         >
-                          <span
-                            className={[
-                              "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border",
-                              enabled
-                                ? "border-wiser-600 bg-wiser-600 text-white"
-                                : "border-slate-300 bg-white text-transparent",
-                            ].join(" ")}
-                          >
-                            <Check size={13} strokeWidth={3} />
-                          </span>
+                          <input
+                            type="checkbox"
+                            checked={enabled}
+                            onChange={() => toggleSchoolSection(section.key)}
+                            aria-label={`Enable ${section.name} section`}
+                            className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer accent-emerald-600 focus-visible:outline-none"
+                            style={{ accentColor: "#16a34a" }}
+                          />
                           <span className="min-w-0">
                             <span className="block text-sm font-semibold text-slate-900">
                               {section.name}
                             </span>
-                            <span className="mt-1 block text-xs leading-5 text-slate-500">
+                            <span className="mt-1 block text-xs leading-5 text-slate-600">
                               {section.description}
                             </span>
                           </span>
-                        </button>
+                        </label>
                       );
                     })}
                   </div>
@@ -1238,10 +1231,9 @@ export default function AdminSchoolConfiguration() {
                     onClick={() =>
                       setAIEnabled(!config.ai_settings.enabled)
                     }
-                    className={[
-                      "relative h-7 w-12 shrink-0 rounded-full transition",
-                      aiEnabled ? "bg-wiser-600" : "bg-slate-300",
-                    ].join(" ")}
+                    className="relative h-7 w-12 shrink-0 rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+                    style={{ backgroundColor: aiEnabled ? "#16a34a" : "#cbd5e1" }}
+                    aria-label="Enable AI Assistant"
                     aria-pressed={aiEnabled}
                   >
                     <span
@@ -1261,45 +1253,39 @@ export default function AdminSchoolConfiguration() {
                       );
 
                     return (
-                      <button
+                      <label
                         key={role.value}
-                        type="button"
-                        onClick={() => toggleAIRole(role.value)}
-                        disabled={!aiEnabled}
                         className={[
-                          "flex items-center gap-3 rounded-xl border p-4 text-left transition",
+                          "flex items-center gap-3 rounded-xl border p-4 text-left transition focus-within:ring-2 focus-within:ring-emerald-500 focus-within:ring-offset-2",
                           allowed
-                            ? "border-wiser-200 bg-wiser-50/60"
+                            ? "border-emerald-300 bg-emerald-50 ring-1 ring-emerald-100"
                             : "border-slate-200 bg-white",
-                          !aiEnabled &&
-                            "cursor-not-allowed opacity-50",
+                          !aiEnabled && "cursor-not-allowed opacity-50",
+                          aiEnabled && "cursor-pointer hover:border-slate-300",
                         ].join(" ")}
                       >
+                        <input
+                          type="checkbox"
+                          checked={allowed}
+                          onChange={() => toggleAIRole(role.value)}
+                          disabled={!aiEnabled}
+                          aria-label={`Allow AI access for ${role.label}`}
+                          className="h-5 w-5 shrink-0 accent-emerald-600 focus-visible:outline-none"
+                          style={{ accentColor: "#16a34a" }}
+                        />
                         <Users
                           size={17}
-                          className={
-                            allowed
-                              ? "text-wiser-600"
-                              : "text-slate-400"
-                          }
+                          className={allowed ? "text-emerald-600" : "text-slate-400"}
                         />
                         <span className="flex-1">
                           <span className="block text-sm font-semibold text-slate-900">
                             {role.label}
                           </span>
-                          <span className="mt-0.5 block text-xs text-slate-500">
-                            {allowed
-                              ? "AI access enabled"
-                              : "No AI access"}
+                          <span className="mt-0.5 block text-xs text-slate-600">
+                            {allowed ? "AI access enabled" : "No AI access"}
                           </span>
                         </span>
-                        {allowed && (
-                          <CheckCircle2
-                            size={16}
-                            className="text-emerald-600"
-                          />
-                        )}
-                      </button>
+                      </label>
                     );
                   })}
                 </div>
@@ -1337,44 +1323,36 @@ export default function AdminSchoolConfiguration() {
                     const enabled = Boolean(config.ai_settings[typedKey]);
 
                     return (
-                      <button
+                      <label
                         key={key}
-                        type="button"
-                        onClick={() =>
-                          updateAI(typedKey, !enabled)
-                        }
-                        disabled={
-                          !aiEnabled ||
-                          key === "allow_finance_insights"
-                        }
                         className={[
-                          "rounded-xl border p-4 text-left",
+                          "flex items-start gap-3 rounded-xl border p-4 text-left transition focus-within:ring-2 focus-within:ring-emerald-500 focus-within:ring-offset-2",
                           enabled
-                            ? "border-wiser-200 bg-wiser-50/60"
-                            : "border-slate-200",
-                          (!aiEnabled ||
-                            key === "allow_finance_insights") &&
-                            "cursor-not-allowed opacity-60",
+                            ? "border-emerald-300 bg-emerald-50 ring-1 ring-emerald-100"
+                            : "border-slate-200 bg-white",
+                          (!aiEnabled || key === "allow_finance_insights")
+                            ? "cursor-not-allowed opacity-60"
+                            : "cursor-pointer hover:border-slate-300",
                         ].join(" ")}
                       >
-                        <div className="flex items-center justify-between gap-3">
-                          <span className="text-sm font-semibold text-slate-900">
+                        <input
+                          type="checkbox"
+                          checked={enabled}
+                          onChange={(event) => updateAI(typedKey, event.currentTarget.checked)}
+                          disabled={!aiEnabled || key === "allow_finance_insights"}
+                          aria-label={`Enable ${name}`}
+                          className="mt-0.5 h-5 w-5 shrink-0 accent-emerald-600 focus-visible:outline-none"
+                          style={{ accentColor: "#16a34a" }}
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-semibold text-slate-900">
                             {name}
                           </span>
-                          <span
-                            className={
-                              enabled
-                                ? "text-emerald-600"
-                                : "text-slate-300"
-                            }
-                          >
-                            <CheckCircle2 size={16} />
+                          <span className="mt-1 block text-xs leading-5 text-slate-600">
+                            {description}
                           </span>
-                        </div>
-                        <p className="mt-1 text-xs leading-5 text-slate-500">
-                          {description}
-                        </p>
-                      </button>
+                        </span>
+                      </label>
                     );
                   })}
                 </div>

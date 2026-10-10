@@ -192,6 +192,79 @@ export function SchoolProvider({
     void loadSchool();
   }, [user?.id, authLoading]);
 
+  // Keep module permissions fresh when a platform administrator changes a
+  // school's configuration in another browser session. Realtime is the fast
+  // path; focus refresh and polling are fallbacks if realtime is unavailable.
+  useEffect(() => {
+    const schoolId = school?.id;
+    if (!schoolId) return;
+
+    let active = true;
+
+    async function refreshConfiguration() {
+      const { data, error: configurationError } = await supabase
+        .from("school_configurations")
+        .select(
+          `
+            school_id,
+            school_type,
+            ownership_type,
+            curriculum,
+            sections,
+            enabled_modules,
+            academic_settings,
+            ai_settings,
+            branding
+          `,
+        )
+        .eq("school_id", schoolId)
+        .maybeSingle();
+
+      if (!active) return;
+
+      if (configurationError) {
+        // Keep the last successfully loaded permissions during transient
+        // errors instead of briefly re-enabling every module.
+        console.error("Failed to refresh school configuration:", configurationError);
+        return;
+      }
+
+      setConfiguration((data as SchoolConfiguration | null) ?? null);
+    }
+
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") {
+        void refreshConfiguration();
+      }
+    };
+
+    const channel = supabase
+      .channel(`school-configuration-${schoolId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "school_configurations",
+          filter: `school_id=eq.${schoolId}`,
+        },
+        () => void refreshConfiguration(),
+      )
+      .subscribe();
+
+    window.addEventListener("focus", refreshWhenVisible);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    const intervalId = window.setInterval(refreshWhenVisible, 60_000);
+
+    return () => {
+      active = false;
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", refreshWhenVisible);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+      void supabase.removeChannel(channel);
+    };
+  }, [school?.id]);
+
   function isModuleEnabled(moduleKey: string) {
     if (!configuration) {
       return true;
